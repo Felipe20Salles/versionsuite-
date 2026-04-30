@@ -316,76 +316,126 @@ textarea.form-input{resize:vertical;min-height:70px}
 
       <!-- BOLETIM IA -->
       <div id="screen-boletim" class="screen">
-        <!-- Tabs GT / Pagadoria -->
+        <!-- Abas principais Email / Inline -->
         <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:20px">
-          <div class="tab active" id="bol-tab-gt" onclick="setBolTab('gt')" style="padding:8px 16px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px">Gestão de Talentos</div>
-          <div class="tab" id="bol-tab-pag" onclick="setBolTab('pag')" style="padding:8px 16px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px">Pagadoria</div>
+          <div id="bol-main-tab-email" class="tab active" onclick="setBolMainTab('email')" style="padding:8px 18px;font-size:13px;cursor:pointer;border-bottom:2px solid var(--accent);color:var(--accent);margin-bottom:-1px">📧 Boletim E-mail</div>
+          <div id="bol-main-tab-inline" class="tab" onclick="setBolMainTab('inline')" style="padding:8px 18px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);margin-bottom:-1px">📱 Boletim Inline/Produto</div>
         </div>
 
-        <!-- Config cabeçalho -->
-        <div style="background:linear-gradient(135deg,rgba(59,94,154,.12),rgba(238,164,34,.06));border:1px solid rgba(59,94,154,.25);border-radius:var(--radius-xl);padding:18px 22px;margin-bottom:20px">
-          <div style="font-size:11px;font-weight:600;color:#7da8e8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px">📋 Cabeçalho do Boletim</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
-            <div><label class="form-label">Versão</label><input class="form-input" id="bol-hdr-versao" placeholder="Ex: 26.3"></div>
-            <div><label class="form-label">Data da entrega</label><input type="date" class="form-input" id="bol-hdr-entrega"></div>
-            <div><label class="form-label">Data do boletim</label><input type="date" class="form-input" id="bol-hdr-boletim"></div>
+        <!-- ===== ABA E-MAIL ===== -->
+        <div id="bol-screen-email">
+          <!-- Tabs Grupo de Produtos -->
+          <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:20px">
+            <div class="tab active" id="bol-tab-gt" onclick="setBolTab('gt')" style="padding:8px 16px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px">Gestão de Talentos</div>
+            <div class="tab" id="bol-tab-pag" onclick="setBolTab('pag')" style="padding:8px 16px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px">Pagadoria</div>
           </div>
-          <div style="margin-bottom:12px"><label class="form-label">Link "Ver novidades completas"</label><input class="form-input" id="bol-hdr-link" placeholder="https://centraldocliente.lg.com.br/hc/pt-br/articles/..."></div>
-          <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);border-radius:var(--radius-lg);padding:12px 14px">
-            <label class="form-label" style="color:var(--amber-text)">🔑 Chave de API Anthropic (salva localmente no seu navegador)</label>
-            <div style="display:flex;gap:8px">
-              <input class="form-input" id="bol-api-key" type="password" placeholder="sk-ant-..." style="flex:1;font-family:var(--mono);font-size:12px" oninput="bolSalvarAPIKey()">
-              <button class="btn btn-sm btn-ghost" onclick="bolToggleAPIKey()" id="bol-api-key-toggle">👁</button>
+
+          <!-- Config cabeçalho -->
+          <div style="background:linear-gradient(135deg,rgba(59,94,154,.12),rgba(238,164,34,.06));border:1px solid rgba(59,94,154,.25);border-radius:var(--radius-xl);padding:18px 22px;margin-bottom:20px">
+            <div style="font-size:11px;font-weight:600;color:#7da8e8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px">📋 Cabeçalho do Boletim</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+              <div><label class="form-label">Versão</label><input class="form-input" id="bol-hdr-versao" placeholder="Ex: 26.3"></div>
+              <div><label class="form-label">Grupo de Produtos</label><select class="form-input" id="bol-hdr-grupo"><option value="GT">Gestão de Talentos</option><option value="PAG">Pagadoria</option></select></div>
+              <div><label class="form-label">Data da entrega</label><input type="date" class="form-input" id="bol-hdr-entrega"></div>
+              <div><label class="form-label">Data do boletim</label><input type="date" class="form-input" id="bol-hdr-boletim"></div>
             </div>
-            <div style="font-size:11px;color:var(--hint);margin-top:5px">Obtenha em console.anthropic.com → API Keys. Necessária apenas para geração por IA.</div>
+            <div style="margin-bottom:12px"><label class="form-label">Link "Ver novidades completas"</label><input class="form-input" id="bol-hdr-link" placeholder="https://centraldocliente.lg.com.br/hc/pt-br/articles/..."></div>
+            <div style="background:rgba(245,166,35,.08);border:1px solid rgba(245,166,35,.25);border-radius:var(--radius-lg);padding:12px 14px">
+              <label class="form-label" style="color:var(--amber-text)">🔑 Chave de API Anthropic</label>
+              <div style="display:flex;gap:8px">
+                <input class="form-input" id="bol-api-key" type="password" placeholder="sk-ant-..." style="flex:1;font-family:var(--mono);font-size:12px" oninput="bolSalvarAPIKey()">
+                <button class="btn btn-sm btn-ghost" onclick="bolToggleAPIKey()">👁</button>
+              </div>
+              <div style="font-size:11px;color:var(--hint);margin-top:5px">Necessária para geração por IA. Obtenha em console.anthropic.com → API Keys.</div>
+            </div>
           </div>
-        </div>
 
-        <!-- Lista de OSs -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <div style="font-size:14px;font-weight:500">OSs do boletim <span id="bol-tab-label" style="color:var(--accent);font-size:13px"></span></div>
-          <button class="btn btn-primary btn-sm" onclick="bolAdicionarOS()">+ Adicionar OS</button>
-        </div>
-        <div id="bol-os-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px"></div>
-
-        <!-- Progresso -->
-        <div id="bol-prog-wrap" style="display:none;margin-bottom:16px">
-          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px">
-            <span id="bol-prog-label"></span><span id="bol-prog-pct"></span>
-          </div>
-          <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden"><div id="bol-prog-fill" style="height:100%;background:var(--accent);border-radius:2px;transition:width .4s;width:0%"></div></div>
-        </div>
-
-        <!-- Botões gerar -->
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
-          <button class="btn btn-primary" onclick="bolGerarHTML()" style="background:#3B5E9A;border-color:#3B5E9A">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,6 1,8 4,10"/><polyline points="12,6 15,8 12,10"/><line x1="9" y1="3" x2="7" y2="13"/></svg>
-            Gerar HTML do Boletim
-          </button>
-          <button class="btn btn-ghost btn-sm" onclick="bolPreview()">👁 Pré-visualizar</button>
-          <button class="btn btn-ghost btn-sm" onclick="bolSalvarRascunho()">💾 Salvar rascunho</button>
-          <button class="btn btn-ghost btn-sm" onclick="bolCarregarRascunho()">📂 Carregar rascunho</button>
-        </div>
-
-        <!-- Output HTML -->
-        <div id="bol-preview-panel" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);padding:20px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-            <div style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px" id="bol-preview-title">HTML Gerado</div>
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-sm btn-ghost" onclick="bolCopiarHTML()">📋 Copiar HTML</button>
-              <button class="btn btn-sm" style="background:#EEA422;border-color:#EEA422;color:#fff" onclick="bolDownloadHTML()">⬇ Download .html</button>
-            </div>
+            <div style="font-size:14px;font-weight:500">OSs do boletim <span id="bol-tab-label" style="color:var(--accent);font-size:13px"></span></div>
+            <button class="btn btn-primary btn-sm" onclick="bolAdicionarOS()">+ Adicionar OS</button>
           </div>
-          <div id="bol-html-output" style="background:#0a0a0d;border:1px solid var(--border2);border-radius:var(--radius-lg);padding:16px;font-family:var(--mono);font-size:11px;color:#a8b5c8;line-height:1.7;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></div>
+          <div id="bol-os-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px"></div>
+          <div id="bol-prog-wrap" style="display:none;margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px"><span id="bol-prog-label"></span><span id="bol-prog-pct"></span></div>
+            <div style="height:3px;background:var(--border);border-radius:2px;overflow:hidden"><div id="bol-prog-fill" style="height:100%;background:var(--accent);border-radius:2px;transition:width .4s;width:0%"></div></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+            <button class="btn btn-primary" onclick="bolGerarHTML()" style="background:#3B5E9A;border-color:#3B5E9A">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,6 1,8 4,10"/><polyline points="12,6 15,8 12,10"/><line x1="9" y1="3" x2="7" y2="13"/></svg>Gerar HTML do Boletim
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="bolPreview()">👁 Pré-visualizar</button>
+            <button class="btn btn-ghost btn-sm" onclick="bolSalvarRascunho()">💾 Salvar rascunho</button>
+            <button class="btn btn-ghost btn-sm" onclick="bolCarregarRascunho()">📂 Carregar rascunho</button>
+          </div>
+          <div id="bol-preview-panel" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);padding:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px" id="bol-preview-title">HTML Gerado</div>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-sm btn-ghost" onclick="bolCopiarHTML()">📋 Copiar HTML</button>
+                <button class="btn btn-sm" style="background:#EEA422;border-color:#EEA422;color:#fff" onclick="bolDownloadHTML()">⬇ Download .html</button>
+              </div>
+            </div>
+            <div id="bol-html-output" style="background:#0a0a0d;border:1px solid var(--border2);border-radius:var(--radius-lg);padding:16px;font-family:var(--mono);font-size:11px;color:#a8b5c8;line-height:1.7;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></div>
+          </div>
+          <div id="bol-visual-preview" style="display:none;margin-top:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:500">Pré-visualização</div>
+              <button class="btn btn-xs btn-ghost" onclick="document.getElementById('bol-visual-preview').style.display='none'">Fechar</button>
+            </div>
+            <div style="background:#f4f7fb;border-radius:var(--radius-xl);padding:20px;border:1px solid var(--border)"><div id="bol-visual-content"></div></div>
+          </div>
         </div>
 
-        <!-- Visual preview -->
-        <div id="bol-visual-preview" style="display:none;margin-top:20px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="font-size:13px;font-weight:500">Pré-visualização</div>
-            <button class="btn btn-xs btn-ghost" onclick="document.getElementById('bol-visual-preview').style.display='none'">Fechar</button>
+        <!-- ===== ABA INLINE/PRODUTO ===== -->
+        <div id="bol-screen-inline" style="display:none">
+          <!-- Config Inline -->
+          <div style="background:linear-gradient(135deg,rgba(59,94,154,.12),rgba(238,164,34,.06));border:1px solid rgba(59,94,154,.25);border-radius:var(--radius-xl);padding:18px 22px;margin-bottom:20px">
+            <div style="font-size:11px;font-weight:600;color:#7da8e8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px">📱 Configuração do Inline</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
+              <div><label class="form-label">Identificação da versão</label><input class="form-input" id="inl-versao" placeholder="Ex: VERSÃO ABRIL 2026"></div>
+              <div><label class="form-label">Data de entrega</label><input type="date" class="form-input" id="inl-entrega"></div>
+              <div><label class="form-label">Link novidades completas</label><input class="form-input" id="inl-link" placeholder="https://..."></div>
+            </div>
+            <div><label class="form-label">Texto introdutório (aparece na Home)</label><textarea class="form-input" id="inl-intro" placeholder="Esta versão chega para tornar sua rotina mais ágil, segura e estratégica..." style="min-height:60px"></textarea></div>
           </div>
-          <div style="background:#f4f7fb;border-radius:var(--radius-xl);padding:20px;border:1px solid var(--border)"><div id="bol-visual-content"></div></div>
+
+          <!-- Produtos do Inline -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="font-size:14px;font-weight:500">Produtos no boletim inline</div>
+            <button class="btn btn-primary btn-sm" onclick="inlAdicionarProduto()">+ Adicionar produto</button>
+          </div>
+          <div id="inl-produtos-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px"></div>
+
+          <!-- Gerar -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+            <button class="btn btn-primary" onclick="inlGerarHTML()" style="background:#1B5EAD;border-color:#1B5EAD">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,6 1,8 4,10"/><polyline points="12,6 15,8 12,10"/><line x1="9" y1="3" x2="7" y2="13"/></svg>Gerar HTML Inline (Home + Produtos)
+            </button>
+            <button class="btn btn-ghost btn-sm" onclick="inlPreview()">👁 Pré-visualizar Home</button>
+          </div>
+
+          <!-- Output Inline -->
+          <div id="inl-preview-panel" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);padding:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">HTML Gerado — Inline</div>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-sm btn-ghost" onclick="inlCopiarHTML('home')">📋 Copiar Home</button>
+                <button class="btn btn-sm" style="background:#EEA422;border-color:#EEA422;color:#fff" onclick="inlDownloadAll()">⬇ Download todos</button>
+              </div>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Home (Step 0):</div>
+            <div id="inl-html-home" style="background:#0a0a0d;border:1px solid var(--border2);border-radius:var(--radius-lg);padding:14px;font-family:var(--mono);font-size:11px;color:#a8b5c8;line-height:1.7;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;margin-bottom:12px"></div>
+            <div id="inl-produtos-outputs"></div>
+          </div>
+
+          <!-- Visual preview inline -->
+          <div id="inl-visual-preview" style="display:none;margin-top:20px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div style="font-size:13px;font-weight:500">Pré-visualização — Home Inline (700×400)</div>
+              <button class="btn btn-xs btn-ghost" onclick="document.getElementById('inl-visual-preview').style.display='none'">Fechar</button>
+            </div>
+            <div style="width:700px;max-width:100%;overflow:auto;border:2px dashed var(--border2);border-radius:var(--radius-lg)"><div id="inl-visual-content" style="width:700px;background:#fff"></div></div>
+          </div>
         </div>
       </div>
 
@@ -523,10 +573,13 @@ textarea.form-input{resize:vertical;min-height:70px}
     </div>
     <div class="form-group"><label class="form-label">Título</label><input class="form-input" id="os-titulo" placeholder="Descrição breve da entrega"></div>
     <div class="form-row">
+      <div class="form-group"><label class="form-label">Versão</label><select class="form-input" id="os-versao-sel"></select></div>
       <div class="form-group"><label class="form-label">Status inicial</label><select class="form-input" id="os-status"><option value="afazer">A fazer</option><option value="andamento">Em andamento</option><option value="concluido">Concluído</option></select></div>
-      <div class="form-group"><label class="form-label">Link evidência (Redmine/SharePoint)</label><input class="form-input" id="os-link" placeholder="https://..."></div>
     </div>
-    <div class="form-group"><label class="form-label">Observações</label><input class="form-input" id="os-obs" placeholder="Notas internas..."></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Link evidência (Redmine/SharePoint)</label><input class="form-input" id="os-link" placeholder="https://..."></div>
+      <div class="form-group"><label class="form-label">Observações</label><input class="form-input" id="os-obs" placeholder="Notas internas..."></div>
+    </div>
     <div class="form-group">
       <label class="form-label">Entregas aplicáveis</label>
       <label class="form-check"><input type="checkbox" id="e-novidade" checked><span class="form-check-label">Novidade de versão</span><span class="form-check-hint">Publicação no boletim</span></label>
@@ -544,7 +597,7 @@ textarea.form-input{resize:vertical;min-height:70px}
 <!-- MODAL PONTO -->
 <div class="modal-overlay" id="modal-ponto">
   <div class="modal">
-    <div class="modal-title">Registrar dia de ponto</div>
+    <div class="modal-title" id="modal-ponto-title">Registrar dia de ponto</div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Data</label><input type="date" class="form-input" id="p-data" onchange="onDataChange()"></div>
       <div class="form-group"><label class="form-label">Dia</label><input class="form-input" id="p-dia" readonly style="color:var(--muted)"></div>
@@ -879,13 +932,18 @@ function deleteOS(osId){if(!confirm('Remover esta OS?'))return;S.oss=S.oss.filte
 function goAprop(osId){S._focusApropOS=osId;goScreen('ponto');setTimeout(function(){setPontoTabById('tab-aprop')},60)}
 
 // ── OS CRUD ──────────────────────────────────────────────────────────────────
+function populateVersaoSelOS(){
+  var sel=document.getElementById('os-versao-sel');if(!sel)return;
+  sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+'</option>'}).join('');
+  if(S.versaoK)sel.value=S.versaoK;
+}
 function openNovaOS(){
   S.editOS=null;
   document.getElementById('modal-os-title').textContent='Nova OS';
   document.getElementById('modal-os-error').style.display='none';
   ['os-num','os-titulo','os-obs','os-link'].forEach(function(id){document.getElementById(id).value=''});
   document.getElementById('os-status').value='afazer';
-  populateProdutoSel();
+  populateProdutoSel();populateVersaoSelOS();
   document.getElementById('e-novidade').checked=true;document.getElementById('e-help').checked=false;
   document.getElementById('e-tutorial').checked=false;document.getElementById('e-evidencia').checked=true;
   openModal('modal-os');
@@ -901,6 +959,7 @@ function openEditOS(osId){
   document.getElementById('os-link').value=os.link||'';
   document.getElementById('os-status').value=os.status;
   populateProdutoSel();document.getElementById('os-produto').value=os.produto;
+  populateVersaoSelOS();document.getElementById('os-versao-sel').value=os.versaoId;
   document.getElementById('e-novidade').checked=!!os.entregas.novidade.aplicavel;
   document.getElementById('e-help').checked=!!os.entregas.help.aplicavel;
   document.getElementById('e-tutorial').checked=!!os.entregas.tutorial.aplicavel;
@@ -908,7 +967,9 @@ function openEditOS(osId){
   openModal('modal-os');
 }
 function salvarOS(){
-  var vid=document.getElementById('kanban-versao-sel').value||(S.versoes[0]&&S.versoes[0].id);if(!vid)return;
+  // Usa versão do modal (permite migrar OS entre versões)
+  var vid=document.getElementById('os-versao-sel').value||(S.versaoK)||(S.versoes[0]&&S.versoes[0].id);
+  if(!vid)return;
   var num=document.getElementById('os-num').value.trim();
   var errEl=document.getElementById('modal-os-error');
   var dup=S.oss.find(function(o){return o.versaoId===vid&&o.num===num&&o.id!==S.editOS});
@@ -1311,7 +1372,12 @@ function setPontoTabById(tabId){
   document.getElementById(tabId).style.display='block';
   if(tabId==='tab-aprop')renderAprop();
 }
-function openNovoRegistro(){['p-data','p-dia','p-m1','p-m2','p-m3','p-m4'].forEach(function(id){document.getElementById(id).value=''});document.getElementById('p-total').textContent='--';openModal('modal-ponto')}
+function openNovoRegistro(){
+  document.getElementById('modal-ponto-title').textContent='Registrar dia de ponto';
+  document.getElementById('modal-ponto').dataset.editId='';
+  ['p-data','p-dia','p-m1','p-m2','p-m3','p-m4'].forEach(function(id){document.getElementById(id).value=''});
+  document.getElementById('p-total').textContent='--';openModal('modal-ponto');
+}
 function onDataChange(){var v=document.getElementById('p-data').value;if(!v)return;document.getElementById('p-dia').value=DIAS[new Date(v+'T12:00:00').getDay()]}
 function fmtTime(el){var v=el.value.replace(/\D/g,'');if(v.length>=3)v=v.slice(0,2)+':'+v.slice(2,4);el.value=v}
 function calcTotal(){
@@ -1325,11 +1391,19 @@ function salvarPonto(){
   var marcacoes=ms.join(' '),horasTrabalhadas=ms.length===4?calcHorasStr(marcacoes):0;
   var dia=document.getElementById('p-dia').value;
   var versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
-  var ei=S.pontos.findIndex(function(p){return p.data===data});
-  var reg={id:uid(),data:data,dia:dia,marcacoes:marcacoes,horasTrabalhadas:horasTrabalhadas,versaoId:versaoId,apropriacoes:[]};
-  if(ei>-1){reg.id=S.pontos[ei].id;reg.apropriacoes=S.pontos[ei].apropriacoes||[];S.pontos[ei]=reg}
-  else{S.pontos.push(reg);S.pontos.sort(function(a,b){return b.data.localeCompare(a.data)})}
-  save();closeModal('modal-ponto');renderPontoList();renderDash();toast('Ponto salvo');
+  var editId=document.getElementById('modal-ponto').dataset.editId;
+  if(editId){
+    // Modo edição — preserva apropriacoes e id
+    var ei=S.pontos.findIndex(function(p){return p.id===editId});
+    if(ei>-1){S.pontos[ei]=Object.assign({},S.pontos[ei],{data:data,dia:dia,marcacoes:marcacoes,horasTrabalhadas:horasTrabalhadas})}
+  }else{
+    var ei2=S.pontos.findIndex(function(p){return p.data===data});
+    var reg={id:uid(),data:data,dia:dia,marcacoes:marcacoes,horasTrabalhadas:horasTrabalhadas,versaoId:versaoId,apropriacoes:[]};
+    if(ei2>-1){reg.id=S.pontos[ei2].id;reg.apropriacoes=S.pontos[ei2].apropriacoes||[];S.pontos[ei2]=reg}
+    else{S.pontos.push(reg);S.pontos.sort(function(a,b){return b.data.localeCompare(a.data)})}
+  }
+  save();closeModal('modal-ponto');renderPontoList();renderDash();
+  toast(editId?'Registro atualizado':'Ponto salvo');
 }
 function renderPontoList(){
   var el=document.getElementById('ponto-list');
@@ -1341,13 +1415,41 @@ function renderPontoList(){
     var diffStr=Math.abs(diff)<0.05?'<span style="font-size:11px;color:var(--green-text)">✓ balanceado</span>':
       diff>0?'<span style="font-size:11px;color:var(--amber-text)">+'+diff.toFixed(1)+'h sem apropriar</span>':
       '<span style="font-size:11px;color:var(--red-text)">'+diff.toFixed(1)+'h acima</span>';
-    return'<div class="ponto-day"><div class="ponto-day-header"><div style="display:flex;align-items:center;gap:8px">'+
-      '<span class="ponto-day-date">'+fmtDate(p.data)+'</span><span style="font-size:11px;color:var(--muted)">'+p.dia+'</span>'+
-      (p.marcacoes?'<span style="font-family:var(--mono);font-size:11px;color:var(--hint)">'+p.marcacoes+'</span>':'')+
-      '</div><div style="display:flex;align-items:center;gap:12px"><span class="ponto-day-horas">'+h.toFixed(2)+'h</span>'+
-      '<span style="font-size:11px;color:var(--hint)">apropr: '+apTotal.toFixed(1)+'h</span>'+diffStr+'</div></div>'+
+    return'<div class="ponto-day"><div class="ponto-day-header">'+
+      '<div style="display:flex;align-items:center;gap:8px;flex:1">'+
+        '<span class="ponto-day-date">'+fmtDate(p.data)+'</span>'+
+        '<span style="font-size:11px;color:var(--muted)">'+p.dia+'</span>'+
+        (p.marcacoes?'<span style="font-family:var(--mono);font-size:11px;color:var(--hint)">'+p.marcacoes+'</span>':'')+
+      '</div>'+
+      '<div style="display:flex;align-items:center;gap:10px">'+
+        '<span class="ponto-day-horas">'+h.toFixed(2)+'h</span>'+
+        '<span style="font-size:11px;color:var(--hint)">apropr: '+apTotal.toFixed(1)+'h</span>'+diffStr+
+        '<button class="btn btn-xs btn-ghost" onclick="editarPonto(\''+p.id+'\')" title="Editar">✏</button>'+
+        '<button class="btn btn-xs btn-danger" onclick="excluirPonto(\''+p.id+'\')" title="Excluir">✕</button>'+
+      '</div>'+
+      '</div>'+
       '<div class="aprop-bar-wrap"><div class="aprop-bar-fill '+barCls+'" style="width:'+pct+'%"></div></div></div>';
   }).join('');
+}
+
+function editarPonto(id){
+  var p=S.pontos.find(function(x){return x.id===id});if(!p)return;
+  document.getElementById('modal-ponto-title').textContent='Editar registro de ponto';
+  document.getElementById('p-data').value=p.data;
+  document.getElementById('p-dia').value=p.dia;
+  var ms=p.marcacoes?p.marcacoes.split(' '):['','','',''];
+  ['p-m1','p-m2','p-m3','p-m4'].forEach(function(id,i){document.getElementById(id).value=ms[i]||''});
+  calcTotal();
+  // guardar id editando
+  document.getElementById('modal-ponto').dataset.editId=id;
+  openModal('modal-ponto');
+}
+
+function excluirPonto(id){
+  if(!confirm('Excluir este registro de ponto e todas as apropriações do dia?'))return;
+  S.pontos=S.pontos.filter(function(p){return p.id!==id});
+  delete _apropState[id];
+  save();renderPontoList();renderDash();toast('Registro excluído');
 }
 
 // ── APROPRIAÇÃO ───────────────────────────────────────────────────────────────
@@ -1548,14 +1650,15 @@ function renderXLSXConfig(sheets){
   var vsel=document.getElementById('xlsx-versao-sel');
   vsel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+'</option>'}).join('');
   if(S.versaoK)vsel.value=S.versaoK;
+  // Todos os produtos sem filtro por grupo
+  var todosProds=S.prefs.produtos.map(function(p){return'<option value="'+p+'">'+p+'</option>'}).join('');
   document.getElementById('xlsx-abas-config').innerHTML=Object.keys(sheets).map(function(nome){
-    var rows=sheets[nome],linha=linhaAba(nome);
+    var rows=sheets[nome];
     var dataRows=rows.filter(function(r){return/^\d{5,7}$/.test(String(r[0]).trim())});
-    var prodOpts=S.prefs.produtos.filter(function(p){return linha==='Pagadoria'?PLINHA[p]==='Pagadoria':PLINHA[p]!=='Pagadoria'}).map(function(p){return'<option value="'+p+'">'+p+'</option>'}).join('');
     return'<div class="pub-aba-cfg">'+
-      '<div style="font-size:13px;font-weight:500;margin-bottom:8px">'+nome+' <span class="badge '+(linha==='Pagadoria'?'tag-pag':'tag-gt')+'">'+linha+'</span> <span style="font-size:11px;color:var(--hint)">'+dataRows.length+' OS(s)</span></div>'+
+      '<div style="font-size:13px;font-weight:500;margin-bottom:8px">'+nome+' <span style="font-size:11px;color:var(--hint)">'+dataRows.length+' OS(s)</span></div>'+
       '<div class="form-row">'+
-        '<div class="form-group"><label class="form-label">Produto padrão</label><select class="form-input" id="xlsx-prod-'+nome+'">'+prodOpts+'</select></div>'+
+        '<div class="form-group"><label class="form-label">Produto padrão desta aba</label><select class="form-input" id="xlsx-prod-'+nome+'">'+todosProds+'</select></div>'+
         '<div class="form-group"><label class="form-label">Importar?</label><select class="form-input" id="xlsx-skip-'+nome+'"><option value="sim">Sim</option><option value="nao">Não</option></select></div>'+
       '</div>'+
       (dataRows.length?'<div style="font-size:11px;color:var(--muted)">OSs: '+dataRows.slice(0,10).map(function(r){return r[0]}).join(', ')+(dataRows.length>10?'…':'')+'</div>':'<div style="font-size:11px;color:var(--amber-text)">Nenhuma OS encontrada</div>')+
