@@ -324,12 +324,6 @@ textarea.form-input{resize:vertical;min-height:70px}
 
         <!-- ===== ABA E-MAIL ===== -->
         <div id="bol-screen-email">
-          <!-- Tabs Grupo de Produtos -->
-          <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:20px">
-            <div class="tab active" id="bol-tab-gt" onclick="setBolTab('gt')" style="padding:8px 16px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px">Gestão de Talentos</div>
-            <div class="tab" id="bol-tab-pag" onclick="setBolTab('pag')" style="padding:8px 16px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;margin-bottom:-1px">Pagadoria</div>
-          </div>
-
           <!-- Config cabeçalho -->
           <div style="background:linear-gradient(135deg,rgba(59,94,154,.12),rgba(238,164,34,.06));border:1px solid rgba(59,94,154,.25);border-radius:var(--radius-xl);padding:18px 22px;margin-bottom:20px">
             <div style="font-size:11px;font-weight:600;color:#7da8e8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px">📋 Cabeçalho do Boletim</div>
@@ -349,9 +343,8 @@ textarea.form-input{resize:vertical;min-height:70px}
               <div style="font-size:11px;color:var(--hint);margin-top:5px">Necessária para geração por IA. Obtenha em console.anthropic.com → API Keys.</div>
             </div>
           </div>
-
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-            <div style="font-size:14px;font-weight:500">OSs do boletim <span id="bol-tab-label" style="color:var(--accent);font-size:13px"></span></div>
+            <div style="font-size:14px;font-weight:500">OSs do boletim</div>
             <button class="btn btn-primary btn-sm" onclick="bolAdicionarOS()">+ Adicionar OS</button>
           </div>
           <div id="bol-os-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px"></div>
@@ -1000,26 +993,27 @@ var BOL_BADGE_STYLES={
 };
 var BOL_CANAL_COLORS={inline:'#6366f1',email:'#3b82f6',entregate:'#10b981',webinar:'#f59e0b',teams:'#7c3aed'};
 
+function setBolMainTab(tab){
+  var isEmail=tab==='email';
+  document.getElementById('bol-main-tab-email').style.color=isEmail?'var(--accent)':'var(--muted)';
+  document.getElementById('bol-main-tab-email').style.borderBottomColor=isEmail?'var(--accent)':'transparent';
+  document.getElementById('bol-main-tab-inline').style.color=!isEmail?'var(--accent)':'var(--muted)';
+  document.getElementById('bol-main-tab-inline').style.borderBottomColor=!isEmail?'var(--accent)':'transparent';
+  document.getElementById('bol-screen-email').style.display=isEmail?'block':'none';
+  document.getElementById('bol-screen-inline').style.display=!isEmail?'block':'none';
+  if(isEmail)bolRenderOSList();
+  else inlRenderProdutos();
+}
+
 function setBolTab(t){
-  BOL_TAB=t;
-  document.getElementById('bol-tab-gt').classList.toggle('active',t==='gt');
-  document.getElementById('bol-tab-pag').classList.toggle('active',t==='pag');
-  document.getElementById('bol-tab-gt').style.color=t==='gt'?'var(--accent)':'var(--muted)';
-  document.getElementById('bol-tab-pag').style.color=t==='pag'?'var(--accent)':'var(--muted)';
-  document.getElementById('bol-tab-gt').style.borderBottomColor=t==='gt'?'var(--accent)':'transparent';
-  document.getElementById('bol-tab-pag').style.borderBottomColor=t==='pag'?'var(--accent)':'transparent';
-  document.getElementById('bol-tab-label').textContent=t==='gt'?'— Gestão de Talentos':'— Pagadoria';
-  bolRenderOSList();
+  // mantida para compatibilidade mas não usada com sub-abas
+  BOL_TAB=t;bolRenderOSList();
 }
 
 function bolAdicionarOS(){
-  // Popula produto
-  var prods=BOL_TAB==='gt'
-    ?S.prefs.produtos.filter(function(p){return(PLINHA[p]||'')!=='Pagadoria'})
-    :S.prefs.produtos.filter(function(p){return(PLINHA[p]||'')==='Pagadoria'});
+  // Todos os produtos sem filtro por grupo
   var psel=document.getElementById('bol-add-produto');
-  psel.innerHTML=prods.map(function(p){return'<option value="'+p+'">'+p+'</option>'}).join('');
-  // Popula versão
+  psel.innerHTML=S.prefs.produtos.map(function(p){return'<option value="'+p+'">'+p+'</option>'}).join('');
   var vsel=document.getElementById('bol-add-versao');
   vsel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+'</option>'}).join('');
   if(S.versaoK)vsel.value=S.versaoK;
@@ -1203,7 +1197,7 @@ async function bolGerarComTexto(osId){
     var response=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:prompt}]})
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:800,messages:[{role:'user',content:prompt}]})
     });
     if(!response.ok){var e=await response.json();throw new Error(e.error&&e.error.message||'Erro '+response.status)}
     var data=await response.json();
@@ -1236,7 +1230,7 @@ async function bolCallAnthropicPDF(pdfB64,osNum,produto){
   var response=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfB64}},{type:'text',text:prompt}]}]})
+    body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:800,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfB64}},{type:'text',text:prompt}]}]})
   });
   if(!response.ok){var e=await response.json();throw new Error(e.error&&e.error.message||'Erro '+response.status)}
   var data=await response.json();
@@ -1355,6 +1349,310 @@ function bolBuildHTML(oss,linha){
     '    <a href="'+link+'" target="_blank" style="font-size:13px;font-weight:700;color:#fff;text-decoration:underline;">Ver todas as alterações →</a>\n'+
     '  </div>\n\n</div>';
 }
+// ── BOLETIM INLINE/PRODUTO ────────────────────────────────────────────────────
+var INL_PRODUTOS=[]; // [{produto, oss:[{osId,titulo,descricao,badge,hasImagem,textoLivre,pdfB64,pdfNome,aiSugestaoTitulo,aiSugestaoDesc,_gerando,aprovado,open}]}]
+
+function inlAdicionarProduto(){
+  var psel=document.getElementById('inl-add-produto-sel');
+  if(!psel){
+    // Criar modal simples
+    var prod=prompt('Qual produto deseja adicionar?\n\n'+S.prefs.produtos.join('\n'));
+    if(!prod||!prod.trim())return;
+    if(INL_PRODUTOS.find(function(p){return p.produto===prod.trim()})){toast('Produto já adicionado','err');return}
+    INL_PRODUTOS.push({produto:prod.trim(),oss:[]});
+    inlRenderProdutos();return;
+  }
+}
+
+function inlRenderProdutos(){
+  var el=document.getElementById('inl-produtos-list');if(!el)return;
+  if(!INL_PRODUTOS.length){
+    el.innerHTML='<div style="text-align:center;padding:32px;color:var(--hint);font-size:13px">Nenhum produto adicionado. Clique em "+ Adicionar produto".</div>';
+    return;
+  }
+  el.innerHTML=INL_PRODUTOS.map(function(p,pi){
+    var ossRows=p.oss.map(function(os,oi){
+      return'<div style="background:var(--card2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px">'+
+        '<div style="width:7px;height:7px;border-radius:50%;background:'+(os.aprovado?'var(--green)':'var(--border2)')+'"></div>'+
+        '<div style="flex:1;font-size:13px;font-weight:500">'+os.titulo+'</div>'+
+        '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:'+(BOL_BADGE_STYLES[os.badge]||BOL_BADGE_STYLES.melhoria).bg+';color:'+(BOL_BADGE_STYLES[os.badge]||BOL_BADGE_STYLES.melhoria).color+'">'+(BOL_BADGE_STYLES[os.badge]||BOL_BADGE_STYLES.melhoria).label+'</span>'+
+        '<button class="btn btn-xs btn-ghost" onclick="inlEditarOS('+pi+','+oi+')">✏</button>'+
+        '<button class="btn btn-xs btn-danger" onclick="inlRemoverOS('+pi+','+oi+')">✕</button>'+
+      '</div>';
+    }).join('');
+    return'<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:12px;overflow:hidden">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card2)">'+
+        '<span style="font-size:14px;font-weight:500">'+p.produto+'</span>'+
+        '<div style="display:flex;gap:6px">'+
+          '<button class="btn btn-xs btn-primary" onclick="inlAdicionarOSProduto('+pi+')">+ OS</button>'+
+          '<button class="btn btn-xs btn-danger" onclick="inlRemoverProduto('+pi+')">Remover produto</button>'+
+        '</div>'+
+      '</div>'+
+      '<div style="padding:12px 16px">'+(ossRows||'<div style="font-size:12px;color:var(--hint)">Nenhuma OS. Clique em "+ OS".</div>')+'</div>'+
+    '</div>';
+  }).join('');
+}
+
+function inlAdicionarProduto(){
+  var prods=S.prefs.produtos.filter(function(p){return!INL_PRODUTOS.find(function(x){return x.produto===p})});
+  if(!prods.length){toast('Todos os produtos já foram adicionados','err');return}
+  var prod=prods[0];
+  // Modal simples via prompt
+  var escolha=prompt('Produto a adicionar (copie e cole um da lista):\n\n'+prods.join('\n'));
+  if(!escolha||!escolha.trim())return;
+  escolha=escolha.trim();
+  if(!S.prefs.produtos.includes(escolha)){toast('Produto não encontrado','err');return}
+  if(INL_PRODUTOS.find(function(p){return p.produto===escolha})){toast('Já adicionado','err');return}
+  INL_PRODUTOS.push({produto:escolha,oss:[]});
+  inlRenderProdutos();
+}
+
+function inlRemoverProduto(pi){
+  if(!confirm('Remover produto e todas as suas OSs?'))return;
+  INL_PRODUTOS.splice(pi,1);inlRenderProdutos();
+}
+
+function inlAdicionarOSProduto(pi){
+  var p=INL_PRODUTOS[pi];if(!p)return;
+  // Busca OSs do produto na versão ativa
+  var oss=S.oss.filter(function(o){return o.produto===p.produto});
+  var jaAdic=p.oss.map(function(o){return o.osId});
+  oss=oss.filter(function(o){return jaAdic.indexOf(o.id)===-1});
+  var opcoes=oss.map(function(o,i){return i+1+') '+o.titulo+' (OS '+o.num+')'}).join('\n');
+  var resp=prompt('Selecione o número da OS:\n\n'+(opcoes||'Nenhuma OS disponível para '+p.produto));
+  if(!resp)return;
+  var idx=parseInt(resp)-1;
+  if(isNaN(idx)||idx<0||idx>=oss.length){toast('Seleção inválida','err');return}
+  var os=oss[idx];
+  p.oss.push({osId:os.id,num:os.num,titulo:os.titulo,descricao:'',badge:'melhoria',hasImagem:false,
+    textoLivre:'',pdfB64:null,pdfNome:null,aiSugestaoTitulo:'',aiSugestaoDesc:'',aprovado:false,open:true,_gerando:false});
+  inlRenderProdutos();
+  toast('OS adicionada — abra o editor para preencher a descrição');
+}
+
+function inlRemoverOS(pi,oi){INL_PRODUTOS[pi].oss.splice(oi,1);inlRenderProdutos()}
+
+function inlEditarOS(pi,oi){
+  var p=INL_PRODUTOS[pi],os=p&&p.oss[oi];if(!os)return;
+  // Usar mesmo modal de edição do boletim email
+  var badge=BOL_BADGE_STYLES[os.badge]||BOL_BADGE_STYLES.melhoria;
+  var html='<div style="background:var(--card2);border:1px solid var(--border2);border-radius:var(--radius-xl);padding:20px;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:400;width:560px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)">'+
+    '<div style="font-size:16px;font-weight:500;margin-bottom:16px">Editar OS — '+os.titulo+'</div>'+
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Tipo</div>'+
+    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+
+      Object.keys(BOL_BADGE_STYLES).map(function(k){var bs=BOL_BADGE_STYLES[k];return'<span onclick="inlSetBadge('+pi+','+oi+',\''+k+'\')" id="inl-badge-'+k+'" style="cursor:pointer;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;background:'+bs.bg+';color:'+bs.color+';border:2px solid '+(os.badge===k?bs.color:'transparent')+'">'+bs.label+'</span>'}).join('')+
+    '</div>'+
+    '<div class="form-group"><label class="form-label">Título no boletim</label><input id="inl-edit-titulo" class="form-input" value="'+escHtml(os.titulo)+'"></div>'+
+    '<div class="form-group"><label class="form-label">Descrição (HTML permitido)</label><textarea id="inl-edit-desc" class="form-input" style="min-height:100px">'+escHtml(os.descricao)+'</textarea></div>'+
+    '<div class="form-group"><label class="form-label">Texto livre para IA (opcional)</label><textarea id="inl-edit-texto" class="form-input" style="min-height:70px" placeholder="Cole rascunho ou notas — IA formata no estilo do boletim">'+escHtml(os.textoLivre||'')+'</textarea></div>'+
+    '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--muted);margin-bottom:16px"><input type="checkbox" id="inl-edit-img" '+(os.hasImagem?'checked':'')+' style="width:15px;height:15px;accent-color:var(--accent)"> Esta OS tem imagem (espaço reservado)</label>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+      '<button class="btn btn-primary btn-sm" onclick="inlSalvarOS('+pi+','+oi+')">Salvar</button>'+
+      '<button class="btn btn-sm btn-ghost" onclick="inlGerarComTextoOS('+pi+','+oi+')" style="color:var(--accent)">✦ Gerar com IA</button>'+
+      '<button class="btn btn-sm btn-ghost" onclick="document.getElementById(\'inl-edit-overlay\').remove()">Cancelar</button>'+
+    '</div>'+
+  '</div>'+
+  '<div style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:399" onclick="document.getElementById(\'inl-edit-overlay\').remove()"></div>';
+  var overlay=document.createElement('div');overlay.id='inl-edit-overlay';overlay.innerHTML=html;document.body.appendChild(overlay);
+}
+
+function inlSetBadge(pi,oi,badge){
+  var os=INL_PRODUTOS[pi]&&INL_PRODUTOS[pi].oss[oi];if(!os)return;
+  os.badge=badge;
+  Object.keys(BOL_BADGE_STYLES).forEach(function(k){
+    var el=document.getElementById('inl-badge-'+k);if(!el)return;
+    var bs=BOL_BADGE_STYLES[k];el.style.borderColor=k===badge?bs.color:'transparent';
+  });
+}
+
+function inlSalvarOS(pi,oi){
+  var os=INL_PRODUTOS[pi]&&INL_PRODUTOS[pi].oss[oi];if(!os)return;
+  os.titulo=document.getElementById('inl-edit-titulo').value.trim()||os.titulo;
+  os.descricao=document.getElementById('inl-edit-desc').value;
+  os.textoLivre=document.getElementById('inl-edit-texto').value;
+  os.hasImagem=document.getElementById('inl-edit-img').checked;
+  os.aprovado=!!os.titulo&&!!os.descricao;
+  document.getElementById('inl-edit-overlay').remove();
+  inlRenderProdutos();toast('OS salva');
+}
+
+async function inlGerarComTextoOS(pi,oi){
+  var os=INL_PRODUTOS[pi]&&INL_PRODUTOS[pi].oss[oi];if(!os)return;
+  var texto=(document.getElementById('inl-edit-texto')&&document.getElementById('inl-edit-texto').value.trim())||'';
+  if(!texto){toast('Preencha o texto livre antes de gerar','err');return}
+  var apiKey=localStorage.getItem('vs_bol_apikey')||'';
+  var keyEl=document.getElementById('bol-api-key');if(keyEl)apiKey=keyEl.value.trim()||apiKey;
+  if(!apiKey){toast('Configure a chave de API na aba Boletim E-mail','err');return}
+  toast('✦ IA gerando...');
+  try{
+    var prompt='Você é redator técnico especializado em sistemas de RH da LG Lugar de Gente. Com base no texto abaixo, gere para o boletim inline (produto: '+os.titulo+'):\n1. TÍTULO curto (máximo 8 palavras)\n2. DESCRIÇÃO de 2-3 frases com palavras-chave em <strong>negrito</strong>\n3. TIPO: "novo","melhoria","legal","ajuste"\n\nTexto:\n"""\n'+texto+'\n"""\n\nJSON apenas:\n{"titulo":"...","descricao":"...","badge":"melhoria"}';
+    var response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:800,messages:[{role:'user',content:prompt}]})});
+    if(!response.ok){var e=await response.json();throw new Error(e.error&&e.error.message||'Erro '+response.status)}
+    var data=await response.json();
+    var txt=data.content.map(function(c){return c.text||''}).join('');
+    var result=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    var tEl=document.getElementById('inl-edit-titulo');if(tEl)tEl.value=result.titulo;
+    var dEl=document.getElementById('inl-edit-desc');if(dEl)dEl.value=result.descricao;
+    inlSetBadge(pi,oi,result.badge||'melhoria');os.badge=result.badge||'melhoria';
+    toast('✦ Sugestão aplicada — revise e salve');
+  }catch(err){toast('Erro IA: '+err.message,'err')}
+}
+
+function inlGerarHTML(){
+  if(!INL_PRODUTOS.length){toast('Adicione ao menos um produto','err');return}
+  var versao=document.getElementById('inl-versao').value||'VERSÃO ATUAL';
+  var entrega=document.getElementById('inl-entrega').value;
+  var link=document.getElementById('inl-link').value||'https://centraldocliente.lg.com.br';
+  var intro=document.getElementById('inl-intro').value||'Esta versão chega para tornar sua rotina mais ágil, segura e estratégica. Selecione um produto abaixo para conferir as melhorias.';
+  var entregaFmt=entrega?new Date(entrega+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}):'';
+
+  // Gerar HTML da Home (Step 0) - 700x400, apenas tabelas+inline styles, sem style/meta/link
+  var prodCards=INL_PRODUTOS.map(function(p,pi){
+    var qtd=p.oss.length;
+    return'<td style="padding:4px" valign="top" width="'+(Math.floor(100/Math.max(INL_PRODUTOS.length,1)))+'%">'+
+    '<div style="background-color:#ffffff;border-radius:8px;border:1px solid #e5eaf1;padding:10px 12px">'+
+    '<div style="background-color:#fff4e0;border-radius:8px;color:#b86f00;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:bold;padding:2px 7px">'+qtd+' melhoria'+(qtd!==1?'s':'')+'</div>'+
+    '<div style="color:#0f1f35;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;height:34px;line-height:1.3;margin-top:6px;overflow:hidden">'+p.produto+'</div>'+
+    '<div class="inmplayer-button inmplayer-button-inline" onclick="inline_manual_player.goToStep('+(pi+1)+')" style="background-color:#ffffff;border-radius:8px;color:#1b5ead;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:bold;padding:2px 17px;cursor:pointer">Ver detalhes &rarr;</div>'+
+    '</div></td>';
+  }).join('\n');
+
+  var homeHTML='<table align="center" border="0" cellpadding="0" cellspacing="0" style="background-color:#ffffff;font-family:Arial,Helvetica,sans-serif;width:700px">'+
+  '<tbody>'+
+  '<tr><td bgcolor="#1B5EAD" style="padding:11px 20px">'+
+    '<table border="0" cellpadding="0" cellspacing="0" style="width:100%"><tbody><tr>'+
+      '<td align="left" style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold">Boletim de Atualiza&ccedil;&otilde;es</td>'+
+      '<td align="right" style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:11px">Entregue em '+entregaFmt+'</td>'+
+    '</tr></tbody></table></td></tr>'+
+  '<tr><td align="center" style="padding:14px 20px 8px 20px">'+
+    '<div style="background-color:#fff4e0;border-radius:10px;color:#b86f00;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:10.5px;font-weight:bold;letter-spacing:1.4px;padding:3px 11px">'+versao.toUpperCase()+'</div>'+
+    '<div style="color:#0f1f35;font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:bold;line-height:1.15;margin-top:8px">Novidades dispon&iacute;veis em <span style="color:#1b5ead">nossos produtos</span></div>'+
+    '<div style="color:#5c6b7e;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;line-height:1.45;margin:6px auto 0;max-width:540px">'+intro+'</div>'+
+  '</td></tr>'+
+  '<tr><td style="padding:8px 16px 4px 16px">'+
+    '<table border="0" cellpadding="0" cellspacing="0" style="width:100%"><tbody><tr>'+prodCards+'</tr></tbody></table>'+
+  '</td></tr>'+
+  '<tr><td align="center" style="padding:10px 20px 14px 20px">'+
+    '<span style="color:#5c6b7e;font-family:Arial,Helvetica,sans-serif;font-size:12px">Quer ver a lista completa de melhorias?</span>'+
+    '<a href="'+link+'" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;color:#1B5EAD;text-decoration:none;margin-left:6px" target="_blank">Conferir vers&atilde;o completa &uarr;</a>'+
+  '</td></tr>'+
+  '</tbody></table>';
+
+  document.getElementById('inl-html-home').textContent=homeHTML;
+
+  // Gerar HTML por produto (Step 1, 2, ...)
+  var prodOutputs=INL_PRODUTOS.map(function(p,pi){
+    var melhorias=p.oss.map(function(os,i){
+      var badge=BOL_BADGE_STYLES[os.badge]||BOL_BADGE_STYLES.melhoria;
+      return'<tr><td bgcolor="#FFFFFF" style="padding:0 32px 14px 32px">'+
+        '<table bgcolor="#FFFFFF" border="1" cellpadding="0" cellspacing="0" style="border-radius:12px;border:1px solid #e5eaf1;width:100%"><tbody>'+
+        '<tr><td style="padding:24px 28px 20px 28px">'+
+          '<table border="0" cellpadding="0" cellspacing="0" style="width:100%"><tbody><tr>'+
+            '<td style="padding-right:14px" valign="top" width="44">'+
+              '<table border="0" cellpadding="0" cellspacing="0"><tbody><tr>'+
+                '<td align="center" bgcolor="'+badge.bg+'" height="30" style="border-radius:8px;color:'+badge.color+';font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;height:30px;width:30px" valign="middle" width="30">'+(String(i+1).padStart(2,'0'))+'</td>'+
+              '</tr></tbody></table>'+
+            '</td>'+
+            '<td valign="top"><h3 style="color:#0f1f35;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;line-height:1.35;padding:4px 0 0 0">'+os.titulo+'</h3></td>'+
+          '</tr></tbody></table>'+
+        '</td></tr>'+
+        '<tr><td style="color:#2c3e50;font-family:Arial,Helvetica,sans-serif;font-size:13.5px;line-height:1.7;padding:0 28px 26px 70px">'+os.descricao+'</td></tr>'+
+        '</tbody></table></td></tr>';
+    }).join('\n');
+
+    var prodHTML='<table align="center" border="0" cellpadding="0" cellspacing="0" style="font-family:Arial,Helvetica,sans-serif;width:600px"><tbody>'+
+      '<tr><td align="left" bgcolor="#1B5EAD" style="border-radius:6px 6px 0 0;padding:18px 28px">'+
+        '<table border="0" cellpadding="0" cellspacing="0" style="width:100%"><tbody><tr>'+
+          '<td align="left" style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;letter-spacing:0.3px">Boletim de Atualiza&ccedil;&otilde;es<div style="color:#a8c6e8;font-size:12px;font-weight:normal;margin-top:3px">'+p.produto+'</div></td>'+
+          '<td align="right" style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:12px">Entregue em '+entregaFmt+'</td>'+
+        '</tr></tbody></table></td></tr>'+
+      '<tr><td bgcolor="#FFFFFF" style="padding:16px 32px 0 32px">'+
+        '<div class="inmplayer-button inmplayer-button-inline" onclick="inline_manual_player.goToStep(0)" style="background-color:#ffffff;border-radius:8px;color:#1b5ead;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;padding:2px 17px;cursor:pointer">&larr; Voltar para a Home</div>'+
+      '</td></tr>'+
+      '<tr><td bgcolor="#FFFFFF" style="padding:20px 32px 24px 32px">'+
+        '<table bgcolor="#FFFFFF" border="1" cellpadding="0" cellspacing="0" style="border-radius:12px;border:1px solid #e5eaf1;width:100%"><tbody><tr><td style="padding:28px 30px">'+
+          '<table border="0" cellpadding="0" cellspacing="0" style="width:100%"><tbody><tr>'+
+            '<td style="padding-right:18px" valign="top" width="76">'+
+              '<table border="0" cellpadding="0" cellspacing="0"><tbody><tr>'+
+                '<td align="center" bgcolor="#1B5EAD" height="58" style="border-radius:14px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:bold;height:58px;width:58px" valign="middle" width="58">★</td>'+
+              '</tr></tbody></table></td>'+
+            '<td valign="top">'+
+              '<table border="0" cellpadding="0" cellspacing="0"><tbody><tr><td bgcolor="#FFF4E0" style="border-radius:11px;color:#b86f00;font-family:Arial,Helvetica,sans-serif;font-size:10.5px;font-weight:bold;letter-spacing:1.4px;padding:4px 11px">'+versao.toUpperCase()+'</td></tr></tbody></table>'+
+              '<h1 style="color:#0f1f35;font-family:Arial,Helvetica,sans-serif;font-size:22px;font-weight:bold;line-height:1.2;margin:12px 0;padding:0">'+p.produto+'</h1>'+
+              '<div style="color:#5c6b7e;font-family:Arial,Helvetica,sans-serif;font-size:13.5px;line-height:1.55">Confira as melhorias entregues neste produto nesta vers&atilde;o.</div>'+
+            '</td>'+
+          '</tr></tbody></table></td></tr></tbody></table></td></tr>'+
+      '<tr><td bgcolor="#FFFFFF" style="padding:8px 36px 14px 36px">'+
+        '<table border="0" cellpadding="0" cellspacing="0"><tbody><tr>'+
+          '<td bgcolor="#1B5EAD" style="line-height:1px;width:4px" width="4">&nbsp;<br>&nbsp;</td>'+
+          '<td style="color:#2c3e50;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;font-weight:bold;letter-spacing:1.5px;padding-left:10px">MELHORIAS DESTA VERS&Atilde;O</td>'+
+        '</tr></tbody></table></td></tr>'+
+      melhorias+
+      '<tr><td bgcolor="#FFFFFF" style="padding:0 32px 32px 32px">'+
+        '<table bgcolor="#1B5EAD" border="0" cellpadding="0" cellspacing="0" style="border-radius:12px;width:100%"><tbody><tr><td style="padding:24px 28px">'+
+          '<table border="0" cellpadding="0" cellspacing="0" style="width:100%"><tbody><tr>'+
+            '<td style="color:#ffffff" valign="middle">'+
+              '<div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;line-height:1.3;margin-bottom:4px">Confira melhorias em outros produtos</div>'+
+              '<div style="color:#c8d9ee;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;line-height:1.5">Volte para a home e selecione outro produto desta vers&atilde;o.</div>'+
+            '</td>'+
+            '<td align="right" valign="middle" width="170">'+
+              '<table border="0" cellpadding="0" cellspacing="0"><tbody><tr>'+
+                '<td bgcolor="#FFFFFF" style="border-radius:6px">'+
+                  '<div class="inmplayer-button inmplayer-button-inline" onclick="inline_manual_player.goToStep(0)" style="display:inline-block;padding:10px 18px;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;font-weight:bold;color:#1B5EAD;text-decoration:none;cursor:pointer">&larr; Ver outros produtos</div>'+
+                '</td>'+
+              '</tr></tbody></table>'+
+            '</td>'+
+          '</tr></tbody></table></td></tr></tbody></table></td></tr>'+
+      '</tbody></table>';
+
+    return{produto:p.produto,step:pi+1,html:prodHTML};
+  });
+
+  // Exibir outputs dos produtos
+  var outEl=document.getElementById('inl-produtos-outputs');
+  outEl.innerHTML=prodOutputs.map(function(o){
+    return'<div style="margin-bottom:12px">'+
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between">'+
+        '<span>'+o.produto+' (Step '+o.step+'):</span>'+
+        '<button class="btn btn-xs btn-ghost" onclick="inlCopiarHTML('+o.step+')">📋 Copiar</button>'+
+      '</div>'+
+      '<div id="inl-prod-out-'+o.step+'" style="background:#0a0a0d;border:1px solid var(--border2);border-radius:var(--radius-lg);padding:12px;font-family:var(--mono);font-size:11px;color:#a8b5c8;line-height:1.7;max-height:150px;overflow-y:auto;white-space:pre-wrap;word-break:break-all">'+escHtml(o.html)+'</div>'+
+    '</div>';
+  }).join('');
+  // guardar para download
+  window._inlProdOutputs=prodOutputs;
+
+  document.getElementById('inl-preview-panel').style.display='block';
+  document.getElementById('inl-preview-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+  toast('HTML Inline gerado! '+(INL_PRODUTOS.length+1)+' steps prontos.');
+}
+
+function inlPreview(){
+  if(!INL_PRODUTOS.length){toast('Adicione produtos primeiro','err');return}
+  inlGerarHTML();
+  var homeHtml=document.getElementById('inl-html-home').textContent;
+  document.getElementById('inl-visual-content').innerHTML=homeHtml;
+  document.getElementById('inl-visual-preview').style.display='block';
+  document.getElementById('inl-visual-preview').scrollIntoView({behavior:'smooth'});
+}
+
+function inlCopiarHTML(step){
+  var el=step===0?document.getElementById('inl-html-home'):document.getElementById('inl-prod-out-'+step);
+  if(!el)return;
+  navigator.clipboard.writeText(el.textContent||el.innerHTML).then(function(){toast('Copiado!')}).catch(function(){toast('Erro ao copiar','err')});
+}
+
+function inlDownloadAll(){
+  var homeHtml=document.getElementById('inl-html-home').textContent;
+  var all='<!-- Step 0: Home -->\n'+homeHtml+'\n\n';
+  if(window._inlProdOutputs)window._inlProdOutputs.forEach(function(o){all+='<!-- Step '+o.step+': '+o.produto+' -->\n'+o.html+'\n\n'});
+  var versao=(document.getElementById('inl-versao').value||'XX').replace(/\s/g,'-');
+  var blob=new Blob([all],{type:'text/html'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='inline_'+versao+'_todos.html';a.click();toast('Download iniciado!');
+}
+
 // ── PONTO ─────────────────────────────────────────────────────────────────────
 function setPontoTab(btn,tabId){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
