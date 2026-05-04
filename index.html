@@ -295,7 +295,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           </select>
         </div>
         <div class="metrics-row" id="dash-metrics"></div>
-        <div class="section-head"><span class="section-title">Versões ativas</span><button class="btn btn-primary btn-sm" onclick="openModal('modal-versao')">+ Nova versão</button></div>
+        <div class="section-head"><span class="section-title">Versões ativas</span></div>
         <div class="grid-2" id="dash-versoes"></div>
       </div>
 
@@ -473,7 +473,6 @@ textarea.form-input{resize:vertical;min-height:70px}
               <button class="filter-chip" onclick="setAgendaFiltro(this,'webinar')">Webinar</button>
               <button class="filter-chip" onclick="setAgendaFiltro(this,'teams')">Teams</button>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="openNovaPublicacao()">+ Nova publicação</button>
           </div>
         </div>
         <div id="agenda-legenda" class="agenda-legenda"></div>
@@ -506,6 +505,40 @@ textarea.form-input{resize:vertical;min-height:70px}
 
     </div>
   </main>
+</div>
+
+<!-- MODAL ADICIONAR PRODUTO -->
+<div class="modal-overlay" id="modal-add-produto">
+  <div class="modal" style="width:460px">
+    <div class="modal-title">Cadastrar novo produto</div>
+    <div class="form-group">
+      <label class="form-label">Nome do produto</label>
+      <input id="add-produto-nome" class="form-input" placeholder="Ex: Admissão Digital" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Linha de produto</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+        <div id="add-produto-linha-gt" onclick="selectLinhaProduto('gt')" style="cursor:pointer;padding:12px 14px;border-radius:var(--radius-lg);border:2px solid var(--accent);background:var(--accent-glow);display:flex;align-items:center;gap:10px;transition:all .15s">
+          <span style="width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0"></span>
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--accent)">Gestão de Talentos</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:1px">Admissão, Desempenho, LMS…</div>
+          </div>
+        </div>
+        <div id="add-produto-linha-pag" onclick="selectLinhaProduto('pag')" style="cursor:pointer;padding:12px 14px;border-radius:var(--radius-lg);border:2px solid var(--border2);background:var(--card2);display:flex;align-items:center;gap:10px;transition:all .15s">
+          <span style="width:10px;height:10px;border-radius:50%;background:var(--green-text);flex-shrink:0;opacity:.4"></span>
+          <div>
+            <div style="font-size:13px;font-weight:500;color:var(--muted)">Pagadoria</div>
+            <div style="font-size:11px;color:var(--hint);margin-top:1px">Folha, Ponto, eSocial…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-produto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarAddProduto()">Adicionar produto</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL ADICIONAR OS BOLETIM -->
@@ -741,12 +774,43 @@ function renderProdutos(){
   }).join('');
   populateProdutoSel();
 }
+var _addProdutoLinha='gt';
+function selectLinhaProduto(linha){
+  _addProdutoLinha=linha;
+  var gtEl=document.getElementById('add-produto-linha-gt');
+  var pagEl=document.getElementById('add-produto-linha-pag');
+  if(!gtEl||!pagEl)return;
+  if(linha==='gt'){
+    gtEl.style.border='2px solid var(--accent)';gtEl.style.background='var(--accent-glow)';
+    gtEl.querySelector('div>.font-size\\:13px, div>div:first-child').style.color='var(--accent)';
+    gtEl.querySelector('span').style.opacity='1';
+    pagEl.style.border='2px solid var(--border2)';pagEl.style.background='var(--card2)';
+    pagEl.querySelector('span').style.opacity='.4';
+  }else{
+    pagEl.style.border='2px solid var(--green-text)';pagEl.style.background='rgba(62,207,142,.08)';
+    pagEl.querySelector('span').style.opacity='1';
+    gtEl.style.border='2px solid var(--border2)';gtEl.style.background='var(--card2)';
+    gtEl.querySelector('span').style.opacity='.4';
+  }
+}
 function addProduto(){
-  var n=prompt('Nome do produto:');if(!n||!n.trim())return;
-  var nome=n.trim();
-  var grupo=confirm('Este produto pertence à Pagadoria?\n\nClique "OK" para Pagadoria\nClique "Cancelar" para Gestão de Talentos')?'Pagadoria':'Gestão de Talentos';
+  _addProdutoLinha='gt';
+  document.getElementById('add-produto-nome').value='';
+  // Reset visual
+  var gtEl=document.getElementById('add-produto-linha-gt');
+  var pagEl=document.getElementById('add-produto-linha-pag');
+  if(gtEl){gtEl.style.border='2px solid var(--accent)';gtEl.style.background='var(--accent-glow)';gtEl.querySelector('span').style.opacity='1';}
+  if(pagEl){pagEl.style.border='2px solid var(--border2)';pagEl.style.background='var(--card2)';pagEl.querySelector('span').style.opacity='.4';}
+  openModal('modal-add-produto');
+  setTimeout(function(){var el=document.getElementById('add-produto-nome');if(el)el.focus();},100);
+}
+function confirmarAddProduto(){
+  var nome=document.getElementById('add-produto-nome').value.trim();
+  if(!nome){toast('Informe o nome do produto','err');return}
+  var grupo=_addProdutoLinha==='pag'?'Pagadoria':'Gestão de Talentos';
   PLINHA[nome]=grupo;
   S.prefs.produtos.push(nome);save();renderProdutos();
+  closeModal('modal-add-produto');
   toast('Produto "'+nome+'" adicionado em '+grupo);
 }
 function removeProduto(i){S.prefs.produtos.splice(i,1);save();renderProdutos()}
@@ -1193,11 +1257,11 @@ async function bolGerarComTexto(osId){
   var apiKey=(document.getElementById('bol-api-key')&&document.getElementById('bol-api-key').value.trim())||localStorage.getItem('vs_bol_apikey')||'';
   if(!apiKey){os._gerando=false;bolRerenderItem(os);toast('Configure a chave de API no cabeçalho','err');return}
   try{
-    var prompt='Você é redator técnico especializado em sistemas de RH da LG Lugar de Gente. Com base no texto abaixo sobre a OS '+os.num+' ('+os.produto+'), gere para o boletim de versão:\n1. TÍTULO curto (máximo 8 palavras, direto ao ponto)\n2. DESCRIÇÃO de 2-3 frases: linguagem clara para o usuário final, benefícios em destaque, palavras-chave em <strong>negrito HTML</strong>. Não use jargões técnicos.\n3. TIPO: "novo" (funcionalidade inédita), "melhoria" (aprimoramento), "legal" (conformidade legal/fiscal), "ajuste" (correção)\n\nTexto fornecido:\n"""\n'+texto+'\n"""\n\nResponda APENAS em JSON sem markdown:\n{"titulo":"...","descricao":"...","badge":"melhoria"}';
+    var prompt='Atue como Product Marketing Manager / Product Owner B2B SaaS, especialista em transformar propostas técnicas de evolução de produto em comunicados comerciais claros, elegantes e corporativos para clientes.\n\nCom base no texto abaixo sobre a OS '+os.num+' ('+os.produto+'), gere um comunicado oficial de evolução de produto seguindo estas diretrizes:\n\nObjetivo: Transformar a melhoria técnica em comunicação de valor ao cliente, explicando: o que foi evoluído; qual necessidade operacional essa evolução atende; como ficou o comportamento do sistema; quais ganhos de experiência, consistência, governança ou produtividade a melhoria traz.\n\nEstrutura obrigatória:\n- Título: Comunicado de Evolução | [nome da melhoria]\n- Texto:\n  Prezados clientes,\n  [Abertura curta informando a disponibilização da melhoria, citando o módulo.]\n  [Parágrafo explicando objetivamente o que mudou no produto.]\n  [Parágrafo explicando o novo comportamento / funcionamento.]\n  [Parágrafo final resumindo o valor entregue ao cliente.]\n  Atenciosamente, Time de Produtos\n\nTom de voz: corporativo, comercial, elegante, objetivo, positivo, orientado a valor, sem excesso técnico, sem bullet points, sem dramatizar problema anterior, sempre suavizando "antes era ruim" para "agora está mais padronizado / mais claro / mais consistente". Redigir em português corporativo brasileiro.\n\nRegras: Não inventar funcionalidades. Não prometer impacto não comprovado. Traduzir termos técnicos para linguagem de negócio.\n\nAlém do comunicado, defina também:\n- TIPO: "novo" (funcionalidade inédita), "melhoria" (aprimoramento), "legal" (conformidade legal/fiscal), "ajuste" (correção)\n- TÍTULO CURTO: versão resumida para o card do boletim (máximo 8 palavras)\n\nTexto fornecido:\n"""\n'+texto+'\n"""\n\nResponda APENAS em JSON sem markdown:\n{"titulo":"...","descricao":"...","badge":"melhoria"}\n\nObs: o campo "descricao" deve conter o comunicado COMPLETO formatado em HTML (usando <p>, <strong> conforme necessário), e o campo "titulo" deve ser o título curto para o card.';
     var response=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:800,messages:[{role:'user',content:prompt}]})
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2000,messages:[{role:'user',content:prompt}]})
     });
     if(!response.ok){var e=await response.json();throw new Error(e.error&&e.error.message||'Erro '+response.status)}
     var data=await response.json();
@@ -1226,11 +1290,11 @@ function bolCarregarAPIKey(){
 async function bolCallAnthropicPDF(pdfB64,osNum,produto){
   var apiKey=(document.getElementById('bol-api-key').value.trim())||localStorage.getItem('vs_bol_apikey')||'';
   if(!apiKey){throw new Error('Chave de API não configurada. Insira sua chave no campo "🔑 Chave de API Anthropic" acima.')}
-  var prompt='Você é redator técnico especializado em sistemas de RH da LG Lugar de Gente. Analise a Proposta de Solução (OS '+osNum+' — '+produto+') e gere:\n1. TÍTULO curto para o boletim (máximo 8 palavras, direto ao ponto)\n2. DESCRIÇÃO de 2-3 frases: clara, focada no benefício, palavras-chave em <strong>negrito HTML</strong>\n3. TIPO: "novo" (funcionalidade inédita), "melhoria" (aprimoramento), "legal" (conformidade fiscal/legal), "ajuste" (correção)\n\nResponda APENAS em JSON sem markdown:\n{"titulo":"...","descricao":"...","badge":"melhoria"}';
+  var prompt='Atue como Product Marketing Manager / Product Owner B2B SaaS, especialista em transformar propostas técnicas de evolução de produto em comunicados comerciais claros, elegantes e corporativos para clientes.\n\nAnalise a Proposta de Solução (OS '+osNum+' — '+produto+') e gere um comunicado oficial de evolução de produto seguindo estas diretrizes:\n\nObjetivo: Transformar a melhoria técnica em comunicação de valor ao cliente, explicando: o que foi evoluído; qual necessidade operacional essa evolução atende; como ficou o comportamento do sistema; quais ganhos de experiência, consistência, governança ou produtividade a melhoria traz.\n\nEstrutura obrigatória:\n- Título: Comunicado de Evolução | [nome da melhoria]\n- Texto:\n  Prezados clientes,\n  [Abertura curta informando a disponibilização da melhoria, citando o módulo.]\n  [Parágrafo explicando objetivamente o que mudou no produto.]\n  [Parágrafo explicando o novo comportamento / funcionamento.]\n  [Parágrafo final resumindo o valor entregue ao cliente.]\n  Atenciosamente, Time de Produtos\n\nTom de voz: corporativo, comercial, elegante, objetivo, positivo, orientado a valor, sem excesso técnico, sem bullet points, sem dramatizar problema anterior, sempre suavizando "antes era ruim" para "agora está mais padronizado / mais claro / mais consistente". Redigir em português corporativo brasileiro.\n\nRegras: Não inventar funcionalidades. Não prometer impacto não comprovado. Traduzir termos técnicos para linguagem de negócio.\n\nAlém do comunicado, defina:\n- TIPO: "novo" (funcionalidade inédita), "melhoria" (aprimoramento), "legal" (conformidade legal/fiscal), "ajuste" (correção)\n- TÍTULO CURTO para o card do boletim (máximo 8 palavras)\n\nResponda APENAS em JSON sem markdown:\n{"titulo":"...","descricao":"...","badge":"melhoria"}\n\nObs: "descricao" deve conter o comunicado COMPLETO em HTML (usando <p>, <strong>), e "titulo" deve ser o título curto para o card.';
   var response=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:800,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfB64}},{type:'text',text:prompt}]}]})
+    body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2000,messages:[{role:'user',content:[{type:'document',source:{type:'base64',media_type:'application/pdf',data:pdfB64}},{type:'text',text:prompt}]}]})
   });
   if(!response.ok){var e=await response.json();throw new Error(e.error&&e.error.message||'Erro '+response.status)}
   var data=await response.json();
@@ -1485,10 +1549,10 @@ async function inlGerarComTextoOS(pi,oi){
   if(!apiKey){toast('Configure a chave de API na aba Boletim E-mail','err');return}
   toast('✦ IA gerando...');
   try{
-    var prompt='Você é redator técnico especializado em sistemas de RH da LG Lugar de Gente. Com base no texto abaixo, gere para o boletim inline (produto: '+os.titulo+'):\n1. TÍTULO curto (máximo 8 palavras)\n2. DESCRIÇÃO de 2-3 frases com palavras-chave em <strong>negrito</strong>\n3. TIPO: "novo","melhoria","legal","ajuste"\n\nTexto:\n"""\n'+texto+'\n"""\n\nJSON apenas:\n{"titulo":"...","descricao":"...","badge":"melhoria"}';
+    var prompt='Atue como Product Marketing Manager B2B SaaS. Com base no texto abaixo, gere para o boletim inline (produto: '+os.titulo+') um comunicado de evolu00e700e3o com estrutura: Prezados clientes, [abertura], [o que mudou], [novo comportamento], [valor entregue]. Atenciosamente, Time de Produtos. Tom corporativo, elegante, sem bullet points, portugu00eas corporativo brasileiro. Defina TIPO: "novo","melhoria","legal","ajuste" e T00cdTULO CURTO (m00e1x 8 palavras).\n\nTexto:\n"""\n'+texto+'\n"""\n\nJSON (descricao em HTML com <p> e <strong>):\n{"titulo":"...","descricao":"...","badge":"melhoria"}';
     var response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:800,messages:[{role:'user',content:prompt}]})});
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
     if(!response.ok){var e=await response.json();throw new Error(e.error&&e.error.message||'Erro '+response.status)}
     var data=await response.json();
     var txt=data.content.map(function(c){return c.text||''}).join('');
