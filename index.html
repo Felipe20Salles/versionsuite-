@@ -2234,7 +2234,7 @@ var CURRENT_USER=null;
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function loginGoogle(){
-  sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
+  sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+'/'}});
 }
 function confirmarLogout(){
   if(!confirm('Sair da VersionSuite?'))return;
