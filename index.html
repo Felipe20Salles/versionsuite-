@@ -761,7 +761,11 @@ var S={versoes:[],oss:[],pontos:[],publicacoes:[],filtro:'todos',bolFiltro:'todo
 var _agendaMes=new Date().getMonth(),_agendaAno=new Date().getFullYear(),_agendaFiltro='todos';
 var _editingPub=null,_editingVersao=null,_xlsxData=null,_apropState={};
 
-function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function uid(){
+  return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){
+    var r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);
+  });
+}
 function load(){
   try{
     var s=localStorage.getItem('vs4');
