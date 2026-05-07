@@ -746,6 +746,22 @@ var CORES=[
   {name:'Rosa',hex:'#ec4899',rgb:'236,72,153'},{name:'Vermelho',hex:'#ef4444',rgb:'239,68,68'},
   {name:'Teal',hex:'#14b8a6',rgb:'20,184,166'},{name:'Roxo',hex:'#a855f7',rgb:'168,85,247'}
 ];
+// Gera uma cor consistente a partir do nome — mesmo nome sempre retorna a mesma cor da paleta
+function corPorNome(nome){
+  if(!nome)return null;
+  var hash=0;
+  for(var i=0;i<nome.length;i++){hash=((hash<<5)-hash)+nome.charCodeAt(i);hash|=0;}
+  var cor=CORES[Math.abs(hash)%CORES.length];
+  return cor;
+}
+// Retorna o HTML do badge de atribuição com visual idêntico ao badge de produto
+function badgeAtribuicao(atribuicao){
+  if(!atribuicao)return'';
+  var primeiro=atribuicao.split(' ')[0];
+  var cor=corPorNome(primeiro);
+  if(!cor)return'';
+  return'<span class="badge" style="background:rgba('+cor.rgb+',.12);color:'+cor.hex+';border:1px solid rgba('+cor.rgb+',.2)">'+primeiro+'</span>';
+}
 var PROD_SEG=['Admissão Digital','Gestão de Desempenho','LMS - Treinamento','Recrutamento e Seleção','Ponto'];
 var PLINHA={'Admissão Digital':'Gestão de Talentos','Gestão de Desempenho':'Gestão de Talentos','LMS - Treinamento':'Gestão de Talentos','Recrutamento e Seleção':'Gestão de Talentos','Ponto':'Pagadoria'};
 var DIAS=['Dom.','Seg.','Ter.','Qua.','Qui.','Sex.','Sáb.'];
@@ -1005,7 +1021,7 @@ function renderKanban(){
           '<div style="display:flex;align-items:center;justify-content:space-between">'+
             '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
               '<span class="badge '+(linha==='Gestão de Talentos'?'tag-gt':'tag-pag')+'">'+os.produto+'</span>'+
-              (os.atribuicao?'<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;background:rgba(124,111,247,0.15);color:var(--accent);border:1px solid rgba(124,111,247,0.3)">'+os.atribuicao.split(' ')[0]+'</span>':'')+
+              (os.atribuicao?badgeAtribuicao(os.atribuicao):'')+
             '</div>'+
             (h>0?'<span class="os-horas-label">'+h.toFixed(1)+'h</span>':'')+
           '</div>'+
