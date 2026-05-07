@@ -1005,7 +1005,7 @@ function renderKanban(){
           '<div style="display:flex;align-items:center;justify-content:space-between">'+
             '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
               '<span class="badge '+(linha==='Gestão de Talentos'?'tag-gt':'tag-pag')+'">'+os.produto+'</span>'+
-              (os.atribuicao?'<span class="badge badge-gray" style="font-size:10px">'+os.atribuicao.split(' ')[0]+'</span>':'')+
+              (os.atribuicao?'<span style="display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;background:rgba(124,111,247,0.15);color:var(--accent);border:1px solid rgba(124,111,247,0.3)">'+os.atribuicao.split(' ')[0]+'</span>':'')+
             '</div>'+
             (h>0?'<span class="os-horas-label">'+h.toFixed(1)+'h</span>':'')+
           '</div>'+
@@ -2707,6 +2707,7 @@ document.addEventListener('visibilitychange',function(){
   }
 });
 // ── INIT ──────────────────────────────────────────────────────────────────────
+var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
 (async function(){
   // Aplicar tema padrão antes de qualquer coisa
   applyPrefs();
@@ -2715,6 +2716,7 @@ document.addEventListener('visibilitychange',function(){
   var {data:{session}}=await sb.auth.getSession();
 
   if(session&&session.user){
+    _appIniciado=true;
     CURRENT_USER=session.user;
     updateUserBadge(session.user);
     setLoadingMsg('Carregando dados...');
@@ -2729,6 +2731,9 @@ document.addEventListener('visibilitychange',function(){
   // Listener de mudança de auth (callback OAuth)
   sb.auth.onAuthStateChange(async function(event,session){
     if(event==='SIGNED_IN'&&session){
+      // Se o app já foi iniciado pelo getSession(), ignora este disparo duplicado
+      if(_appIniciado)return;
+      _appIniciado=true;
       CURRENT_USER=session.user;
       updateUserBadge(session.user);
       document.getElementById('login-screen').style.display='none';
@@ -2739,6 +2744,7 @@ document.addEventListener('visibilitychange',function(){
       mostrarApp();
       renderDash();
     }else if(event==='SIGNED_OUT'){
+      _appIniciado=false;
       CURRENT_USER=null;
       _loadedAt=0;
       S={versoes:[],oss:[],pontos:[],publicacoes:[],filtro:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
