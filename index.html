@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VersionSuite</title>
+<title>VersionSuite v9.4</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -616,7 +616,7 @@ textarea.form-input{resize:vertical;min-height:70px}
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-versao')">Cancelar</button>
-      <button class="btn btn-primary" onclick="salvarVersao()">Criar versão</button>
+      <button class="btn btn-primary" id="btn-salvar-versao" onclick="salvarVersao()">Criar versão</button>
     </div>
   </div>
 </div>
@@ -636,9 +636,10 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div class="form-group"><label class="form-label">Status inicial</label><select class="form-input" id="os-status"><option value="afazer">A fazer</option><option value="andamento">Em andamento</option><option value="concluido">Concluído</option></select></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label class="form-label">Link evidência (Redmine/SharePoint)</label><input class="form-input" id="os-link" placeholder="https://..."></div>
+      <div class="form-group"><label class="form-label">Atribuição</label><input class="form-input" id="os-atribuicao" placeholder="Nome de quem está trabalhando"></div>
       <div class="form-group"><label class="form-label">Observações</label><input class="form-input" id="os-obs" placeholder="Notas internas..."></div>
     </div>
+    <div class="form-group"><label class="form-label">Link evidência (Redmine/SharePoint)</label><input class="form-input" id="os-link" placeholder="https://..."></div>
     <div class="form-group">
       <label class="form-label">Entregas aplicáveis</label>
       <label class="form-check"><input type="checkbox" id="e-novidade" checked><span class="form-check-label">Novidade de versão</span><span class="form-check-hint">Publicação no boletim</span></label>
@@ -766,6 +767,7 @@ function uid(){
     var r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16);
   });
 }
+var _loadedAt=0;
 function load(){
   try{
     var s=localStorage.getItem('vs4');
@@ -864,7 +866,7 @@ function goScreen(name){
   var el=document.getElementById('screen-'+name);if(el)el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(function(b){if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+name+"'"))b.classList.add('active')});
   var titles={dashboard:'Dashboard',kanban:'Kanban',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda de Publicações'};
-  var acts={dashboard:'<button class="btn btn-primary btn-sm" onclick="openModal(\'modal-versao\')">+ Nova versão</button>',
+  var acts={dashboard:'<button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
     kanban:'<button class="btn btn-primary btn-sm" onclick="openNovaOS()">+ Nova OS</button>',
     boletim:'',ponto:'<button class="btn btn-primary btn-sm" onclick="openNovoRegistro()">+ Adicionar dia</button>',
     historico:'',preferencias:'',agenda:'<button class="btn btn-primary btn-sm" onclick="openNovaPublicacao()">+ Nova publicação</button>'};
@@ -1001,7 +1003,10 @@ function renderKanban(){
           '<div class="os-num">OS '+os.num+(os.link?' <a href="'+os.link+'" target="_blank" style="color:var(--accent);text-decoration:none;font-size:10px" onclick="event.stopPropagation()">↗</a>':'')+'</div>'+
           '<div class="os-title-text">'+os.titulo+'</div>'+
           '<div style="display:flex;align-items:center;justify-content:space-between">'+
-            '<span class="badge '+(linha==='Gestão de Talentos'?'tag-gt':'tag-pag')+'">'+os.produto+'</span>'+
+            '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
+              '<span class="badge '+(linha==='Gestão de Talentos'?'tag-gt':'tag-pag')+'">'+os.produto+'</span>'+
+              (os.atribuicao?'<span class="badge badge-gray" style="font-size:10px">'+os.atribuicao.split(' ')[0]+'</span>':'')+
+            '</div>'+
             (h>0?'<span class="os-horas-label">'+h.toFixed(1)+'h</span>':'')+
           '</div>'+
           '<div class="os-checks-row">'+pips+'</div>'+
@@ -1037,6 +1042,10 @@ function openNovaOS(){
   document.getElementById('modal-os-error').style.display='none';
   ['os-num','os-titulo','os-obs','os-link'].forEach(function(id){document.getElementById(id).value=''});
   document.getElementById('os-status').value='afazer';
+  // Pré-preencher atribuição com primeiro nome do usuário autenticado
+  var primeiroNome='';
+  if(CURRENT_USER){var meta=CURRENT_USER.user_metadata||{};var nomeCompleto=meta.full_name||meta.name||CURRENT_USER.email||'';primeiroNome=nomeCompleto.split(' ')[0];}
+  document.getElementById('os-atribuicao').value=primeiroNome;
   populateProdutoSel();populateVersaoSelOS();
   document.getElementById('e-novidade').checked=true;document.getElementById('e-help').checked=false;
   document.getElementById('e-tutorial').checked=false;document.getElementById('e-evidencia').checked=true;
@@ -1052,6 +1061,7 @@ function openEditOS(osId){
   document.getElementById('os-obs').value=os.obs||'';
   document.getElementById('os-link').value=os.link||'';
   document.getElementById('os-status').value=os.status;
+  document.getElementById('os-atribuicao').value=os.atribuicao||'';
   populateProdutoSel();document.getElementById('os-produto').value=os.produto;
   populateVersaoSelOS();document.getElementById('os-versao-sel').value=os.versaoId;
   document.getElementById('e-novidade').checked=!!os.entregas.novidade.aplicavel;
@@ -1073,7 +1083,8 @@ function salvarOS(){
   var old=S.editOS?S.oss.find(function(o){return o.id===S.editOS}):null;
   var data={num:num,titulo:document.getElementById('os-titulo').value.trim(),produto:document.getElementById('os-produto').value,
     status:document.getElementById('os-status').value,obs:document.getElementById('os-obs').value,
-    link:document.getElementById('os-link').value.trim(),versaoId:vid,
+    link:document.getElementById('os-link').value.trim(),atribuicao:document.getElementById('os-atribuicao').value.trim(),
+    versaoId:vid,
     entregas:{novidade:mkE(document.getElementById('e-novidade').checked,old&&old.entregas.novidade),
       help:mkE(document.getElementById('e-help').checked,old&&old.entregas.help),
       tutorial:mkE(document.getElementById('e-tutorial').checked,old&&old.entregas.tutorial),
@@ -1365,17 +1376,30 @@ function bolDownloadHTML(){
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='boletim_v'+versao+'_'+(BOL_TAB==='gt'?'GT':'Pagadoria')+'.html';a.click();toast('Download iniciado!');
 }
+function bolGetGrupoAtual(){
+  var el=document.getElementById('bol-hdr-grupo');
+  return el?el.value:'GT';
+}
 function bolSalvarRascunho(){
+  var grupo=bolGetGrupoAtual();
+  var chave='vs_bol_rascunho_'+grupo.toLowerCase();
   var dados={oss:BOL_OSS,hdr:{versao:document.getElementById('bol-hdr-versao').value,entrega:document.getElementById('bol-hdr-entrega').value,boletim:document.getElementById('bol-hdr-boletim').value,link:document.getElementById('bol-hdr-link').value}};
   // Não salvar pdfB64
   ['gt','pag'].forEach(function(t){dados.oss[t].forEach(function(o){var c=Object.assign({},o);c.pdfB64=null;return c})});
-  localStorage.setItem('vs_bol_rascunho',JSON.stringify(dados));toast('Rascunho salvo!');
+  localStorage.setItem(chave,JSON.stringify(dados));
+  var grupoLabel=grupo==='GT'?'Gestão de Talentos':'Pagadoria';
+  toast('Rascunho salvo — '+grupoLabel+'!');
 }
 function bolCarregarRascunho(){
-  var raw=localStorage.getItem('vs_bol_rascunho');if(!raw){toast('Nenhum rascunho salvo','err');return}
+  var grupo=bolGetGrupoAtual();
+  var chave='vs_bol_rascunho_'+grupo.toLowerCase();
+  var raw=localStorage.getItem(chave);
+  if(!raw){var grupoLabel=grupo==='GT'?'Gestão de Talentos':'Pagadoria';toast('Nenhum rascunho salvo para '+grupoLabel,'err');return}
   var dados=JSON.parse(raw);BOL_OSS=dados.oss||{gt:[],pag:[]};
   if(dados.hdr){document.getElementById('bol-hdr-versao').value=dados.hdr.versao||'';document.getElementById('bol-hdr-entrega').value=dados.hdr.entrega||'';document.getElementById('bol-hdr-boletim').value=dados.hdr.boletim||'';document.getElementById('bol-hdr-link').value=dados.hdr.link||''}
-  bolRenderOSList();toast('Rascunho carregado!');
+  bolRenderOSList();
+  var grupoLabel=grupo==='GT'?'Gestão de Talentos':'Pagadoria';
+  toast('Rascunho carregado — '+grupoLabel+'!');
 }
 
 function bolSlugify(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')}
@@ -2225,7 +2249,15 @@ function renderHist(){
       '<div class="hist-stat"><div class="hist-stat-val">'+horasPonto.toFixed(1)+'h</div><div class="hist-stat-lbl">Horas Ponto</div></div>'+
       '<div class="hist-stat"><div class="hist-stat-val">'+horasAprop.toFixed(1)+'h</div><div class="hist-stat-lbl">Horas Aprop.</div></div>'+
       '<div class="hist-stat"><div class="hist-stat-val">'+pct+'%</div><div class="hist-stat-lbl">Progresso</div></div>'+
-      (!v.ativa?'<button class="btn btn-xs btn-ghost" onclick="reativarVersao(\''+v.id+'\')">Reativar</button>':'')+
+      '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">'+
+        (!v.ativa?'<button class="btn btn-xs btn-ghost" onclick="reativarVersao(\''+v.id+'\')">Reativar</button>':'')+
+        '<button class="btn btn-xs btn-ghost" onclick="editarVersao(\''+v.id+'\')" title="Editar versão">'+
+          '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2l3 3-9 9H2v-3L11 2z"/></svg>'+
+        '</button>'+
+        '<button class="btn btn-xs btn-danger" onclick="excluirVersao(\''+v.id+'\')" title="Excluir versão">'+
+          '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,4 14,4"/><path d="M6,4V2h4v2"/><path d="M3,4l1,10h8l1-10"/><line x1="6" y1="7" x2="6" y2="11"/><line x1="10" y1="7" x2="10" y2="11"/></svg>'+
+        '</button>'+
+      '</div>'+
     '</div>';
   }).join('');
 }
@@ -2299,7 +2331,7 @@ async function load(){
     var {data:oss}=await sb.from('oss').select('*').order('created_at');
     S.oss=(oss||[]).map(function(o){return{
       id:o.id,num:o.num,titulo:o.titulo,produto:o.produto,
-      status:o.status,obs:o.obs||'',link:o.link||'',
+      status:o.status,obs:o.obs||'',link:o.link||'',atribuicao:o.atribuicao||'',
       versaoId:o.versao_id,entregas:o.entregas||{},
       criadaEm:o.created_at
     }});
@@ -2322,6 +2354,7 @@ async function load(){
     }});
 
     if(!S.versaoK&&S.versoes.length)S.versaoK=S.versoes[0].id;
+    _loadedAt=Date.now();
   }catch(e){console.error('Erro ao carregar:',e)}
 }
 
@@ -2347,13 +2380,20 @@ async function dbEncerrarVersao(id){
 async function dbReativarVersao(id){
   await sb.from('versoes').update({ativa:true,encerrada_em:null}).eq('id',id);
 }
+async function dbDeletarVersao(id){
+  // Deleta OSs e pontos vinculados antes de deletar a versão
+  await sb.from('oss').delete().eq('versao_id',id);
+  await sb.from('pontos').update({versao_id:null}).eq('versao_id',id);
+  var {error}=await sb.from('versoes').delete().eq('id',id);
+  if(error)throw error;
+}
 
 // OSs
 async function dbSalvarOS(os){
   var {data,error}=await sb.from('oss').upsert({
     id:os.id,versao_id:os.versaoId,num:os.num,titulo:os.titulo,
     produto:os.produto,status:os.status,obs:os.obs||'',link:os.link||'',
-    entregas:os.entregas,created_by:CURRENT_USER.id
+    atribuicao:os.atribuicao||'',entregas:os.entregas,created_by:CURRENT_USER.id
   }).select().single();
   if(error)throw error;
   return data;
@@ -2413,15 +2453,54 @@ async function dbSalvarPrefs(){
 
 // ── PATCH NAS FUNÇÕES EXISTENTES ──────────────────────────────────────────────
 
+var _editingVersaoId=null;
+
+function openNovaVersao(){
+  _editingVersaoId=null;
+  document.getElementById('modal-versao-title').textContent='Nova versão';
+  document.getElementById('btn-salvar-versao').textContent='Criar versão';
+  document.getElementById('v-nome').value='';
+  document.getElementById('v-data').value='';
+  document.getElementById('v-boletim').value='';
+  openModal('modal-versao');
+}
+
+function editarVersao(vid){
+  var v=S.versoes.find(function(x){return x.id===vid});if(!v)return;
+  _editingVersaoId=vid;
+  document.getElementById('modal-versao-title').textContent='Editar versão';
+  document.getElementById('btn-salvar-versao').textContent='Salvar alterações';
+  document.getElementById('v-nome').value=v.nome||'';
+  document.getElementById('v-data').value=v.data||'';
+  document.getElementById('v-boletim').value=v.boletim||'';
+  openModal('modal-versao');
+}
+
 function salvarVersao(){
   var nome=document.getElementById('v-nome').value.trim();if(!nome)return;
-  var v={id:uid(),nome:nome,data:document.getElementById('v-data').value||null,
-    boletim:document.getElementById('v-boletim').value||null,ativa:true};
-  dbSalvarVersao(v).then(function(saved){
-    v.id=saved.id;S.versoes.unshift(v);if(!S.versaoK)S.versaoK=v.id;
-    closeModal('modal-versao');document.getElementById('v-nome').value='';
-    renderDash();toast('Versão criada');
-  }).catch(function(e){toast('Erro: '+e.message,'err')});
+  var data=document.getElementById('v-data').value||null;
+  var boletim=document.getElementById('v-boletim').value||null;
+
+  if(_editingVersaoId){
+    // Modo edição
+    var v=S.versoes.find(function(x){return x.id===_editingVersaoId});if(!v)return;
+    v.nome=nome;v.data=data;v.boletim=boletim;
+    dbSalvarVersao(v).then(function(){
+      closeModal('modal-versao');
+      _editingVersaoId=null;
+      document.getElementById('modal-versao-title').textContent='Nova versão';
+      document.getElementById('btn-salvar-versao').textContent='Criar versão';
+      renderHist();renderDash();toast('Versão atualizada');
+    }).catch(function(e){toast('Erro: '+e.message,'err')});
+  }else{
+    // Modo criação
+    var nv={id:uid(),nome:nome,data:data,boletim:boletim,ativa:true};
+    dbSalvarVersao(nv).then(function(saved){
+      nv.id=saved.id;S.versoes.unshift(nv);if(!S.versaoK)S.versaoK=nv.id;
+      closeModal('modal-versao');document.getElementById('v-nome').value='';
+      renderDash();toast('Versão criada');
+    }).catch(function(e){toast('Erro: '+e.message,'err')});
+  }
 }
 
 function encerrarVersao(vid){
@@ -2438,6 +2517,21 @@ function reativarVersao(vid){
     var v=S.versoes.find(function(x){return x.id===vid});
     if(v){v.ativa=true;delete v.encerradaEm}
     renderHist();renderDash();toast('Versão reativada');
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function excluirVersao(vid){
+  var v=S.versoes.find(function(x){return x.id===vid});
+  if(!v)return;
+  var ossCount=S.oss.filter(function(o){return o.versaoId===vid}).length;
+  var aviso=ossCount>0?'\n⚠️ Esta versão possui '+ossCount+' OS(s) que também serão excluídas.':'';
+  if(!confirm('Excluir a versão "'+v.nome+'" permanentemente?'+aviso+'\n\nEsta ação não pode ser desfeita.'))return;
+  dbDeletarVersao(vid).then(function(){
+    S.versoes=S.versoes.filter(function(x){return x.id!==vid});
+    S.oss=S.oss.filter(function(o){return o.versaoId!==vid});
+    S.pontos.forEach(function(p){if(p.versaoId===vid)p.versaoId=null});
+    if(S.versaoK===vid)S.versaoK=S.versoes[0]?S.versoes[0].id:null;
+    renderHist();renderDash();toast('Versão excluída');
   }).catch(function(e){toast('Erro: '+e.message,'err')});
 }
 
@@ -2589,6 +2683,29 @@ function toggleTheme(){
   S.prefs.lightMode=!S.prefs.lightMode;applyPrefs();
   dbSalvarPrefs().catch(function(){});
 }
+// ── VISIBILITY API — evita reload ao trocar abas ───────────────────────────
+var _RELOAD_THRESHOLD=30*60*1000; // recarrega dados só após 30min de inatividade
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='visible'&&CURRENT_USER){
+    var agora=Date.now();
+    if(_loadedAt>0&&(agora-_loadedAt)<_RELOAD_THRESHOLD)return; // dados frescos, não faz nada
+    // Só chega aqui se ficou 30min+ fora — recarrega silenciosamente sem loading overlay
+    load().then(function(){
+      applyPrefs();
+      var telas=['dashboard','kanban','boletim','ponto','historico','preferencias','agenda'];
+      telas.forEach(function(t){
+        var el=document.getElementById('screen-'+t);
+        if(el&&el.classList.contains('active')){
+          if(t==='dashboard')renderDash();
+          if(t==='kanban')renderKanban();
+          if(t==='ponto')renderPontoList();
+          if(t==='historico')renderHist();
+          if(t==='agenda')renderAgenda();
+        }
+      });
+    }).catch(function(){});
+  }
+});
 // ── INIT ──────────────────────────────────────────────────────────────────────
 (async function(){
   // Aplicar tema padrão antes de qualquer coisa
@@ -2623,6 +2740,7 @@ function toggleTheme(){
       renderDash();
     }else if(event==='SIGNED_OUT'){
       CURRENT_USER=null;
+      _loadedAt=0;
       S={versoes:[],oss:[],pontos:[],publicacoes:[],filtro:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
         prefs:{accent:'#7c6ff7',accentRgb:'124,111,247',lightMode:false,produtos:PROD_SEG.slice()}};
       mostrarLogin();
