@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VersionSuite</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -239,6 +240,31 @@ textarea.form-input{resize:vertical;min-height:70px}
 </style>
 </head>
 <body>
+<!-- TELA DE LOGIN -->
+<div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;flex-direction:column">
+  <div style="text-align:center;max-width:360px;padding:40px 32px;background:var(--card);border:1px solid var(--border);border-radius:20px">
+    <div style="font-family:var(--mono);font-size:22px;font-weight:500;margin-bottom:6px">Version<span style="color:var(--accent)">Suite</span></div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:32px">Gestão de entregas · LG Lugar de Gente</div>
+    <button onclick="loginGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:13px 20px;background:#fff;border:1.5px solid #e0e0e8;border-radius:10px;font-size:14px;font-weight:500;color:#333;cursor:pointer;transition:all .15s;font-family:var(--font)">
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Entrar com Google
+    </button>
+    <div id="login-error" style="display:none;margin-top:14px;font-size:12px;color:var(--red-text);padding:8px 12px;background:var(--red-dim);border-radius:8px"></div>
+    <div style="font-size:11px;color:var(--hint);margin-top:20px">Acesso restrito a usuários autorizados</div>
+  </div>
+</div>
+
+<!-- LOADING OVERLAY -->
+<div id="loading-screen" style="display:flex;position:fixed;inset:0;background:var(--bg);z-index:400;align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <div style="font-family:var(--mono);font-size:20px;font-weight:500">Version<span style="color:var(--accent)">Suite</span></div>
+  <div style="display:flex;gap:6px">
+    <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink .8s step-end infinite"></div>
+    <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink .8s step-end infinite;animation-delay:.15s"></div>
+    <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);animation:blink .8s step-end infinite;animation-delay:.3s"></div>
+  </div>
+  <div style="font-size:13px;color:var(--muted)" id="loading-msg">Verificando sessão...</div>
+</div>
+
 <div class="app">
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -281,7 +307,14 @@ textarea.form-input{resize:vertical;min-height:70px}
   <main class="main">
     <div class="topbar">
       <div><div class="topbar-title" id="topbar-title">Dashboard</div><div class="topbar-sub" id="topbar-sub"></div></div>
-      <div class="topbar-actions" id="topbar-actions"></div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="topbar-actions" id="topbar-actions"></div>
+        <div id="user-badge" style="display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--card2);border-radius:20px;border:1px solid var(--border);cursor:pointer" onclick="confirmarLogout()">
+          <img id="user-avatar" style="width:22px;height:22px;border-radius:50%;display:none">
+          <span id="user-name" style="font-size:12px;color:var(--muted)">...</span>
+          <span style="font-size:10px;color:var(--hint)">Sair</span>
+        </div>
+      </div>
     </div>
     <div class="content">
 
@@ -2193,8 +2226,405 @@ function renderHist(){
   }).join('');
 }
 
+// ── SUPABASE ──────────────────────────────────────────────────────────────────
+var SUPA_URL='https://lexgxlurnqbdytzzxkmv.supabase.co';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxleGd4bHVybnFiZHl0enp4a212Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTE4OTgsImV4cCI6MjA5MzAyNzg5OH0.ku_7RG38RJqG44ZsfX82HoGfsKArl9aQ7ogAZRz9CGY';
+var sb=supabase.createClient(SUPA_URL,SUPA_KEY);
+var CURRENT_USER=null;
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+function loginGoogle(){
+  sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.href}});
+}
+function confirmarLogout(){
+  if(!confirm('Sair da VersionSuite?'))return;
+  sb.auth.signOut().then(function(){mostrarLogin()});
+}
+function mostrarLogin(){
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.querySelector('.app').style.display='none';
+}
+function mostrarApp(){
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.querySelector('.app').style.display='flex';
+}
+function setLoadingMsg(msg){
+  var el=document.getElementById('loading-msg');if(el)el.textContent=msg;
+}
+function updateUserBadge(user){
+  var meta=user.user_metadata||{};
+  var nome=meta.full_name||meta.name||user.email||'Usuário';
+  var avatar=meta.avatar_url||meta.picture||'';
+  document.getElementById('user-name').textContent=nome.split(' ')[0];
+  var img=document.getElementById('user-avatar');
+  if(avatar){img.src=avatar;img.style.display='block'}
+}
+
+// ── LOAD/SAVE (Supabase) ──────────────────────────────────────────────────────
+async function load(){
+  try{
+    setLoadingMsg('Carregando versões...');
+    var uid=CURRENT_USER.id;
+
+    // Produtos
+    var {data:prods}=await sb.from('produtos').select('*').order('nome');
+    if(prods&&prods.length){
+      S.prefs.produtos=prods.map(function(p){return p.nome});
+      prods.forEach(function(p){PLINHA[p.nome]=p.grupo});
+    }
+
+    // Preferências do usuário
+    var {data:prof}=await sb.from('profiles').select('prefs').eq('id',uid).single();
+    if(prof&&prof.prefs){
+      var pr=prof.prefs;
+      if(pr.accent){S.prefs.accent=pr.accent;S.prefs.accentRgb=pr.accentRgb||S.prefs.accentRgb}
+      if(pr.lightMode!==undefined)S.prefs.lightMode=pr.lightMode;
+    }
+
+    // Versões
+    setLoadingMsg('Carregando OSs...');
+    var {data:versoes}=await sb.from('versoes').select('*').order('created_at',{ascending:false});
+    S.versoes=(versoes||[]).map(function(v){return{
+      id:v.id,nome:v.nome,data:v.data,boletim:v.boletim,
+      ativa:v.ativa,encerradaEm:v.encerrada_em
+    }});
+
+    // OSs
+    var {data:oss}=await sb.from('oss').select('*').order('created_at');
+    S.oss=(oss||[]).map(function(o){return{
+      id:o.id,num:o.num,titulo:o.titulo,produto:o.produto,
+      status:o.status,obs:o.obs||'',link:o.link||'',
+      versaoId:o.versao_id,entregas:o.entregas||{},
+      criadaEm:o.created_at
+    }});
+
+    // Pontos (apenas do usuário)
+    setLoadingMsg('Carregando ponto...');
+    var {data:pontos}=await sb.from('pontos').select('*').eq('user_id',uid).order('data',{ascending:false});
+    S.pontos=(pontos||[]).map(function(p){return{
+      id:p.id,data:p.data,dia:p.dia||'',marcacoes:p.marcacoes||'',
+      horasTrabalhadas:parseFloat(p.horas_trabalhadas)||0,
+      versaoId:p.versao_id,apropriacoes:p.apropriacoes||[]
+    }});
+
+    // Publicações
+    setLoadingMsg('Carregando agenda...');
+    var {data:pubs}=await sb.from('publicacoes').select('*').order('inicio');
+    S.publicacoes=(pubs||[]).map(function(p){return{
+      id:p.id,titulo:p.titulo,inicio:p.inicio,fim:p.fim,
+      tipo:p.tipo||'inline',produto:p.produto||'Todos',desc:p.descricao||''
+    }});
+
+    if(!S.versaoK&&S.versoes.length)S.versaoK=S.versoes[0].id;
+  }catch(e){console.error('Erro ao carregar:',e)}
+}
+
+async function save(){
+  // save() agora é no-op — cada operação salva diretamente no Supabase
+  // mantida para compatibilidade com chamadas existentes
+}
+
+// ── OPERAÇÕES SUPABASE ────────────────────────────────────────────────────────
+
+// Versões
+async function dbSalvarVersao(v){
+  var {data,error}=await sb.from('versoes').upsert({
+    id:v.id,nome:v.nome,data:v.data||null,boletim:v.boletim||null,
+    ativa:v.ativa,encerrada_em:v.encerradaEm||null,created_by:CURRENT_USER.id
+  }).select().single();
+  if(error)throw error;
+  return data;
+}
+async function dbEncerrarVersao(id){
+  await sb.from('versoes').update({ativa:false,encerrada_em:new Date().toISOString()}).eq('id',id);
+}
+async function dbReativarVersao(id){
+  await sb.from('versoes').update({ativa:true,encerrada_em:null}).eq('id',id);
+}
+
+// OSs
+async function dbSalvarOS(os){
+  var {data,error}=await sb.from('oss').upsert({
+    id:os.id,versao_id:os.versaoId,num:os.num,titulo:os.titulo,
+    produto:os.produto,status:os.status,obs:os.obs||'',link:os.link||'',
+    entregas:os.entregas,created_by:CURRENT_USER.id
+  }).select().single();
+  if(error)throw error;
+  return data;
+}
+async function dbDeletarOS(id){
+  await sb.from('oss').delete().eq('id',id);
+}
+async function dbMoverOS(id,novoStatus){
+  await sb.from('oss').update({status:novoStatus}).eq('id',id);
+}
+async function dbToggleEntrega(id,entregas){
+  await sb.from('oss').update({entregas:entregas}).eq('id',id);
+}
+
+// Pontos
+async function dbSalvarPonto(p){
+  var {data,error}=await sb.from('pontos').upsert({
+    id:p.id,user_id:CURRENT_USER.id,versao_id:p.versaoId||null,
+    data:p.data,dia:p.dia,marcacoes:p.marcacoes,
+    horas_trabalhadas:p.horasTrabalhadas,apropriacoes:p.apropriacoes||[]
+  },{onConflict:'user_id,data'}).select().single();
+  if(error)throw error;
+  return data;
+}
+async function dbDeletarPonto(id){
+  await sb.from('pontos').delete().eq('id',id);
+}
+async function dbSalvarApropriacao(pontoId,apropriacoes){
+  await sb.from('pontos').update({apropriacoes:apropriacoes}).eq('id',pontoId);
+}
+
+// Publicações
+async function dbSalvarPublicacao(pub){
+  var {data,error}=await sb.from('publicacoes').upsert({
+    id:pub.id,titulo:pub.titulo,inicio:pub.inicio,fim:pub.fim,
+    tipo:pub.tipo,produto:pub.produto,descricao:pub.desc||'',created_by:CURRENT_USER.id
+  }).select().single();
+  if(error)throw error;
+  return data;
+}
+async function dbDeletarPublicacao(id){
+  await sb.from('publicacoes').delete().eq('id',id);
+}
+
+// Produtos
+async function dbSalvarProduto(nome,grupo){
+  await sb.from('produtos').upsert({nome:nome,grupo:grupo},{onConflict:'nome'});
+}
+async function dbDeletarProduto(nome){
+  await sb.from('produtos').delete().eq('nome',nome);
+}
+
+// Preferências
+async function dbSalvarPrefs(){
+  await sb.from('profiles').update({prefs:{accent:S.prefs.accent,accentRgb:S.prefs.accentRgb,lightMode:S.prefs.lightMode}}).eq('id',CURRENT_USER.id);
+}
+
+// ── PATCH NAS FUNÇÕES EXISTENTES ──────────────────────────────────────────────
+
+function salvarVersao(){
+  var nome=document.getElementById('v-nome').value.trim();if(!nome)return;
+  var v={id:uid(),nome:nome,data:document.getElementById('v-data').value||null,
+    boletim:document.getElementById('v-boletim').value||null,ativa:true};
+  dbSalvarVersao(v).then(function(saved){
+    v.id=saved.id;S.versoes.unshift(v);if(!S.versaoK)S.versaoK=v.id;
+    closeModal('modal-versao');document.getElementById('v-nome').value='';
+    renderDash();toast('Versão criada');
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function encerrarVersao(vid){
+  if(!confirm('Encerrar esta versão?'))return;
+  dbEncerrarVersao(vid).then(function(){
+    var v=S.versoes.find(function(x){return x.id===vid});
+    if(v){v.ativa=false;v.encerradaEm=new Date().toISOString()}
+    renderDash();toast('Versão encerrada');
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function reativarVersao(vid){
+  dbReativarVersao(vid).then(function(){
+    var v=S.versoes.find(function(x){return x.id===vid});
+    if(v){v.ativa=true;delete v.encerradaEm}
+    renderHist();renderDash();toast('Versão reativada');
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function salvarOS(){
+  var vid=document.getElementById('os-versao-sel').value||(S.versaoK)||(S.versoes[0]&&S.versoes[0].id);
+  if(!vid)return;
+  var num=document.getElementById('os-num').value.trim();
+  var errEl=document.getElementById('modal-os-error');
+  var dup=S.oss.find(function(o){return o.versaoId===vid&&o.num===num&&o.id!==S.editOS});
+  if(dup){errEl.style.display='block';errEl.textContent='OS '+num+' já cadastrada nesta versão.';return}
+  errEl.style.display='none';
+  function mkE(chk,old){return{aplicavel:chk,feito:old?old.feito:false}}
+  var old=S.editOS?S.oss.find(function(o){return o.id===S.editOS}):null;
+  var osId=S.editOS||uid();
+  var data={id:osId,num:num,titulo:document.getElementById('os-titulo').value.trim(),
+    produto:document.getElementById('os-produto').value,status:document.getElementById('os-status').value,
+    obs:document.getElementById('os-obs').value,link:document.getElementById('os-link').value.trim(),
+    versaoId:vid,criadaEm:old?old.criadaEm:new Date().toISOString(),
+    entregas:{novidade:mkE(document.getElementById('e-novidade').checked,old&&old.entregas.novidade),
+      help:mkE(document.getElementById('e-help').checked,old&&old.entregas.help),
+      tutorial:mkE(document.getElementById('e-tutorial').checked,old&&old.entregas.tutorial),
+      evidencia:mkE(document.getElementById('e-evidencia').checked,old&&old.entregas.evidencia)}};
+  dbSalvarOS(data).then(function(){
+    if(S.editOS){var i=S.oss.findIndex(function(o){return o.id===S.editOS});if(i>-1)S.oss[i]=data}
+    else S.oss.push(data);
+    closeModal('modal-os');S.editOS=null;renderKanban();renderDash();toast('OS salva');
+  }).catch(function(e){errEl.style.display='block';errEl.textContent='Erro: '+e.message});
+}
+
+function deleteOS(osId){
+  if(!confirm('Remover esta OS?'))return;
+  dbDeletarOS(osId).then(function(){
+    S.oss=S.oss.filter(function(o){return o.id!==osId});
+    S.pontos.forEach(function(p){p.apropriacoes=(p.apropriacoes||[]).filter(function(a){return a.osId!==osId})});
+    renderKanban();renderDash();toast('OS removida');
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function moveOS(osId,newStatus){
+  var os=S.oss.find(function(o){return o.id===osId});if(!os)return;
+  dbMoverOS(osId,newStatus).then(function(){
+    os.status=newStatus;renderKanban();renderDash();toast('Movido: '+statusLabel(newStatus));
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function toggleE(osId,key){
+  var os=S.oss.find(function(o){return o.id===osId});if(!os||!os.entregas[key].aplicavel)return;
+  os.entregas[key].feito=!os.entregas[key].feito;
+  if(os.entregas[key].feito&&os.status==='afazer')os.status='andamento';
+  if(Object.values(os.entregas).filter(function(e){return e.aplicavel}).every(function(e){return e.feito}))os.status='concluido';
+  dbToggleEntrega(osId,os.entregas).then(function(){
+    return dbMoverOS(osId,os.status);
+  }).then(function(){
+    renderKanban();renderDash();
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function setStatus(osId,status){
+  var os=S.oss.find(function(o){return o.id===osId});if(!os)return;
+  dbMoverOS(osId,status).then(function(){
+    os.status=status;renderKanban();renderDash();
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function salvarPonto(){
+  var data=document.getElementById('p-data').value;if(!data)return;
+  var ms=['p-m1','p-m2','p-m3','p-m4'].map(function(id){return document.getElementById(id).value}).filter(function(m){return/^\d{2}:\d{2}$/.test(m)});
+  var marcacoes=ms.join(' '),horasTrabalhadas=ms.length===4?calcHorasStr(marcacoes):0;
+  var dia=document.getElementById('p-dia').value;
+  var versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
+  var editId=document.getElementById('modal-ponto').dataset.editId;
+  var pontoId=editId||uid();
+  var reg={id:pontoId,data:data,dia:dia,marcacoes:marcacoes,horasTrabalhadas:horasTrabalhadas,versaoId:versaoId,apropriacoes:[]};
+  if(editId){var ep=S.pontos.find(function(p){return p.id===editId});if(ep)reg.apropriacoes=ep.apropriacoes||[]}
+  dbSalvarPonto(reg).then(function(saved){
+    reg.id=saved.id;
+    var ei=S.pontos.findIndex(function(p){return p.id===editId||p.data===data});
+    if(ei>-1)S.pontos[ei]=reg;
+    else{S.pontos.push(reg);S.pontos.sort(function(a,b){return b.data.localeCompare(a.data)})}
+    closeModal('modal-ponto');renderPontoList();renderDash();
+    toast(editId?'Registro atualizado':'Ponto salvo');
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function excluirPonto(id){
+  if(!confirm('Excluir este registro de ponto e todas as apropriações do dia?'))return;
+  dbDeletarPonto(id).then(function(){
+    S.pontos=S.pontos.filter(function(p){return p.id!==id});
+    delete _apropState[id];renderPontoList();renderDash();toast('Registro excluído');
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function saveAprop(pid){
+  var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;
+  var st=getApropState(p);var h=p.horasTrabalhadas||0;
+  p.apropriacoes=st.oss.filter(function(x){return x.osId}).map(function(x){return{osId:x.osId,horas:parseFloat((h*x.pct/100).toFixed(2))}});
+  st.editing=false;delete st._backup;
+  dbSalvarApropriacao(pid,p.apropriacoes).then(function(){
+    redrawApropDay(p);renderPontoList();renderDash();renderKanban();toast('Apropriação salva');
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function salvarPublicacao(){
+  var titulo=document.getElementById('pub-titulo').value.trim();
+  var inicio=document.getElementById('pub-inicio').value;var fim=document.getElementById('pub-fim').value;
+  if(!titulo||!inicio||!fim){toast('Preencha título, início e fim','err');return}
+  var pub={id:_editingPub||uid(),titulo:titulo,inicio:inicio,fim:fim,
+    produto:document.getElementById('pub-produto').value,
+    tipo:document.getElementById('pub-tipo').value,
+    desc:document.getElementById('pub-desc').value};
+  dbSalvarPublicacao(pub).then(function(){
+    if(_editingPub){var i=S.publicacoes.findIndex(function(p){return p.id===_editingPub});if(i>-1)S.publicacoes[i]=pub}
+    else S.publicacoes.push(pub);
+    closeModal('modal-pub');renderAgenda();toast('Publicação salva');
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function deletarPublicacao(){
+  if(!_editingPub||!confirm('Remover esta publicação?'))return;
+  dbDeletarPublicacao(_editingPub).then(function(){
+    S.publicacoes=S.publicacoes.filter(function(p){return p.id!==_editingPub});
+    closeModal('modal-pub');renderAgenda();toast('Publicação removida');
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function confirmarAddProduto(){
+  var nome=document.getElementById('add-produto-nome').value.trim();
+  if(!nome){toast('Informe o nome do produto','err');return}
+  var grupo=_addProdutoLinha==='pag'?'Pagadoria':'Gestão de Talentos';
+  dbSalvarProduto(nome,grupo).then(function(){
+    PLINHA[nome]=grupo;S.prefs.produtos.push(nome);
+    renderProdutos();closeModal('modal-add-produto');toast('Produto "'+nome+'" adicionado em '+grupo);
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function removeProduto(i){
+  var nome=S.prefs.produtos[i];if(!nome)return;
+  dbDeletarProduto(nome).then(function(){
+    S.prefs.produtos.splice(i,1);delete PLINHA[nome];renderProdutos();toast('Produto removido');
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function setAccent(hex,rgb){
+  S.prefs.accent=hex;S.prefs.accentRgb=rgb;applyPrefs();renderPalette();
+  dbSalvarPrefs().catch(function(){});
+}
+
+function toggleTheme(){
+  S.prefs.lightMode=!S.prefs.lightMode;applyPrefs();
+  dbSalvarPrefs().catch(function(){});
+}
 // ── INIT ──────────────────────────────────────────────────────────────────────
-load();applyPrefs();renderDash();
+(async function(){
+  // Aplicar tema padrão antes de qualquer coisa
+  applyPrefs();
+
+  // Verificar sessão
+  var {data:{session}}=await sb.auth.getSession();
+
+  if(session&&session.user){
+    CURRENT_USER=session.user;
+    updateUserBadge(session.user);
+    setLoadingMsg('Carregando dados...');
+    await load();
+    applyPrefs();
+    mostrarApp();
+    renderDash();
+  }else{
+    mostrarLogin();
+  }
+
+  // Listener de mudança de auth (callback OAuth)
+  sb.auth.onAuthStateChange(async function(event,session){
+    if(event==='SIGNED_IN'&&session){
+      CURRENT_USER=session.user;
+      updateUserBadge(session.user);
+      document.getElementById('login-screen').style.display='none';
+      document.getElementById('loading-screen').style.display='flex';
+      setLoadingMsg('Carregando dados...');
+      await load();
+      applyPrefs();
+      mostrarApp();
+      renderDash();
+    }else if(event==='SIGNED_OUT'){
+      CURRENT_USER=null;
+      S={versoes:[],oss:[],pontos:[],publicacoes:[],filtro:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
+        prefs:{accent:'#7c6ff7',accentRgb:'124,111,247',lightMode:false,produtos:PROD_SEG.slice()}};
+      mostrarLogin();
+    }
+  });
+})();
 </script>
 </body>
 </html>
