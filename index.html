@@ -1087,7 +1087,6 @@ function openEditOS(osId){
   openModal('modal-os');
 }
 function salvarOS(){
-  // Usa versão do modal (permite migrar OS entre versões)
   var vid=document.getElementById('os-versao-sel').value||(S.versaoK)||(S.versoes[0]&&S.versoes[0].id);
   if(!vid)return;
   var num=document.getElementById('os-num').value.trim();
@@ -1097,17 +1096,25 @@ function salvarOS(){
   errEl.style.display='none';
   function mkE(chk,old){return{aplicavel:chk,feito:old?old.feito:false}}
   var old=S.editOS?S.oss.find(function(o){return o.id===S.editOS}):null;
-  var data={num:num,titulo:document.getElementById('os-titulo').value.trim(),produto:document.getElementById('os-produto').value,
-    status:document.getElementById('os-status').value,obs:document.getElementById('os-obs').value,
-    link:document.getElementById('os-link').value.trim(),atribuicao:document.getElementById('os-atribuicao').value.trim(),
+  var osId=S.editOS||uid();
+  var data={id:osId,num:num,titulo:document.getElementById('os-titulo').value.trim(),
+    produto:document.getElementById('os-produto').value,
+    status:document.getElementById('os-status').value,
+    obs:document.getElementById('os-obs').value,
+    link:document.getElementById('os-link').value.trim(),
+    atribuicao:document.getElementById('os-atribuicao').value.trim(),
     versaoId:vid,
+    criadaEm:old?old.criadaEm:new Date().toISOString(),
     entregas:{novidade:mkE(document.getElementById('e-novidade').checked,old&&old.entregas.novidade),
       help:mkE(document.getElementById('e-help').checked,old&&old.entregas.help),
       tutorial:mkE(document.getElementById('e-tutorial').checked,old&&old.entregas.tutorial),
       evidencia:mkE(document.getElementById('e-evidencia').checked,old&&old.entregas.evidencia)}};
-  if(S.editOS){var i=S.oss.findIndex(function(o){return o.id===S.editOS});if(i>-1)S.oss[i]=Object.assign({},S.oss[i],data)}
-  else S.oss.push(Object.assign({id:uid(),criadaEm:new Date().toISOString()},data));
-  save();closeModal('modal-os');S.editOS=null;renderKanban();renderDash();toast('OS salva');
+  dbSalvarOS(data).then(function(saved){
+    data.id=saved.id;
+    if(S.editOS){var i=S.oss.findIndex(function(o){return o.id===S.editOS});if(i>-1)S.oss[i]=data}
+    else S.oss.push(data);
+    closeModal('modal-os');S.editOS=null;renderKanban();renderDash();toast('OS salva');
+  }).catch(function(e){toast('Erro ao salvar OS: '+e.message,'err')});
 }
 
 // ── BOLETIM IA INTEGRADO ──────────────────────────────────────────────────────
