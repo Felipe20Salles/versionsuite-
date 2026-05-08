@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VersionSuite v10</title>
+<title>VersionSuite v10.2</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -469,19 +469,34 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div id="screen-ponto" class="screen">
         <div class="tabs">
           <div class="tab active" onclick="setPontoTab(this,'tab-registro')">Registro diário</div>
-          <div class="tab" onclick="setPontoTab(this,'tab-importar')">Importar CSV</div>
+          <div class="tab" onclick="setPontoTab(this,'tab-importar')">Importar Ponto</div>
           <div class="tab" onclick="setPontoTab(this,'tab-aprop')">Apropriação</div>
         </div>
         <div id="tab-registro"><div id="ponto-list"></div></div>
         <div id="tab-importar" style="display:none">
           <div class="card">
-            <div style="font-size:13px;font-weight:500;margin-bottom:6px">Importar relatório de ponto (CSV)</div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Detecta automaticamente separadores por vírgula, ponto-e-vírgula ou tab. Colunas esperadas: Data, Dia, Jor, Marcações (4 horários separados por espaço).</div>
-            <div class="ponto-import-area" onclick="document.getElementById('csv-input').click()">
-              <div style="font-size:28px;color:var(--hint);margin-bottom:8px">↑</div>
-              <div style="font-size:13px;color:var(--muted)">Clique para selecionar o arquivo CSV</div>
+            <div style="font-size:13px;font-weight:500;margin-bottom:4px">Importar relatório de ponto</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
+              Utilize o arquivo <strong>XLSX</strong> exportado pelo sistema LG (<em>RelatorioCartaoDePontoLayout</em>). O XLSX é mais confiável que o CSV — sem problemas de encoding ou quebras de linha.
+            </div>
+
+            <!-- Área principal: XLSX -->
+            <div class="ponto-import-area" onclick="document.getElementById('ponto-xlsx-input').click()" style="margin-bottom:10px">
+              <div style="font-size:28px;color:var(--hint);margin-bottom:8px">📊</div>
+              <div style="font-size:13px;color:var(--text);font-weight:500">Clique para importar o XLSX</div>
+              <div style="font-size:11px;color:var(--hint);margin-top:4px">RelatorioCartaoDePontoLayout · Excel (.xlsx)</div>
+            </div>
+            <input type="file" id="ponto-xlsx-input" accept=".xlsx" style="display:none" onchange="importPontoXLSX(this)">
+
+            <!-- Fallback CSV -->
+            <div style="font-size:11px;color:var(--hint);margin-bottom:6px;text-align:center">ou, se só tiver o CSV:</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <button class="btn btn-sm btn-ghost" style="flex:1;font-size:11px" onclick="document.getElementById('csv-input').click()">
+                📄 Importar CSV (modo compatibilidade)
+              </button>
             </div>
             <input type="file" id="csv-input" accept=".csv,.txt" style="display:none" onchange="importCSV(this)">
+
             <div id="import-preview"></div>
           </div>
         </div>
@@ -1314,7 +1329,21 @@ function bolRenderOSItem(os){
       '<div class="form-group"><label class="form-label">Título no boletim</label>'+
         '<input class="form-input" value="'+escHtml(os.titulo)+'" placeholder="Título que aparece no boletim" oninput="bolUpdateOS(\''+os.id+'\',\'titulo\',this.value)"></div>'+
       '<div class="form-group"><label class="form-label">Descrição</label>'+
-        '<textarea class="form-input" placeholder="Descrição da melhoria..." oninput="bolUpdateOS(\''+os.id+'\',\'descricao\',this.value)" style="min-height:80px">'+escHtml(os.descricao)+'</textarea></div>'+
+        '<div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">'+
+          // Toolbar Office-style
+          '<div style="display:flex;align-items:center;gap:2px;padding:4px 6px;background:var(--card2);border-bottom:1px solid var(--border);flex-wrap:wrap">'+
+            '<button type="button" title="Negrito" onclick="bolFormatDesc(\''+os.id+'\',\'bold\')" style="width:26px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;justify-content:center" onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'"><b>B</b></button>'+
+            '<button type="button" title="Itálico" onclick="bolFormatDesc(\''+os.id+'\',\'italic\')" style="width:26px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;font-size:13px;color:var(--text);display:flex;align-items:center;justify-content:center" onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'"><i>I</i></button>'+
+            '<button type="button" title="Sublinhado" onclick="bolFormatDesc(\''+os.id+'\',\'underline\')" style="width:26px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;font-size:13px;color:var(--text);display:flex;align-items:center;justify-content:center" onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'"><u>U</u></button>'+
+            '<div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>'+
+            '<button type="button" title="&lt;strong&gt; tag" onclick="bolFormatDesc(\''+os.id+'\',\'strong\')" style="width:46px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;font-size:10px;color:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--mono)" onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'">&lt;b&gt;</button>'+
+            '<button type="button" title="Parágrafo &lt;p&gt;" onclick="bolFormatDesc(\''+os.id+'\',\'p\')" style="width:46px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;font-size:10px;color:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--mono)" onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'">&lt;p&gt;</button>'+
+            '<div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>'+
+            '<button type="button" title="Limpar formatação" onclick="bolFormatDesc(\''+os.id+'\',\'clear\')" style="width:26px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center" onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'">✕</button>'+
+          '</div>'+
+          '<textarea id="bol-desc-'+os.id+'" placeholder="Descrição da melhoria (HTML permitido)..." oninput="bolUpdateOS(\''+os.id+'\',\'descricao\',this.value)" style="width:100%;min-height:90px;padding:10px;border:none;outline:none;background:var(--card);color:var(--text);font-size:13px;font-family:var(--font);resize:vertical;box-sizing:border-box">'+escHtml(os.descricao)+'</textarea>'+
+        '</div>'+
+      '</div>'+
       '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--muted);margin-bottom:14px">'+
         '<input type="checkbox" '+(os.hasImagem?'checked':'')+' style="width:15px;height:15px;accent-color:var(--accent)" onchange="bolUpdateOS(\''+os.id+'\',\'hasImagem\',this.checked)">'+
         'Esta OS tem imagem no boletim (espaço reservado)</label>'+
@@ -1329,6 +1358,26 @@ function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').rep
 function bolFindOS(id){return BOL_OSS[BOL_TAB].find(function(o){return o.id===id})}
 function bolToggleOS(id){var os=bolFindOS(id);if(!os)return;os.open=!os.open;var b=document.getElementById('bol-body-'+id);if(b)b.style.display=os.open?'block':'none'}
 function bolUpdateOS(id,field,val){var os=bolFindOS(id);if(!os)return;os[field]=val}
+function bolFormatDesc(id,cmd){
+  var ta=document.getElementById('bol-desc-'+id);if(!ta)return;
+  var start=ta.selectionStart,end=ta.selectionEnd;
+  var sel=ta.value.substring(start,end);
+  var before=ta.value.substring(0,start),after=ta.value.substring(end);
+  var ins='';
+  if(cmd==='bold')   ins='<strong>'+(sel||'texto')+'</strong>';
+  else if(cmd==='italic') ins='<em>'+(sel||'texto')+'</em>';
+  else if(cmd==='underline') ins='<u>'+(sel||'texto')+'</u>';
+  else if(cmd==='strong') ins='<strong>'+(sel||'texto')+'</strong>';
+  else if(cmd==='p')  ins='<p>'+(sel||'')+'</p>';
+  else if(cmd==='clear'&&sel) ins=sel.replace(/<[^>]+>/g,'');
+  else{ta.focus();return}
+  ta.value=before+ins+after;
+  // Disparar oninput para sincronizar com o estado
+  ta.dispatchEvent(new Event('input'));
+  // Reposicionar cursor após inserção
+  var pos=start+ins.length;
+  ta.setSelectionRange(pos,pos);ta.focus();
+}
 function bolSetBadge(id,badge){var os=bolFindOS(id);if(!os)return;os.badge=badge;bolRerenderItem(os)}
 function bolAprovar(id){var os=bolFindOS(id);if(!os)return;if(!os.titulo){toast('Preencha o título antes de aprovar','err');return}os.aprovado=true;os.open=false;bolRerenderItem(os);bolAtualizarProgresso()}
 function bolDesaprovar(id){var os=bolFindOS(id);if(!os)return;os.aprovado=false;os.open=true;bolRerenderItem(os);bolAtualizarProgresso()}
@@ -1375,7 +1424,7 @@ async function bolGerarComTexto(osId){
   var apiKey=(document.getElementById('bol-api-key')&&document.getElementById('bol-api-key').value.trim())||localStorage.getItem('vs_bol_apikey')||'';
   if(!apiKey){os._gerando=false;bolRerenderItem(os);toast('Configure a chave de API no cabeçalho','err');return}
   try{
-    var prompt='Atue como Product Marketing Manager / Product Owner B2B SaaS, especialista em transformar propostas técnicas de evolução de produto em comunicados comerciais claros, elegantes e corporativos para clientes.\n\nCom base no texto abaixo sobre a OS '+os.num+' ('+os.produto+'), gere um comunicado oficial de evolução de produto seguindo estas diretrizes:\n\nObjetivo: Transformar a melhoria técnica em comunicação de valor ao cliente, explicando: o que foi evoluído; qual necessidade operacional essa evolução atende; como ficou o comportamento do sistema; quais ganhos de experiência, consistência, governança ou produtividade a melhoria traz.\n\nEstrutura obrigatória:\n- Título: Comunicado de Evolução | [nome da melhoria]\n- Texto:\n  Prezados clientes,\n  [Abertura curta informando a disponibilização da melhoria, citando o módulo.]\n  [Parágrafo explicando objetivamente o que mudou no produto.]\n  [Parágrafo explicando o novo comportamento / funcionamento.]\n  [Parágrafo final resumindo o valor entregue ao cliente.]\n  Atenciosamente, Time de Produtos\n\nTom de voz: corporativo, comercial, elegante, objetivo, positivo, orientado a valor, sem excesso técnico, sem bullet points, sem dramatizar problema anterior, sempre suavizando "antes era ruim" para "agora está mais padronizado / mais claro / mais consistente". Redigir em português corporativo brasileiro.\n\nRegras: Não inventar funcionalidades. Não prometer impacto não comprovado. Traduzir termos técnicos para linguagem de negócio.\n\nAlém do comunicado, defina também:\n- TIPO: "novo" (funcionalidade inédita), "melhoria" (aprimoramento), "legal" (conformidade legal/fiscal), "ajuste" (correção)\n- TÍTULO CURTO: versão resumida para o card do boletim (máximo 8 palavras)\n\nTexto fornecido:\n"""\n'+texto+'\n"""\n\nResponda APENAS em JSON sem markdown:\n{"titulo":"...","descricao":"...","badge":"melhoria"}\n\nObs: o campo "descricao" deve conter o comunicado COMPLETO formatado em HTML (usando <p>, <strong> conforme necessário), e o campo "titulo" deve ser o título curto para o card.';
+    var prompt='Atue como Product Marketing Manager / Product Owner B2B SaaS, especialista em transformar propostas técnicas de evolução de produto em comunicados comerciais claros, elegantes e corporativos para clientes.\n\nCom base no texto abaixo sobre a OS '+os.num+' ('+os.produto+'), gere um comunicado oficial de evolução de produto.\n\nEstrutura obrigatória do comunicado:\n  Prezados clientes,\n  [Abertura curta informando a disponibilização da melhoria, citando o módulo.]\n  [O que mudou no produto.]\n  [Novo comportamento / funcionamento.]\n  [Valor entregue ao cliente.]\n  Atenciosamente, Time de Produtos\n\nTom: corporativo, elegante, objetivo, positivo, sem bullet points, português corporativo brasileiro.\n\nAlém do comunicado, classifique o TIPO da entrega com base no conteúdo:\n- "novo" → funcionalidade ou fluxo completamente inédito no sistema\n- "melhoria" → aprimoramento, ajuste de usabilidade, evolução de feature existente\n- "legal" → obrigação legal, fiscal, trabalhista ou regulatória (LGPD, eSocial, etc.)\n- "ajuste" → correção de bug, comportamento incorreto ou inconsistência\n\nIMPORTANTE: Analise cuidadosamente o conteúdo para definir o tipo correto. Não use "melhoria" como padrão se o conteúdo indica claramente outro tipo.\n\nTexto fornecido:\n"""\n'+texto+'\n"""\n\nResponda APENAS em JSON sem markdown (sem blocos de código, sem explicações):\n{"titulo":"título curto para o card do boletim (máx 8 palavras)","descricao":"comunicado completo em HTML com <p> e <strong>","badge":"[novo|melhoria|legal|ajuste]"}';
     var response=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
@@ -1408,7 +1457,7 @@ function bolCarregarAPIKey(){
 async function bolCallAnthropicPDF(pdfB64,osNum,produto){
   var apiKey=(document.getElementById('bol-api-key').value.trim())||localStorage.getItem('vs_bol_apikey')||'';
   if(!apiKey){throw new Error('Chave de API não configurada. Insira sua chave no campo "🔑 Chave de API Anthropic" acima.')}
-  var prompt='Atue como Product Marketing Manager / Product Owner B2B SaaS, especialista em transformar propostas técnicas de evolução de produto em comunicados comerciais claros, elegantes e corporativos para clientes.\n\nAnalise a Proposta de Solução (OS '+osNum+' — '+produto+') e gere um comunicado oficial de evolução de produto seguindo estas diretrizes:\n\nObjetivo: Transformar a melhoria técnica em comunicação de valor ao cliente, explicando: o que foi evoluído; qual necessidade operacional essa evolução atende; como ficou o comportamento do sistema; quais ganhos de experiência, consistência, governança ou produtividade a melhoria traz.\n\nEstrutura obrigatória:\n- Título: Comunicado de Evolução | [nome da melhoria]\n- Texto:\n  Prezados clientes,\n  [Abertura curta informando a disponibilização da melhoria, citando o módulo.]\n  [Parágrafo explicando objetivamente o que mudou no produto.]\n  [Parágrafo explicando o novo comportamento / funcionamento.]\n  [Parágrafo final resumindo o valor entregue ao cliente.]\n  Atenciosamente, Time de Produtos\n\nTom de voz: corporativo, comercial, elegante, objetivo, positivo, orientado a valor, sem excesso técnico, sem bullet points, sem dramatizar problema anterior, sempre suavizando "antes era ruim" para "agora está mais padronizado / mais claro / mais consistente". Redigir em português corporativo brasileiro.\n\nRegras: Não inventar funcionalidades. Não prometer impacto não comprovado. Traduzir termos técnicos para linguagem de negócio.\n\nAlém do comunicado, defina:\n- TIPO: "novo" (funcionalidade inédita), "melhoria" (aprimoramento), "legal" (conformidade legal/fiscal), "ajuste" (correção)\n- TÍTULO CURTO para o card do boletim (máximo 8 palavras)\n\nResponda APENAS em JSON sem markdown:\n{"titulo":"...","descricao":"...","badge":"melhoria"}\n\nObs: "descricao" deve conter o comunicado COMPLETO em HTML (usando <p>, <strong>), e "titulo" deve ser o título curto para o card.';
+  var prompt='Atue como Product Marketing Manager / Product Owner B2B SaaS. Analise a Proposta de Solução (OS '+osNum+' — '+produto+') e gere um comunicado oficial de evolução de produto.\n\nEstrutura:\n  Prezados clientes,\n  [Abertura curta informando a disponibilização, citando o módulo.]\n  [O que mudou no produto.]\n  [Novo comportamento / funcionamento.]\n  [Valor entregue ao cliente.]\n  Atenciosamente, Time de Produtos\n\nTom: corporativo, elegante, objetivo, sem bullet points, português corporativo brasileiro.\n\nClassifique o TIPO da entrega com base no conteúdo do documento:\n- "novo" → funcionalidade ou fluxo completamente inédito no sistema\n- "melhoria" → aprimoramento, ajuste de usabilidade, evolução de feature existente\n- "legal" → obrigação legal, fiscal, trabalhista ou regulatória (LGPD, eSocial, CNIS, etc.)\n- "ajuste" → correção de bug, comportamento incorreto ou inconsistência\n\nIMPORTANTE: Leia atentamente o documento. Se mencionar legislação, decreto, portaria, conformidade ou obrigação legal → "legal". Se descreve criação de algo novo inexistente → "novo". Se corrige algo que estava errado → "ajuste". Caso contrário → "melhoria".\n\nResponda APENAS em JSON sem markdown:\n{"titulo":"título curto para o card (máx 8 palavras)","descricao":"comunicado completo em HTML com <p> e <strong>","badge":"[novo|melhoria|legal|ajuste]"}';
   var response=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
@@ -1610,7 +1659,16 @@ function bolBuildHTML(oss,linha){
 '<tr><td style="padding: 32px 36px;">'+
 '<p style="margin: 0 0 14px; color: #ffffff; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; '+F+' opacity: 0.75;">LG Lugar de Gente</p>'+
 '<h1 style="margin: 0 0 6px; color: #ffffff; font-size: 26px; font-weight: 700; line-height: 1.2; '+F+'">Novidades da Versão '+versao+'</h1>'+
-'<p style="margin: 0; color: #ffffff; font-size: 14px; line-height: 1.6; '+F+' opacity: 0.75;">Entrega prevista para '+bolFmtDateBR(entrega)+'</p>'+
+// Data badge laranja + data de entrega
+'<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin: 10px 0 16px;"><tr>'+
+  (boletim?'<td valign="middle" style="padding-right: 12px;"><table role="presentation" border="0" cellpadding="0" cellspacing="0" style="background-color: #EEA422; border-radius: 6px;"><tr><td style="padding: 5px 14px; color: #ffffff; font-size: 13px; font-weight: 700; '+F+'">'+bolFmtDateShort(boletim)+'</td></tr></table></td>':'')+
+  (entrega?'<td valign="middle"><p style="margin: 0; color: #ffffff; font-size: 14px; line-height: 1.6; '+F+' opacity: 0.75;">Entrega prevista para '+bolFmtDateBR(entrega)+'</p></td>':'')+
+'</tr></table>'+
+// Botão "Ver novidades completas" no topo (mesmo estilo âmbar do botão do fim)
+'<table role="presentation" border="0" cellpadding="0" cellspacing="0">'+
+'<tr><td align="center" style="background-color: #EEA422; border-radius: 8px;">'+
+'<a href="'+link+'" target="_blank" style="display: inline-block; padding: 11px 22px; color: #ffffff; font-size: 13px; font-weight: 700; text-decoration: none; '+F+' letter-spacing: 0.3px;">&#128196; Ver novidades completas &#8594;</a>'+
+'</td></tr></table>'+
 '</td></tr></table>'+
 '</td></tr>\n'+
 
@@ -2243,78 +2301,258 @@ function renderSliderTrack(el,st,p){
   el.innerHTML='<div class="rateio-track-inner">'+segs+'</div>'+handles;
 }
 
-// ── CSV IMPORT ────────────────────────────────────────────────────────────────
-function detectSep(text){var first=text.split('\n')[0]||'';if((first.match(/;/g)||[]).length>=(first.match(/,/g)||[]).length)return';';if((first.match(/\t/g)||[]).length>0)return'\t';return','}
+// ── PONTO XLSX IMPORT (formato primário) ─────────────────────────────────────
+// Lê o RelatorioCartaoDePontoLayout.xlsx via SheetJS
+// Colunas-chave (índice 0-based):
+//   19 = Dia  (Seg., Ter., etc.)
+//   23 = MarcacoesStr  (" 08:07 12:45 14:08 18:06 ")
+//   37 = HorasTrabalhadas ("00:00" formato HH:MM — pode estar em 0-based)
+//   38 = Data (número serial Excel OU string "DD/MM/YYYY")
+// Linhas sem Dia são quebras/ocorrências — ignoradas.
+function importPontoXLSX(input){
+  var file=input.files[0];if(!file)return;
+  input.value='';
+  var prevEl=document.getElementById('import-preview');
+  prevEl.innerHTML='<div style="margin-top:10px;font-size:12px;color:var(--muted)">Lendo arquivo...</div>';
+
+  var reader=new FileReader();
+  reader.onload=function(e){
+    // Carregar SheetJS se ainda não estiver disponível
+    function processXLSX(buf){
+      try{
+        var wb=XLSX.read(buf,{type:'array',cellDates:false});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
+        if(!rows.length){toast('Planilha vazia','err');return}
+
+        // Linha 0 = cabeçalho
+        var header=rows[0].map(function(c){return String(c).trim()});
+
+        // Índices pelos nomes de coluna
+        var iDia    =header.indexOf('Dia');
+        var iMarc   =header.indexOf('MarcacoesStr');
+        var iHT     =header.indexOf('HorasTrabalhadas');
+        var iData   =header.indexOf('Data');
+
+        // Fallback: tentar nomes sem acento / variações
+        if(iDia===-1)   iDia   =header.findIndex(function(h){return/^dia$/i.test(h)});
+        if(iMarc===-1)  iMarc  =header.findIndex(function(h){return/marcacoes/i.test(h)});
+        if(iData===-1)  iData  =header.findIndex(function(h){return/^data$/i.test(h)});
+        if(iHT===-1)    iHT    =header.findIndex(function(h){return/horastrabalhadas/i.test(h)});
+
+        if(iData===-1||iMarc===-1){
+          prevEl.innerHTML='<div style="margin-top:12px;padding:10px 14px;background:var(--red-dim);border-radius:var(--radius);font-size:13px;color:var(--red-text)">Colunas esperadas não encontradas. Verifique se é o RelatorioCartaoDePontoLayout correto.</div>';
+          return;
+        }
+
+        var versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
+        var porData={};
+
+        rows.slice(1).forEach(function(row){
+          var diaVal=String(row[iDia]||'').trim();
+          // Só processa linhas que têm o dia da semana (Seg., Ter., Qui., etc.)
+          // Linhas sem Dia são ocorrências/quebras secundárias
+          if(!/^(Seg|Ter|Qua|Qui|Sex|Sáb|Sab|Dom)/i.test(diaVal))return;
+
+          var rawData=row[iData];
+          var dataISO='';
+
+          if(typeof rawData==='number'&&rawData>40000){
+            // Serial Excel: dias desde 01/01/1900 (com bug do 1900 como bissexto)
+            var d=new Date(Math.round((rawData-25569)*86400*1000));
+            var y=d.getUTCFullYear(),m=d.getUTCMonth()+1,dd=d.getUTCDate();
+            dataISO=y+'-'+(m<10?'0'+m:m)+'-'+(dd<10?'0'+dd:dd);
+          }else{
+            // String: DD/MM/YYYY ou DD/MM/YY
+            var s=String(rawData).trim();
+            var mp=s.match(/(\d{2})\/(\d{2})\/(\d{2,4})/);
+            if(mp){var ano=mp[3].length===2?'20'+mp[3]:mp[3];dataISO=ano+'-'+mp[2]+'-'+mp[1]}
+          }
+          if(!dataISO)return;
+
+          // Marcações: extrair apenas os HH:MM reais da coluna MarcacoesStr
+          var marcStr=String(row[iMarc]||'').trim();
+          // Limpar artefatos como "18:00:" (XLSX do dia 24/04 tinha isso)
+          marcStr=marcStr.replace(/\d{2}:\d{2}:/g,function(m){return m.slice(0,5)});
+          var tempos=marcStr.match(/\d{2}:\d{2}/g)||[];
+          if(tempos.length<2)return; // sem saída registrada — pular
+
+          // Horas trabalhadas: tentar usar o campo já calculado pelo sistema
+          var htStr=String(row[iHT]||'').trim();
+          var ht=0;
+          if(/^\d{2}:\d{2}$/.test(htStr)){
+            var parts=htStr.split(':');ht=parseInt(parts[0])+(parseInt(parts[1])/60);
+          }else{
+            ht=calcHorasStr(tempos.join('  '));
+          }
+
+          porData[dataISO]={data:dataISO,dia:diaVal,marcacoes:tempos.join('  '),horasTrabalhadas:ht};
+        });
+
+        var registros=Object.values(porData);
+        var imported=0;
+
+        registros.forEach(function(reg){
+          var ei=S.pontos.findIndex(function(p){return p.data===reg.data});
+          var novo={id:uid(),data:reg.data,dia:reg.dia,marcacoes:reg.marcacoes,
+            horasTrabalhadas:reg.horasTrabalhadas,versaoId:versaoId,apropriacoes:[]};
+          if(ei>-1){novo.id=S.pontos[ei].id;novo.apropriacoes=S.pontos[ei].apropriacoes||[];S.pontos[ei]=novo}
+          else S.pontos.push(novo);
+          imported++;
+        });
+
+        if(!imported){
+          prevEl.innerHTML='<div style="margin-top:12px;padding:10px 14px;background:var(--red-dim);border-radius:var(--radius);font-size:13px;color:var(--red-text)">Nenhum dia com marcações encontrado. Verifique o arquivo.</div>';
+          return;
+        }
+
+        S.pontos.sort(function(a,b){return b.data.localeCompare(a.data)});
+
+        var promises=registros.map(function(reg){
+          var p=S.pontos.find(function(x){return x.data===reg.data});
+          return p?dbSalvarPonto(p).catch(function(){}):Promise.resolve();
+        });
+        Promise.all(promises).then(function(){
+          prevEl.innerHTML='<div style="margin-top:12px;padding:10px 14px;background:var(--green-dim);border-radius:var(--radius);font-size:13px;color:var(--green-text)">✓ '+imported+' dia(s) importado(s) com sucesso via XLSX.</div>';
+          renderPontoList();renderDash();
+        });
+
+      }catch(err){
+        prevEl.innerHTML='<div style="margin-top:12px;padding:10px 14px;background:var(--red-dim);border-radius:var(--radius);font-size:13px;color:var(--red-text)">Erro ao ler XLSX: '+err.message+'</div>';
+      }
+    }
+
+    var buf=e.target.result;
+    if(window.XLSX){processXLSX(buf)}
+    else{
+      var s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      s.onload=function(){processXLSX(buf)};
+      s.onerror=function(){prevEl.innerHTML='<div style="margin-top:12px;padding:10px 14px;background:var(--red-dim);border-radius:var(--radius);font-size:13px;color:var(--red-text)">Erro ao carregar SheetJS. Verifique sua conexão.</div>'};
+      document.head.appendChild(s);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── CSV IMPORT (fallback) ────────────────────────────────────────────────────
+function detectSep(text){
+  var first=text.split('\n')[0]||'';
+  if((first.match(/;/g)||[]).length>=(first.match(/,/g)||[]).length)return';';
+  if((first.match(/\t/g)||[]).length>0)return'\t';
+  return',';
+}
+
+// Parse uma linha CSV respeitando campos entre aspas (incluindo vírgulas internas)
+function parseCSVLine(line,sep){
+  var cols=[],cur='',inQ=false;
+  for(var i=0;i<line.length;i++){
+    var ch=line[i];
+    if(ch==='"'){
+      if(inQ&&line[i+1]==='"'){cur+='"';i++} // aspas duplas escapadas
+      else{inQ=!inQ}
+    }else if(ch===sep&&!inQ){cols.push(cur.trim());cur=''}
+    else{cur+=ch}
+  }
+  cols.push(cur.trim());
+  return cols;
+}
+
+// Normaliza data de vários formatos para YYYY-MM-DD
+function normalizarData(raw){
+  raw=(raw||'').replace(/"/g,'').trim();
+  // DD/MM/YY ou DD/MM/YYYY
+  var m=raw.match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);
+  if(m){var ano=m[3].length===2?'20'+m[3]:m[3];return ano+'-'+m[2]+'-'+m[1]}
+  // YYYY-MM-DD (já no formato certo)
+  if(/^\d{4}-\d{2}-\d{2}$/.test(raw))return raw;
+  return null;
+}
 
 function importCSV(input){
   var file=input.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(e){
-    var text=e.target.result,sep=detectSep(text);
-    var lines=text.split('\n').map(function(l){return l.trim()}).filter(Boolean);
-    if(!lines.length){toast('Arquivo vazio','err');return}
+    var text=e.target.result;
+    // Tentar UTF-8 primeiro; se houver muitos caracteres estranhos, avisar mas continuar
+    var sep=detectSep(text);
 
-    // Localizar os índices das colunas pelo cabeçalho da primeira linha
-    var header=lines[0].split(sep).map(function(c){return c.replace(/"/g,'').trim()});
-    var iJornada=header.indexOf('jornadaTextBox');
-    var iDia=header.indexOf('diaTextBox');
-    var iData=header.indexOf('dataTextBox');
-    var iMarcacoes=header.indexOf('marcacoesTextBox');
+    // Dividir em linhas — suporta \r\n, \n, \r
+    var rawLines=text.split(/\r\n|\r|\n/);
+    if(!rawLines.length){toast('Arquivo vazio','err');return}
 
-    // Se não achou cabeçalho, tenta fallback por posição (formato antigo)
-    var usaFallback=(iData===-1||iMarcacoes===-1);
-
-    var imported=0,versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
-    // Agrupar por data — cada data pode ter múltiplas linhas (linhas de quebra)
-    var porData={};
-
-    lines.forEach(function(line,lineIdx){
-      if(lineIdx===0)return; // pula cabeçalho
-      // Parse respeitando aspas
-      var cols=[];var cur='';var inQ=false;
-      for(var ci=0;ci<line.length;ci++){
-        var ch=line[ci];
-        if(ch==='"'){inQ=!inQ}
-        else if(ch===sep&&!inQ){cols.push(cur.trim());cur=''}
-        else{cur+=ch}
+    // Localizar linha de cabeçalho — pode não ser a primeira (o CSV do LG tem linhas de header gerais antes)
+    var headerIdx=-1;
+    var header=[];
+    for(var li=0;li<rawLines.length;li++){
+      var trimmed=rawLines[li].trim();
+      if(!trimmed)continue;
+      // O cabeçalho real contém "dataTextBox" ou "marcacoesTextBox"
+      if(trimmed.indexOf('dataTextBox')>-1||trimmed.indexOf('marcacoesTextBox')>-1){
+        header=parseCSVLine(trimmed,sep).map(function(c){return c.replace(/"/g,'').trim()});
+        headerIdx=li;
+        break;
       }
-      cols.push(cur.trim());
+    }
 
-      var rawData,dia,marcacoes,jornada;
+    // Índices das colunas úteis
+    var iData    =header.indexOf('dataTextBox');
+    var iMarcacoes=header.indexOf('marcacoesTextBox');
+    var iDiaTxt  =header.indexOf('diaTextBox');   // contém Seg., Ter., etc.
+    var iJorTxt  =header.indexOf('jornadaTextBox'); // inversão conhecida: jornada está em diaTextBox
+
+    // Se não achou cabeçalho estruturado, usa detecção por conteúdo (fallback)
+    var usaFallback=(headerIdx===-1||iData===-1||iMarcacoes===-1);
+
+    var porData={};
+    var versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
+
+    var startLine=usaFallback?0:(headerIdx+1);
+
+    for(var li2=startLine;li2<rawLines.length;li2++){
+      var line=rawLines[li2];
+      if(!line||!line.trim())continue;
+
+      var cols=parseCSVLine(line,sep);
+      var rawDataVal='',diaVal='',marcacoesVal='';
 
       if(!usaFallback){
-        // Formato correto: usa índices do cabeçalho
-        // ATENÇÃO: conforme descrito, jornadaTextBox está na coluna seguinte (diaTextBox)
-        // Portanto o conteúdo real da jornada está em iDia, e o dia da semana está em iJornada
-        jornada = iJornada>-1 ? (cols[iDia]||'').replace(/"/g,'').trim() : '';
-        dia     = iJornada>-1 ? (cols[iJornada]||'').replace(/"/g,'').trim() : '';
-        rawData = iData>-1    ? (cols[iData]||'').replace(/"/g,'').trim()    : '';
-        marcacoes= iMarcacoes>-1 ? (cols[iMarcacoes]||'').replace(/"/g,'').trim() : '';
-      } else {
-        // Fallback posicional — detecta data e marcações por regex
-        rawData=cols.find(function(c){return/^\d{2}\/\d{2}\/\d{2,4}$/.test(c.trim())})||'';
-        dia='';
-        marcacoes=cols.find(function(c){return/\d{2}:\d{2}\s+\d{2}:\d{2}/.test(c)})||'';
+        rawDataVal =(cols[iData]||'').replace(/"/g,'').trim();
+        marcacoesVal=(cols[iMarcacoes]||'').replace(/"/g,'').trim();
+        // diaTextBox contém "Seg.", "Ter.", etc. (inversão conhecida do sistema LG)
+        // Se iDiaTxt aponta para o nome do dia, usa ele; senão usa iJorTxt
+        var diaCandidate=(cols[iDiaTxt]||'').replace(/"/g,'').trim();
+        diaVal=/^(Seg|Ter|Qua|Qui|Sex|Sáb|Sab|Dom)\.?/i.test(diaCandidate)?diaCandidate:'';
+      }else{
+        // Fallback: varre todas as colunas por conteúdo
+        rawDataVal=cols.find(function(c){return/^\d{2}\/\d{2}\/\d{2,4}$/.test(c.replace(/"/g,'').trim())})||'';
+        marcacoesVal=cols.find(function(c){return/\d{2}:\d{2}\s+\d{2}:\d{2}/.test(c)})||'';
+        var diasPattern=/^(Seg|Ter|Qua|Qui|Sex|Sáb|Sab|Dom)\.?/i;
+        var diaFnd=cols.find(function(c){return diasPattern.test(c.replace(/"/g,'').trim())});
+        diaVal=diaFnd?diaFnd.replace(/"/g,'').trim():'';
       }
 
-      if(!rawData||!/\d/.test(rawData))return;
-      // Normalizar data para YYYY-MM-DD
-      var dataISO=rawData;
-      if(/\d{2}\/\d{2}\/\d{2,4}/.test(rawData)){
-        var p=rawData.split('/');var ano=p[2].length===2?'20'+p[2]:p[2];
-        dataISO=ano+'-'+p[1]+'-'+p[0];
-      }
-      if(!marcacoes)return; // linha sem marcações (linha de quebra/ocorrência)
+      var dataISO=normalizarData(rawDataVal);
+      if(!dataISO)continue; // linha sem data válida (cabeçalho repetido, quebra, etc.)
 
-      // Acumula: se já existe entrada para esta data com marcações, mantém a mais completa
-      var marcStr=marcacoes.trim();
-      var numMarcacoes=(marcStr.match(/\d{2}:\d{2}/g)||[]).length;
+      // Marcações: extrair apenas os pares HH:MM (ignora coluna inteira se não tiver 2+ horários)
+      var marcacoesLimpa=(marcacoesVal||'').replace(/"/g,'').trim();
+      var temposCandidatos=marcacoesLimpa.match(/\d{2}:\d{2}/g)||[];
+      if(temposCandidatos.length<2)continue; // linha de ocorrência/quebra sem marcações reais
+
+      var marcStr=temposCandidatos.join('  ');
+      var numMarcacoes=temposCandidatos.length;
+
+      // Consolidar por data: mantém a linha com mais marcações para o dia
       if(!porData[dataISO]||numMarcacoes>(porData[dataISO].numMarcacoes||0)){
-        porData[dataISO]={data:dataISO,dia:dia||'',marcacoes:marcStr,numMarcacoes:numMarcacoes};
+        porData[dataISO]={data:dataISO,dia:diaVal||porData[dataISO]&&porData[dataISO].dia||'',marcacoes:marcStr,numMarcacoes:numMarcacoes};
       }
-    });
+    }
 
-    Object.values(porData).forEach(function(reg){
+    var registros=Object.values(porData);
+    var imported=0;
+
+    registros.forEach(function(reg){
       var ht=calcHorasStr(reg.marcacoes);
       var ei=S.pontos.findIndex(function(p){return p.data===reg.data});
       var novo={id:uid(),data:reg.data,dia:reg.dia,marcacoes:reg.marcacoes,horasTrabalhadas:ht,versaoId:versaoId,apropriacoes:[]};
@@ -2324,19 +2562,25 @@ function importCSV(input){
     });
 
     S.pontos.sort(function(a,b){return b.data.localeCompare(a.data)});
+
+    var prevEl=document.getElementById('import-preview');
+    if(!imported){
+      prevEl.innerHTML='<div style="margin-top:12px;padding:10px 14px;background:var(--red-dim);border-radius:var(--radius);font-size:13px;color:var(--red-text)">Nenhum registro encontrado. Verifique se o arquivo é o RelatorioCartaoDePonto correto.</div>';
+      input.value='';return;
+    }
+
     // Salva no Supabase
-    var promises=Object.values(porData).map(function(reg){
+    var promises=registros.map(function(reg){
       var p=S.pontos.find(function(x){return x.data===reg.data});
       return p?dbSalvarPonto(p).catch(function(){}):Promise.resolve();
     });
     Promise.all(promises).then(function(){
-      document.getElementById('import-preview').innerHTML=
-        '<div style="margin-top:12px;padding:10px 14px;background:var(--green-dim);border-radius:var(--radius);font-size:13px;color:var(--green-text)">'+
-        imported+' dia(s) importado(s) com sucesso.</div>';
+      prevEl.innerHTML='<div style="margin-top:12px;padding:10px 14px;background:var(--green-dim);border-radius:var(--radius);font-size:13px;color:var(--green-text)">✓ '+imported+' dia(s) importado(s) com sucesso'+(usaFallback?' · modo compatibilidade':'')+'.</div>';
       renderPontoList();renderDash();
     });
     input.value='';
   };
+  // Tentar UTF-8 primeiro
   reader.readAsText(file,'UTF-8');
 }
 
@@ -3022,6 +3266,10 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     applyPrefs();
     mostrarApp();
     renderDash();
+    // ── Paralelo ──────────────────────────────────────────
+    Paralelo.identify({ userId: session.user.id, email: session.user.email })
+    Paralelo.page('dashboard')
+    // ──────────────────────────────────────────────────────
   }else{
     mostrarLogin();
   }
@@ -3041,6 +3289,10 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       applyPrefs();
       mostrarApp();
       renderDash();
+      // ── Paralelo ────────────────────────────────────────
+      Paralelo.identify({ userId: session.user.id, email: session.user.email })
+      Paralelo.page('dashboard')
+      // ────────────────────────────────────────────────────
     }else if(event==='SIGNED_OUT'){
       _appIniciado=false;
       CURRENT_USER=null;
@@ -3051,6 +3303,12 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     }
   });
 })();
+</script>
+  <!-- Paralelo SDK -->
+<script
+  src="http://localhost:3000/paralelo.js"
+  data-sdk-key="b5e61607853319386147b0894baf59aa9a231640fd7f1116"
+  data-api-url="http://localhost:3000">
 </script>
 </body>
 </html>
