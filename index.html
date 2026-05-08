@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VersionSuite v10.3</title>
+<title>VersionSuite v10.4</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -341,6 +341,10 @@ textarea.form-input{resize:vertical;min-height:70px}
             <button class="filter-chip" onclick="setFiltro(this,'Gestão de Talentos')">GT</button>
             <button class="filter-chip" onclick="setFiltro(this,'Pagadoria')">Pagadoria</button>
           </div>
+          <div class="filter-bar" style="margin:0;border-left:1px solid var(--border);padding-left:8px">
+            <button class="filter-chip active" id="filtro-atrib-todos" onclick="setFiltroAtrib(this,'todos')">Todos</button>
+            <div id="filtro-atrib-chips" style="display:contents"></div>
+          </div>
           <button class="btn btn-sm btn-ghost" onclick="document.getElementById('xlsx-input').click()" style="margin-left:auto">📥 Importar planilha</button>
           <input type="file" id="xlsx-input" accept=".xlsx,.xls" style="display:none" onchange="importXLSX(this)">
         </div>
@@ -598,7 +602,34 @@ textarea.form-input{resize:vertical;min-height:70px}
   </div>
 </div>
 
-<!-- MODAL ADICIONAR OS BOLETIM -->
+<!-- MODAL CONFIRMAR (substitui alert/confirm nativo) -->
+<div class="modal-overlay" id="modal-confirm">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title" id="modal-confirm-title">Confirmar</div>
+    <div id="modal-confirm-body" style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="modalConfirmResolve(false)">Cancelar</button>
+      <button class="btn btn-primary" id="modal-confirm-ok" onclick="modalConfirmResolve(true)">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ENCERRAR VERSÃO -->
+<div class="modal-overlay" id="modal-encerrar">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title">Encerrar versão</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
+      Tem certeza que deseja encerrar a versão <strong id="modal-encerrar-nome"></strong>?<br>
+      OSs não concluídas receberão aviso visual e a versão será movida para o Histórico.
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-encerrar')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarEncerrarVersao()">Encerrar versão</button>
+    </div>
+  </div>
+</div>
+
+
 <div class="modal-overlay" id="modal-bol-os">
   <div class="modal">
     <div class="modal-title">Adicionar OS ao boletim</div>
@@ -809,7 +840,7 @@ var SEG_COLORS=['#6366f1','#3b82f6','#10b981','#f59e0b','#ec4899','#ef4444','#a8
 var CANAL_LABELS={inline:'Inline/Banner',email:'E-mail',entregate:'Entre a Gente',webinar:'Webinar',teams:'Teams'};
 var CANAL_COLORS={inline:'#6366f1',email:'#3b82f6',entregate:'#10b981',webinar:'#f59e0b',teams:'#7c3aed'};
 
-var S={versoes:[],oss:[],pontos:[],publicacoes:[],filtro:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
+var S={versoes:[],oss:[],pontos:[],publicacoes:[],filtro:'todos',filtroAtrib:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
   prefs:{accent:'#7c6ff7',accentRgb:'124,111,247',lightMode:false,produtos:PROD_SEG.slice()}};
 
 var _agendaMes=new Date().getMonth(),_agendaAno=new Date().getFullYear(),_agendaFiltro='todos';
@@ -1027,11 +1058,31 @@ function salvarVersao(){
 // ── KANBAN ────────────────────────────────────────────────────────────────────
 function onVersaoChange(){S.versaoK=document.getElementById('kanban-versao-sel').value;renderKanban()}
 function setFiltro(btn,f){document.querySelectorAll('.filter-chip').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');S.filtro=f;renderKanban()}
+function setFiltroAtrib(btn,nome){
+  document.getElementById('filtro-atrib-todos').classList.remove('active');
+  document.querySelectorAll('#filtro-atrib-chips .filter-chip').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');S.filtroAtrib=nome;renderKanban();
+}
+function renderAtribChips(){
+  var vid=S.versaoK;
+  var oss=vid?S.oss.filter(function(o){return o.versaoId===vid}):S.oss;
+  var nomes=[...new Set(oss.map(function(o){
+    var a=(o.atribuicao||'').trim();if(!a)return null;
+    var pts=a.split(' ');return pts.length>=2?pts[0]+' '+pts[pts.length-1]:pts[0];
+  }).filter(Boolean))].sort();
+  var el=document.getElementById('filtro-atrib-chips');if(!el)return;
+  el.innerHTML=nomes.map(function(n){
+    var cor=corPorNome(n.split(' ')[0]);var isActive=S.filtroAtrib===n;
+    return'<button class="filter-chip'+(isActive?' active':'')+'" onclick="setFiltroAtrib(this,\''+n+'\')" '+
+      (isActive&&cor?'style="background:'+cor.hex+';color:#fff;border-color:'+cor.hex+'"':'')+'>'+n+'</button>';
+  }).join('');
+}
 function statusLabel(k){return{afazer:'A fazer',andamento:'Em andamento',concluido:'Concluído'}[k]||k}
 function statusNext(k){return{afazer:'andamento',andamento:'concluido',concluido:null}[k]}
 function statusPrev(k){return{afazer:null,andamento:'afazer',concluido:'andamento'}[k]}
 
 function renderKanban(){
+  renderAtribChips();
   var sel=document.getElementById('kanban-versao-sel');
   sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+(v.ativa?'':' ✓')+'</option>'}).join('');
   if(S.versaoK)sel.value=S.versaoK;
@@ -1040,6 +1091,14 @@ function renderKanban(){
   var isEncerrada=versao&&!versao.ativa;
   var oss=S.oss.filter(function(o){return o.versaoId===vid});
   if(S.filtro!=='todos')oss=oss.filter(function(o){return(PLINHA[o.produto]||'')===S.filtro});
+  // Filtro de atribuição (primeiro+último nome)
+  if(S.filtroAtrib&&S.filtroAtrib!=='todos'){
+    oss=oss.filter(function(o){
+      var a=(o.atribuicao||'').trim();if(!a)return false;
+      var pts=a.split(' ');var nome=pts.length>=2?pts[0]+' '+pts[pts.length-1]:pts[0];
+      return nome===S.filtroAtrib;
+    });
+  }
   var cols=['afazer','andamento','concluido'];
   document.getElementById('kanban-board').innerHTML=cols.map(function(k){
     var items=oss.filter(function(o){return o.status===k});
@@ -1495,15 +1554,14 @@ function bolDownloadHTML(){
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);
   a.download='boletim_v'+versao+'_'+(BOL_TAB==='gt'?'GT':'Pagadoria')+'.html';a.click();toast('Download iniciado!');
 }
-function bolGetGrupoAtual(){
-  var el=document.getElementById('bol-hdr-grupo');
-  return el?el.value:'GT';
+function bolGetRascunhoKey(grupo){
+  var uid=CURRENT_USER?CURRENT_USER.id.slice(0,8):'anon';
+  return'vs_bol_rascunho_'+(grupo||bolGetGrupoAtual()).toLowerCase()+'_'+uid;
 }
 function bolSalvarRascunho(){
   var grupo=bolGetGrupoAtual();
-  var chave='vs_bol_rascunho_'+grupo.toLowerCase();
+  var chave=bolGetRascunhoKey(grupo);
   var dados={oss:BOL_OSS,hdr:{versao:document.getElementById('bol-hdr-versao').value,entrega:document.getElementById('bol-hdr-entrega').value,boletim:document.getElementById('bol-hdr-boletim').value,link:document.getElementById('bol-hdr-link').value}};
-  // Não salvar pdfB64
   ['gt','pag'].forEach(function(t){dados.oss[t].forEach(function(o){var c=Object.assign({},o);c.pdfB64=null;return c})});
   localStorage.setItem(chave,JSON.stringify(dados));
   var grupoLabel=grupo==='GT'?'Gestão de Talentos':'Pagadoria';
@@ -1511,7 +1569,7 @@ function bolSalvarRascunho(){
 }
 function bolCarregarRascunho(){
   var grupo=bolGetGrupoAtual();
-  var chave='vs_bol_rascunho_'+grupo.toLowerCase();
+  var chave=bolGetRascunhoKey(grupo);
   var raw=localStorage.getItem(chave);
   if(!raw){var grupoLabel=grupo==='GT'?'Gestão de Talentos':'Pagadoria';toast('Nenhum rascunho salvo para '+grupoLabel,'err');return}
   var dados=JSON.parse(raw);BOL_OSS=dados.oss||{gt:[],pag:[]};
@@ -2076,18 +2134,28 @@ function salvarPonto(){
 function renderPontoList(){
   var el=document.getElementById('ponto-list');
   if(!S.pontos.length){el.innerHTML='<div style="color:var(--hint);font-size:13px">Nenhum registro. Clique em "+ Adicionar dia".</div>';return}
-  el.innerHTML=S.pontos.map(function(p){
+
+  // Toolbar de seleção múltipla
+  var toolbar='<div id="ponto-sel-toolbar" style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
+    '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--muted)">'+
+      '<input type="checkbox" id="ponto-sel-all" onchange="pontoToggleAll(this.checked)" style="accent-color:var(--accent)"> Selecionar todos'+
+    '</label>'+
+    '<button class="btn btn-xs btn-danger" id="ponto-del-sel" onclick="excluirSelecionados()" style="display:none">🗑 Excluir selecionados</button>'+
+  '</div>';
+
+  el.innerHTML=toolbar+S.pontos.map(function(p){
     var h=p.horasTrabalhadas||0,apTotal=(p.apropriacoes||[]).reduce(function(a,x){return a+x.horas},0);
     var diff=h-apTotal,pct=h>0?Math.min(100,Math.round(apTotal/h*100)):0;
     var barCls=Math.abs(diff)<0.1?'aprop-bar-ok':diff>0?'aprop-bar-under':'aprop-bar-over';
     var diffStr=Math.abs(diff)<0.05?'<span style="font-size:11px;color:var(--green-text)">✓ balanceado</span>':
       diff>0?'<span style="font-size:11px;color:var(--amber-text)">+'+diff.toFixed(1)+'h sem apropriar</span>':
       '<span style="font-size:11px;color:var(--red-text)">'+diff.toFixed(1)+'h acima</span>';
-    return'<div class="ponto-day"><div class="ponto-day-header">'+
+    return'<div class="ponto-day" id="pday-'+p.id+'"><div class="ponto-day-header">'+
       '<div style="display:flex;align-items:center;gap:8px;flex:1">'+
+        '<input type="checkbox" class="ponto-sel-cb" data-id="'+p.id+'" onchange="pontoSelChange()" style="accent-color:var(--accent);flex-shrink:0">'+
         '<span class="ponto-day-date">'+fmtDate(p.data)+'</span>'+
         '<span style="font-size:11px;color:var(--muted)">'+p.dia+'</span>'+
-        (p.marcacoes?'<span style="font-family:var(--mono);font-size:11px;color:var(--hint)">'+p.marcacoes+'</span>':'')+
+        (p.marcacoes?'<span style="font-family:var(--mono);font-size:11px;color:var(--hint)">'+p.marcacoes.trim()+'</span>':'')+
       '</div>'+
       '<div style="display:flex;align-items:center;gap:10px">'+
         '<span class="ponto-day-horas">'+h.toFixed(2)+'h</span>'+
@@ -2099,13 +2167,46 @@ function renderPontoList(){
       '<div class="aprop-bar-wrap"><div class="aprop-bar-fill '+barCls+'" style="width:'+pct+'%"></div></div></div>';
   }).join('');
 }
+function pontoSelChange(){
+  var cbs=document.querySelectorAll('.ponto-sel-cb');
+  var sels=document.querySelectorAll('.ponto-sel-cb:checked');
+  var allCb=document.getElementById('ponto-sel-all');
+  var delBtn=document.getElementById('ponto-del-sel');
+  if(allCb)allCb.checked=(sels.length===cbs.length&&cbs.length>0);
+  if(delBtn)delBtn.style.display=sels.length>0?'':'none';
+  if(delBtn&&sels.length>0)delBtn.textContent='🗑 Excluir '+sels.length+' selecionado(s)';
+}
+function pontoToggleAll(checked){
+  document.querySelectorAll('.ponto-sel-cb').forEach(function(cb){cb.checked=checked});
+  pontoSelChange();
+}
+function excluirSelecionados(){
+  var ids=Array.from(document.querySelectorAll('.ponto-sel-cb:checked')).map(function(cb){return cb.dataset.id});
+  if(!ids.length)return;
+  modalConfirm(
+    'Excluir registros',
+    'Excluir <strong>'+ids.length+' registro(s)</strong> de ponto selecionados?<br><span style="font-size:12px;color:var(--muted)">Todas as apropriações dos dias selecionados serão removidas. Esta ação não pode ser desfeita.</span>',
+    'Excluir '+ids.length+' registro(s)',
+    'btn-danger'
+  ).then(function(ok){
+    if(!ok)return;
+    var promises=ids.map(function(id){
+      var p=S.pontos.find(function(x){return x.id===id});
+      if(!p)return Promise.resolve();
+      S.pontos=S.pontos.filter(function(x){return x.id!==id});
+      delete _apropState[id];
+      return dbDeletarPonto(id).catch(function(){});
+    });
+    Promise.all(promises).then(function(){renderPontoList();renderDash();toast(ids.length+' registro(s) excluído(s)');});
+  });
+}
 
 function editarPonto(id){
   var p=S.pontos.find(function(x){return x.id===id});if(!p)return;
   document.getElementById('modal-ponto-title').textContent='Editar registro de ponto';
   document.getElementById('p-data').value=p.data;
   document.getElementById('p-dia').value=p.dia;
-  var ms=p.marcacoes?p.marcacoes.split(' '):['','','',''];
+  var ms=p.marcacoes?p.marcacoes.trim().split(/\s+/).filter(Boolean):['','','',''];
   ['p-m1','p-m2','p-m3','p-m4'].forEach(function(id,i){document.getElementById(id).value=ms[i]||''});
   calcTotal();
   // guardar id editando
@@ -2114,10 +2215,17 @@ function editarPonto(id){
 }
 
 function excluirPonto(id){
-  if(!confirm('Excluir este registro de ponto e todas as apropriações do dia?'))return;
-  S.pontos=S.pontos.filter(function(p){return p.id!==id});
-  delete _apropState[id];
-  save();renderPontoList();renderDash();toast('Registro excluído');
+  modalConfirm(
+    'Excluir registro',
+    'Excluir o registro de ponto deste dia?<br><span style="font-size:12px;color:var(--muted)">Todas as apropriações do dia serão removidas. Esta ação não pode ser desfeita.</span>',
+    'Excluir','btn-danger'
+  ).then(function(ok){
+    if(!ok)return;
+    S.pontos=S.pontos.filter(function(p){return p.id!==id});
+    delete _apropState[id];
+    dbDeletarPonto(id).catch(function(){});
+    renderPontoList();renderDash();toast('Registro excluído');
+  });
 }
 
 // ── APROPRIAÇÃO ───────────────────────────────────────────────────────────────
@@ -2133,46 +2241,67 @@ function ossParaApropriar(){
   });
 }
 
-// Apropriação automática — distribui horas igualmente entre OSs disponíveis
-// para todos os dias sem apropriação (ou com apropriação incompleta)
+// Apropriação automática — só OSs atribuídas ao usuário logado, rateio igual
 function apropriarAutomatico(){
-  var ossDisp=ossParaApropriar();
-  if(!ossDisp.length){toast('Nenhuma OS disponível para apropriar','err');return}
+  // Extrair primeiro nome do usuário logado para comparar com campo atribuicao
+  var nomeUsuario='';
+  if(CURRENT_USER){var meta=CURRENT_USER.user_metadata||{};var full=meta.full_name||meta.name||'';nomeUsuario=full.trim().split(' ')[0].toLowerCase();}
+
+  var todasOssDisp=ossParaApropriar();
+  // Filtrar apenas OSs atribuídas ao usuário (por primeiro nome, case-insensitive)
+  var ossMinhas=nomeUsuario?todasOssDisp.filter(function(o){
+    var atrib=(o.atribuicao||'').trim().split(' ')[0].toLowerCase();
+    return atrib&&atrib===nomeUsuario;
+  }):todasOssDisp;
+
+  if(!ossMinhas.length){
+    // Se não encontrou por nome, usa todas (fallback)
+    modalConfirm(
+      'Atenção',
+      'Nenhuma OS encontrada com seu nome no campo Atribuição.<br><span style="font-size:12px;color:var(--muted)">Deseja apropriar em <strong>todas</strong> as OSs disponíveis ('+todasOssDisp.length+')?</span>',
+      'Usar todas','btn-primary'
+    ).then(function(ok){if(ok)_executarApropriacao(todasOssDisp)});
+    return;
+  }
 
   var diasSemAprop=S.pontos.filter(function(p){
     if(!p.horasTrabalhadas||p.horasTrabalhadas<=0)return false;
     var total=(p.apropriacoes||[]).reduce(function(a,x){return a+x.horas},0);
-    return total<p.horasTrabalhadas*0.95; // considera incompleto se < 95% apropriado
+    return total<p.horasTrabalhadas*0.95;
   });
 
   if(!diasSemAprop.length){toast('Todos os dias já estão apropriados ✓');return}
 
-  var n=ossDisp.length;
-  var confirmMsg=diasSemAprop.length+' dia(s) sem apropriação completa.\n'+
-    'Distribuir igualmente entre '+n+' OS(s) disponíveis?\n\n'+
-    'As OSs que já possuem apropriação manual serão mantidas — apenas dias sem nenhuma apropriação serão preenchidos.';
-  if(!confirm(confirmMsg))return;
+  modalConfirm(
+    'Apropriar automaticamente',
+    '<strong>'+diasSemAprop.length+' dia(s)</strong> sem apropriação completa.<br>'+
+    'Distribuir igualmente entre suas <strong>'+ossMinhas.length+' OS(s)</strong>:<br>'+
+    '<span style="font-family:var(--mono);font-size:11px;color:var(--muted)">'+ossMinhas.map(function(o){return'OS '+o.num}).join(', ')+'</span><br><br>'+
+    '<span style="font-size:12px;color:var(--hint)">Dias que já têm apropriação manual não serão alterados.</span>',
+    'Apropriar','btn-primary'
+  ).then(function(ok){if(ok)_executarApropriacao(ossMinhas)});
+}
 
+function _executarApropriacao(ossDisp){
+  var diasSemAprop=S.pontos.filter(function(p){
+    if(!p.horasTrabalhadas||p.horasTrabalhadas<=0)return false;
+    var total=(p.apropriacoes||[]).reduce(function(a,x){return a+x.horas},0);
+    return total<p.horasTrabalhadas*0.95;
+  });
+  var n=ossDisp.length;if(!n)return;
   var salvos=0;
   var promises=diasSemAprop.map(function(p){
-    var jaTemAprop=(p.apropriacoes||[]).length>0;
-    if(jaTemAprop)return Promise.resolve(); // preserva apropriações manuais existentes
-
-    // Rateio igual entre todas as OSs disponíveis
+    if((p.apropriacoes||[]).length>0)return Promise.resolve();
     var base=Math.floor(100/n),rem=100-base*n;
     var novasAprop=ossDisp.map(function(os,i){
       var pct=base+(i<rem?1:0);
       return{osId:os.id,horas:parseFloat((p.horasTrabalhadas*pct/100).toFixed(2))};
     });
     p.apropriacoes=novasAprop;
-    // Atualiza estado local de sliders
-    if(_apropState[p.id]){
-      _apropState[p.id].oss=ossDisp.map(function(os,i){return{osId:os.id,pct:base+(i<rem?1:0)}});
-    }
+    if(_apropState[p.id])_apropState[p.id].oss=ossDisp.map(function(os,i){return{osId:os.id,pct:base+(i<rem?1:0)}});
     salvos++;
     return dbSalvarPonto(p).catch(function(){});
   });
-
   Promise.all(promises).then(function(){
     renderAprop();renderDash();
     toast(salvos>0?salvos+' dia(s) apropriados automaticamente ✓':'Nenhum dia novo para apropriar');
@@ -3225,7 +3354,45 @@ function toggleTheme(){
   S.prefs.lightMode=!S.prefs.lightMode;applyPrefs();
   dbSalvarPrefs().catch(function(){});
 }
-// ── VISIBILITY API — evita reload ao trocar abas ───────────────────────────
+// ── MODAL CONFIRM (substitui confirm() nativo) ────────────────────────────────
+var _confirmResolve=null;
+function modalConfirm(titulo,msg,okLabel,okClass){
+  return new Promise(function(resolve){
+    _confirmResolve=resolve;
+    document.getElementById('modal-confirm-title').textContent=titulo||'Confirmar';
+    document.getElementById('modal-confirm-body').innerHTML=msg||'';
+    var okBtn=document.getElementById('modal-confirm-ok');
+    okBtn.textContent=okLabel||'Confirmar';
+    okBtn.className='btn '+(okClass||'btn-primary');
+    openModal('modal-confirm');
+  });
+}
+function modalConfirmResolve(ok){
+  closeModal('modal-confirm');
+  if(_confirmResolve){_confirmResolve(ok);_confirmResolve=null;}
+}
+
+// ── ENCERRAR VERSÃO (modal customizado) ───────────────────────────────────────
+var _encerrandoVid=null;
+function encerrarVersao(vid){
+  var v=S.versoes.find(function(x){return x.id===vid});if(!v)return;
+  _encerrandoVid=vid;
+  document.getElementById('modal-encerrar-nome').textContent=v.nome;
+  openModal('modal-encerrar');
+}
+function confirmarEncerrarVersao(){
+  if(!_encerrandoVid)return;
+  closeModal('modal-encerrar');
+  var vid=_encerrandoVid;_encerrandoVid=null;
+  dbEncerrarVersao(vid).then(function(){
+    var v=S.versoes.find(function(x){return x.id===vid});
+    if(v){v.ativa=false;v.encerradaEm=new Date().toISOString()}
+    if(S.versaoK===vid){var ativa=S.versoes.find(function(x){return x.ativa});S.versaoK=ativa?ativa.id:null}
+    renderDash();renderHist();renderKanban();toast('Versão encerrada');
+  }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+
 var _RELOAD_THRESHOLD=30*60*1000; // recarrega dados só após 30min de inatividade
 document.addEventListener('visibilitychange',function(){
   if(document.visibilityState==='visible'&&CURRENT_USER){
@@ -3306,9 +3473,9 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
 </script>
   <!-- Paralelo SDK -->
 <script
-  src="http://localhost:3000/paralelo.js"
+  src="https://lunacy-repurpose-flashcard.ngrok-free.de/paralelo.js"
   data-sdk-key="b5e61607853319386147b0894baf59aa9a231640fd7f1116"
-  data-api-url="http://localhost:3000">
+  data-api-url="https://lunacy-repurpose-flashcard.ngrok-free.de">
 </script>
 </body>
 </html>
