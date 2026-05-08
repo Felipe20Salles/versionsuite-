@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VersionSuite v9.4</title>
+<title>VersionSuite v10</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -485,7 +485,16 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div id="import-preview"></div>
           </div>
         </div>
-        <div id="tab-aprop" style="display:none"><div id="aprop-list"></div></div>
+        <div id="tab-aprop" style="display:none">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap">
+            <div style="font-size:13px;color:var(--muted)">Distribua as horas de cada dia entre as OSs da versão.</div>
+            <button class="btn btn-sm" onclick="apropriarAutomatico()" style="gap:6px;display:flex;align-items:center">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><polyline points="8,5 8,8 10,10"/><path d="M5,2.5 A6,6 0 0,1 13,5" stroke-dasharray="2 1"/></svg>
+              Apropriar automaticamente
+            </button>
+          </div>
+          <div id="aprop-list"></div>
+        </div>
       </div>
 
       <!-- AGENDA -->
@@ -623,29 +632,42 @@ textarea.form-input{resize:vertical;min-height:70px}
 
 <!-- MODAL OS -->
 <div class="modal-overlay" id="modal-os">
-  <div class="modal modal-lg">
+  <div class="modal" style="max-width:540px">
     <div class="modal-title" id="modal-os-title">Nova OS</div>
     <div id="modal-os-error" style="display:none;padding:8px 12px;background:var(--red-dim);border:1px solid var(--red-text);border-radius:var(--radius);font-size:13px;color:var(--red-text);margin-bottom:14px"></div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Número da OS</label><input class="form-input" id="os-num" placeholder="Ex: 334820" style="font-family:var(--mono)"></div>
-      <div class="form-group"><label class="form-label">Produto</label><select class="form-input" id="os-produto"></select></div>
+    <!-- Nº + Título na mesma linha -->
+    <div class="form-row" style="gap:10px">
+      <div class="form-group" style="flex:0 0 120px"><label class="form-label">Nº OS</label><input class="form-input" id="os-num" placeholder="334820" style="font-family:var(--mono)"></div>
+      <div class="form-group" style="flex:1"><label class="form-label">Título</label><input class="form-input" id="os-titulo" placeholder="Descrição breve da entrega"></div>
     </div>
-    <div class="form-group"><label class="form-label">Título</label><input class="form-input" id="os-titulo" placeholder="Descrição breve da entrega"></div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Versão</label><select class="form-input" id="os-versao-sel"></select></div>
-      <div class="form-group"><label class="form-label">Status inicial</label><select class="form-input" id="os-status"><option value="afazer">A fazer</option><option value="andamento">Em andamento</option><option value="concluido">Concluído</option></select></div>
+    <!-- Produto + Atribuição -->
+    <div class="form-row" style="gap:10px">
+      <div class="form-group" style="flex:1"><label class="form-label">Produto</label><select class="form-input" id="os-produto"></select></div>
+      <div class="form-group" style="flex:0 0 155px">
+        <label class="form-label">Atribuição</label>
+        <input class="form-input" id="os-atribuicao" placeholder="Responsável" list="atrib-list" autocomplete="off">
+        <datalist id="atrib-list"></datalist>
+      </div>
     </div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Atribuição</label><input class="form-input" id="os-atribuicao" placeholder="Nome de quem está trabalhando"></div>
-      <div class="form-group"><label class="form-label">Observações</label><input class="form-input" id="os-obs" placeholder="Notas internas..."></div>
+    <!-- Versão + Status + Obs -->
+    <div class="form-row" style="gap:10px">
+      <div class="form-group" style="flex:1"><label class="form-label">Versão</label><select class="form-input" id="os-versao-sel"></select></div>
+      <div class="form-group" style="flex:0 0 140px"><label class="form-label">Status</label><select class="form-input" id="os-status"><option value="afazer">A fazer</option><option value="andamento">Em andamento</option><option value="concluido">Concluído</option></select></div>
     </div>
-    <div class="form-group"><label class="form-label">Link evidência (Redmine/SharePoint)</label><input class="form-input" id="os-link" placeholder="https://..."></div>
+    <!-- Link + Obs -->
+    <div class="form-row" style="gap:10px">
+      <div class="form-group" style="flex:1"><label class="form-label">Link evidência</label><input class="form-input" id="os-link" placeholder="https://..."></div>
+      <div class="form-group" style="flex:1"><label class="form-label">Observações</label><input class="form-input" id="os-obs" placeholder="Notas internas..."></div>
+    </div>
+    <!-- Entregas em 2 colunas -->
     <div class="form-group">
-      <label class="form-label">Entregas aplicáveis</label>
-      <label class="form-check"><input type="checkbox" id="e-novidade" checked><span class="form-check-label">Novidade de versão</span><span class="form-check-hint">Publicação no boletim</span></label>
-      <label class="form-check"><input type="checkbox" id="e-help"><span class="form-check-label">Help (Zendesk)</span><span class="form-check-hint">Artigo de suporte</span></label>
-      <label class="form-check"><input type="checkbox" id="e-tutorial"><span class="form-check-label">Tutorial</span><span class="form-check-hint">Vídeo ou passo a passo</span></label>
-      <label class="form-check"><input type="checkbox" id="e-evidencia" checked><span class="form-check-label">Evidência de entrega</span><span class="form-check-hint">Documento comprobatório</span></label>
+      <label class="form-label" style="margin-bottom:6px">Entregas aplicáveis</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <label class="form-check"><input type="checkbox" id="e-novidade" checked><span class="form-check-label">Novidade de versão</span><span class="form-check-hint">Boletim</span></label>
+        <label class="form-check"><input type="checkbox" id="e-help"><span class="form-check-label">Help (Zendesk)</span><span class="form-check-hint">Artigo</span></label>
+        <label class="form-check"><input type="checkbox" id="e-tutorial"><span class="form-check-label">Tutorial</span><span class="form-check-hint">Vídeo</span></label>
+        <label class="form-check"><input type="checkbox" id="e-evidencia" checked><span class="form-check-label">Evidência</span><span class="form-check-hint">Documento</span></label>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-os')">Cancelar</button>
@@ -1052,17 +1074,41 @@ function populateVersaoSelOS(){
   sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+'</option>'}).join('');
   if(S.versaoK)sel.value=S.versaoK;
 }
+// Carrega lista de usuários (profiles) para o datalist de atribuição
+var _USUARIOS_CACHE=[];
+async function loadUsuarios(){
+  if(_USUARIOS_CACHE.length)return _USUARIOS_CACHE;
+  try{
+    var {data}=await sb.from('profiles').select('id, prefs');
+    // prefs pode ter display_name; fallback para auth.users via RPC não disponível
+    // Usamos os nomes que já conhecemos das OSs cadastradas como fallback
+    var nomesOSs=[...new Set(S.oss.map(function(o){return(o.atribuicao||'').trim()}).filter(Boolean))];
+    var nomesMeta=[];
+    if(CURRENT_USER){var m=CURRENT_USER.user_metadata||{};var n=m.full_name||m.name||'';if(n)nomesMeta.push(n);}
+    _USUARIOS_CACHE=[...new Set([...nomesMeta,...nomesOSs])].filter(Boolean);
+  }catch(e){_USUARIOS_CACHE=[]}
+  return _USUARIOS_CACHE;
+}
+function populateAtribList(){
+  var dl=document.getElementById('atrib-list');if(!dl)return;
+  var nomes=_USUARIOS_CACHE.length?_USUARIOS_CACHE:
+    [...new Set([
+      ...(CURRENT_USER?[(CURRENT_USER.user_metadata||{}).full_name||(CURRENT_USER.user_metadata||{}).name||''].filter(Boolean):[]),
+      ...S.oss.map(function(o){return(o.atribuicao||'').trim()}).filter(Boolean)
+    ])];
+  dl.innerHTML=nomes.map(function(n){return'<option value="'+n+'">'}).join('');
+}
+
 function openNovaOS(){
   S.editOS=null;
   document.getElementById('modal-os-title').textContent='Nova OS';
   document.getElementById('modal-os-error').style.display='none';
   ['os-num','os-titulo','os-obs','os-link'].forEach(function(id){document.getElementById(id).value=''});
   document.getElementById('os-status').value='afazer';
-  // Pré-preencher atribuição com primeiro nome do usuário autenticado
   var primeiroNome='';
   if(CURRENT_USER){var meta=CURRENT_USER.user_metadata||{};var nomeCompleto=meta.full_name||meta.name||CURRENT_USER.email||'';primeiroNome=nomeCompleto.split(' ')[0];}
   document.getElementById('os-atribuicao').value=primeiroNome;
-  populateProdutoSel();populateVersaoSelOS();
+  populateProdutoSel();populateVersaoSelOS();populateAtribList();
   document.getElementById('e-novidade').checked=true;document.getElementById('e-help').checked=false;
   document.getElementById('e-tutorial').checked=false;document.getElementById('e-evidencia').checked=true;
   openModal('modal-os');
@@ -1080,6 +1126,7 @@ function openEditOS(osId){
   document.getElementById('os-atribuicao').value=os.atribuicao||'';
   populateProdutoSel();document.getElementById('os-produto').value=os.produto;
   populateVersaoSelOS();document.getElementById('os-versao-sel').value=os.versaoId;
+  populateAtribList();
   document.getElementById('e-novidade').checked=!!os.entregas.novidade.aplicavel;
   document.getElementById('e-help').checked=!!os.entregas.help.aplicavel;
   document.getElementById('e-tutorial').checked=!!os.entregas.tutorial.aplicavel;
@@ -1432,70 +1479,187 @@ function bolFmtDateShort(d){if(!d)return'';return new Date(d+'T12:00:00').toLoca
 function bolBuildHTML(oss,linha){
   var versao=document.getElementById('bol-hdr-versao').value||'XX.X';
   var entrega=document.getElementById('bol-hdr-entrega').value;
-  var boletim=document.getElementById('bol-hdr-boletim').value;
-  var link=document.getElementById('bol-hdr-link').value||'https://centraldocliente.lg.com.br/hc/pt-br/articles/LINK';
+  var link=document.getElementById('bol-hdr-link').value||'https://centraldocliente.lg.com.br/hc/pt-br/articles/49937285581723';
+
   // Agrupar por produto
   var porProd={};
   oss.forEach(function(o){if(!porProd[o.produto])porProd[o.produto]=[];porProd[o.produto].push(o)});
   var produtos=Object.keys(porProd);
-  // Tabs CSS
-  var abaAtivaCss=produtos.map(function(p,i){
-    var id='bl-p-'+bolSlugify(p);
-    return (i===0?'  .bl-tc:not(:has(.bl-pn:target)) .bl-tab[href="#'+id+'"],\n':'')+'  .bl-tc:has(#'+id+':target) .bl-tab[href="#'+id+'"]';
-  }).join(',\n');
-  var tabsNav=produtos.map(function(p){
-    return'      <a class="bl-tab" href="#bl-p-'+bolSlugify(p)+'" style="font-size:13px;padding:10px 18px;border-radius:6px 6px 0 0;border:1px solid transparent;cursor:pointer;color:#666;background:transparent;text-decoration:none;position:relative;bottom:-1px;white-space:nowrap;">'+p+'</a>';
-  }).join('\n');
-  var paineis=produtos.map(function(p){
-    var id='bl-p-'+bolSlugify(p);
+  var totalOS=oss.length;
+
+  var F="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;";
+
+  // Índice clicável — linhas
+  var indiceLinhas=produtos.map(function(p,pi){
+    var slug=bolSlugify(p);
+    var n=porProd[p].length;
+    var borda=pi<produtos.length-1?'border-bottom: 1px solid #e5e7eb;':'';
+    return(
+      '<tr>'+
+      '<td style="'+borda+'">'+
+      '<a href="#'+slug+'" style="display: block; text-decoration: none; color: inherit;">'+
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td style="padding: 14px 20px;">'+
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr>'+
+      '<td valign="middle" style="'+F+'">'+
+        '<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #3B5E9A; vertical-align: middle; margin-right: 12px;">&nbsp;</span>'+
+        '<span style="font-size: 15px; font-weight: 700; color: #3B5E9A; vertical-align: middle;">'+p+'</span>'+
+      '</td>'+
+      '<td align="right" valign="middle">'+
+        '<table role="presentation" border="0" cellpadding="0" cellspacing="0"><tr>'+
+        '<td valign="middle"><table role="presentation" border="0" cellpadding="0" cellspacing="0" style="background-color: #EEA422; border-radius: 100px;">'+
+          '<tr><td style="padding: 3px 10px; color: #ffffff; font-size: 11px; font-weight: 700; '+F+'">'+n+' melhoria'+(n>1?'s':'')+'</td></tr>'+
+        '</table></td>'+
+        '<td valign="middle" style="padding-left: 10px; color: #EEA422; font-size: 16px; font-weight: 700; '+F+'">›</td>'+
+        '</tr></table>'+
+      '</td>'+
+      '</tr></table>'+
+      '</td></tr></table>'+
+      '</a></td></tr>'
+    );
+  }).join('');
+
+  // Seções de produto com cards de OS
+  var secoes=produtos.map(function(p){
+    var slug=bolSlugify(p);
     var ossP=porProd[p];
-    var cards=ossP.map(function(o){
+    var cards=ossP.map(function(o,oi){
       var badge=BOL_BADGE_STYLES[o.badge]||BOL_BADGE_STYLES.melhoria;
-      var imgBlock=o.hasImagem?'\n          <div style="width:100%;background:repeating-linear-gradient(45deg,#f4f7fb,#f4f7fb 8px,#eaf0f9 8px,#eaf0f9 16px);border:2px dashed #3B5E9A;border-radius:8px;padding:24px 16px;text-align:center;color:#3B5E9A;margin-top:10px;">\n            <div style="font-size:24px;margin-bottom:4px;">🖼️</div>\n            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;">Espaço para imagem</div>\n          </div>':'';
-      return'        <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:10px;padding:18px 20px;margin-bottom:12px;">\n'+
-        '          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">\n'+
-        '            <span style="background:'+badge.bg+';color:'+badge.color+';font-size:10px;font-weight:700;padding:3px 9px;border-radius:100px;text-transform:uppercase;letter-spacing:0.05em;">'+badge.label+'</span>\n'+
-        '            <span style="font-size:15px;font-weight:700;color:#111;">'+o.titulo+'</span>\n'+
-        '          </div>\n'+
-        '          <p style="font-size:13px;color:#555;line-height:1.6;margin:0;">'+o.descricao+'</p>'+imgBlock+'\n'+
-        '        </div>';
-    }).join('\n');
-    return'      <div id="'+id+'" class="bl-pn">\n'+
-      '        <div style="background:#f4f7fb;border-left:3px solid #3B5E9A;border-radius:0 8px 8px 0;padding:12px 16px;margin-bottom:16px;">\n'+
-      '          <div style="font-size:11px;font-weight:800;color:#3B5E9A;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;">'+p+'</div>\n'+
-      '          <div style="font-size:13px;color:#555;">'+ossP.length+' destaque'+(ossP.length>1?'s':'')+' nesta versão</div>\n'+
-      '        </div>\n'+
-      cards+'\n'+
-      '        <a href="'+link+'" target="_blank" style="display:inline-block;margin-top:4px;font-size:13px;font-weight:700;color:#EEA422;text-decoration:none;">Ver todas as novidades de '+p+' →</a>\n'+
-      '      </div>';
-  }).join('\n\n');
-  var prodsBadges=produtos.map(function(p){return'<span style="background:rgba(255,255,255,0.18);color:#fff;font-size:12px;font-weight:500;padding:4px 12px;border-radius:100px;">'+p+'</span>'}).join('\n      ');
-  return'<!-- Boletim v'+versao+' — '+(linha==='gt'?'GT':'Pagadoria')+' | VersionSuite '+new Date().toLocaleDateString('pt-BR')+' -->\n\n'+
-    '<style>\n  .bl-tc,.bl-tc *{box-sizing:border-box}\n  .bl-pn{display:none}\n  .bl-pn:target{display:block}\n  .bl-tc:not(:has(.bl-pn:target))>.bl-panels>.bl-pn:first-of-type{display:block}\n'+
-    abaAtivaCss+'{background:#fff!important;color:#3B5E9A!important;border-color:#e5e7eb!important;border-bottom-color:#fff!important;font-weight:700!important;box-shadow:inset 0 3px 0 #EEA422!important}\n'+
-    '  .bl-tab{transition:all .15s}.bl-tab:hover{color:#3B5E9A!important;background:#f4f7fb!important}\n</style>\n\n'+
-    '<div style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;max-width:720px;margin:0 auto;color:#1a1a1a;line-height:1.6;padding:16px;">\n\n'+
-    '  <div style="background:#3B5E9A;border-radius:14px;padding:32px 36px;margin-bottom:20px;">\n'+
-    '    <div style="font-size:12px;font-weight:700;color:rgba(255,255,255,0.75);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;">LG Lugar de Gente</div>\n'+
-    '    <h1 style="font-size:26px;font-weight:700;color:#fff;margin:0 0 6px;line-height:1.2;">Novidades da Versão '+versao+'</h1>\n'+
-    '    <p style="font-size:14px;color:rgba(255,255,255,0.75);margin:0 0 20px;">Entrega prevista para '+bolFmtDateBR(entrega)+'</p>\n'+
-    '    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">\n'+
-    '      <span style="background:#EEA422;color:#fff;font-size:12px;font-weight:600;padding:4px 12px;border-radius:100px;">'+bolFmtDateShort(boletim)+'</span>\n'+
-    '      '+prodsBadges+'\n    </div>\n'+
-    '    <a href="'+link+'" target="_blank" style="display:inline-block;margin-top:22px;background:#fff;color:#3B5E9A;font-size:13px;font-weight:700;padding:10px 22px;border-radius:8px;text-decoration:none;">Ver novidades completas →</a>\n'+
-    '  </div>\n\n'+
-    '  <div style="background:#f4f7fb;border-radius:12px;padding:18px 22px;margin-bottom:20px;border-left:4px solid #EEA422;font-size:14px;color:#444;line-height:1.65;">Em resposta aos feedbacks dos nossos clientes, esta versão traz evoluções focadas em <strong style="color:#3B5E9A;">eficiência operacional, conformidade legal e usabilidade</strong>.</div>\n\n'+
-    '  <div class="bl-tc">\n'+
-    '    <div style="display:flex;flex-wrap:wrap;gap:4px;border-bottom:1px solid #e5e7eb;margin-bottom:20px;">\n'+tabsNav+'\n    </div>\n'+
-    '    <div class="bl-panels">\n'+paineis+'\n    </div>\n  </div>\n\n'+
-    '  <div style="text-align:center;margin:28px 0 16px;">\n'+
-    '    <a href="'+link+'" target="_blank" style="display:inline-block;background:#EEA422;color:#fff;font-size:14px;font-weight:700;padding:14px 32px;border-radius:10px;text-decoration:none;">Acessar página de novidades completa →</a>\n'+
-    '    <div style="font-size:12px;color:#888;margin-top:10px;">Conteúdo detalhado, imagens e pré-requisitos de cada melhoria</div>\n'+
-    '  </div>\n\n'+
-    '  <div style="background:#3B5E9A;border-radius:12px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">\n'+
-    '    <div style="font-size:13px;color:rgba(255,255,255,0.85);">Dúvidas? Acesse o menu <strong style="color:#EEA422;">eSuporte</strong> no Portal Gente de Sucesso.</div>\n'+
-    '    <a href="'+link+'" target="_blank" style="font-size:13px;font-weight:700;color:#fff;text-decoration:underline;">Ver todas as alterações →</a>\n'+
-    '  </div>\n\n</div>';
+      var spacer=oi>0?'<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td height="12" style="height: 12px; line-height: 12px; font-size: 0;">&nbsp;</td></tr></table>':'';
+      var imgBlock=o.hasImagem?(
+        '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr>'+
+        '<td height="10" style="height: 10px; line-height: 10px; font-size: 0;">&nbsp;</td></tr></table>'+
+        '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background: repeating-linear-gradient(45deg,#f4f7fb,#f4f7fb 8px,#eaf0f9 8px,#eaf0f9 16px); border: 2px dashed #3B5E9A; border-radius: 8px;">'+
+        '<tr><td style="padding: 24px 16px; text-align: center; color: #3B5E9A; '+F+'">'+
+        '<div style="font-size: 24px; margin-bottom: 4px;">&#128247;</div>'+
+        '<div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Espaço para imagem</div>'+
+        '</td></tr></table>'
+      ):'';
+      return(
+        spacer+
+        '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafbfc; border: 1px solid #e5e7eb; border-radius: 10px;">'+
+        '<tr><td style="padding: 18px 20px;">'+
+          '<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-bottom: 8px;"><tr>'+
+            '<td valign="middle" style="padding-right: 8px;">'+
+              '<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="background-color: '+badge.bg+'; border-radius: 100px;">'+
+              '<tr><td style="padding: 3px 9px; color: '+badge.color+'; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; '+F+'">'+badge.label+'</td></tr>'+
+              '</table>'+
+            '</td>'+
+            '<td valign="middle" style="font-size: 15px; font-weight: 700; color: #111111; '+F+'">'+o.titulo+'</td>'+
+          '</tr></table>'+
+          '<p style="margin: 0; font-size: 13px; color: #555555; line-height: 1.6; '+F+'">'+o.descricao+'</p>'+
+          imgBlock+
+        '</td></tr></table>'
+      );
+    }).join('');
+
+    return(
+      '<tr><td style="padding-bottom: 12px;">'+
+      '<a name="'+slug+'"></a>'+
+      '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">'+
+        '<tr><td style="background-color: #f4f7fb; border-bottom: 1px solid #e5e7eb; border-radius: 12px 12px 0 0; padding: 16px 20px;">'+
+          '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr>'+
+            '<td valign="middle" style="'+F+'">'+
+              '<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #3B5E9A; vertical-align: middle; margin-right: 10px;">&nbsp;</span>'+
+              '<span style="font-size: 15px; font-weight: 700; color: #3B5E9A; vertical-align: middle;">'+p+'</span>'+
+            '</td>'+
+            '<td align="right" valign="middle">'+
+              '<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="background-color: #EEA422; border-radius: 100px;">'+
+              '<tr><td style="padding: 3px 10px; color: #ffffff; font-size: 11px; font-weight: 700; '+F+'">'+ossP.length+' melhoria'+(ossP.length>1?'s':'')+'</td></tr>'+
+              '</table>'+
+            '</td>'+
+          '</tr></table>'+
+        '</td></tr>'+
+        '<tr><td style="padding: 16px 20px;">'+cards+'</td></tr>'+
+        '<tr><td align="right" style="padding: 0 20px 16px;">'+
+          '<a href="#topo" style="font-size: 12px; font-weight: 700; color: #EEA422; text-decoration: none; '+F+'">&#8593; Voltar ao índice</a>'+
+        '</td></tr>'+
+      '</table>'+
+      '</td></tr>'
+    );
+  }).join('');
+
+  // HTML final — XHTML/table-based, Outlook-safe
+  return(
+'<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">\n'+
+'<html xmlns="http://www.w3.org/1999/xhtml" lang="pt-BR">\n<head>\n'+
+'<meta charset="UTF-8"><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">\n'+
+'<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'+
+'<meta http-equiv="X-UA-Compatible" content="IE=edge">\n'+
+'<meta name="x-apple-disable-message-reformatting">\n'+
+'<title>Novidades da Versão '+versao+' - LG Lugar de Gente</title>\n'+
+'<!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>\n'+
+'<style>table, td, div, h1, p { font-family: Arial, Helvetica, sans-serif !important; }</style><![endif]-->\n'+
+'<style type="text/css">\n'+
+'body, table, td, div, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }\n'+
+'table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; border-collapse: collapse; }\n'+
+'img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }\n'+
+'body { margin: 0; padding: 0; width: 100% !important; }\n'+
+'a { text-decoration: none; }\n'+
+'.index-row:hover { background-color: #eaf0f9 !important; }\n'+
+'@media only screen and (max-width: 600px) { .email-container { width: 100% !important; } .mobile-padding { padding-left: 16px !important; padding-right: 16px !important; } }\n'+
+'</style></head>\n'+
+'<body style="margin: 0; padding: 0; background-color: #f0f2f5; '+F+'">\n'+
+'<div style="display: none; max-height: 0; overflow: hidden; font-size: 1px; line-height: 1px; color: #f0f2f5;">Confira as novidades da versão '+versao+': '+totalOS+' melhoria'+(totalOS>1?'s':'')+' em '+produtos.length+' produto'+(produtos.length>1?'s':'')+'.</div>\n'+
+'<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f0f2f5;"><tr><td align="center" style="padding: 20px 10px;">\n'+
+'<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="720" class="email-container" style="max-width: 720px; width: 100%;">\n'+
+
+'<!-- ÂNCORA TOPO --><tr><td><a name="topo"></a></td></tr>\n'+
+
+'<!-- HEADER --><tr><td style="padding-bottom: 20px;">'+
+'<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #3B5E9A; border-radius: 14px;">'+
+'<tr><td style="padding: 32px 36px;">'+
+'<p style="margin: 0 0 14px; color: #ffffff; font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; '+F+' opacity: 0.75;">LG Lugar de Gente</p>'+
+'<h1 style="margin: 0 0 6px; color: #ffffff; font-size: 26px; font-weight: 700; line-height: 1.2; '+F+'">Novidades da Versão '+versao+'</h1>'+
+'<p style="margin: 0; color: #ffffff; font-size: 14px; line-height: 1.6; '+F+' opacity: 0.75;">Entrega prevista para '+bolFmtDateBR(entrega)+'</p>'+
+'</td></tr></table>'+
+'</td></tr>\n'+
+
+'<!-- INTRO --><tr><td style="padding-bottom: 20px;">'+
+'<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f7fb; border-radius: 12px; border-left: 4px solid #EEA422;">'+
+'<tr><td style="padding: 18px 22px; color: #444444; font-size: 14px; line-height: 1.65; '+F+'">'+
+'Em resposta aos feedbacks dos nossos clientes, esta versão traz evoluções focadas em <strong style="color: #3B5E9A;">eficiência operacional, conformidade legal e usabilidade</strong>. Clique em cada produto abaixo para ir direto aos destaques.'+
+'</td></tr></table>'+
+'</td></tr>\n'+
+
+'<!-- ÍNDICE --><tr><td style="padding-bottom: 28px;">'+
+'<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden;">'+
+'<tr><td style="background-color: #3B5E9A; padding: 14px 20px;">'+
+'<p style="margin: 0; color: #ffffff; font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; '+F+'">&#128203; Nesta versão &middot; '+produtos.length+' produto'+(produtos.length>1?'s':'')+'</p>'+
+'</td></tr>'+
+indiceLinhas+
+'</table></td></tr>\n'+
+
+'<!-- DIVISOR --><tr><td style="padding-bottom: 20px;">'+
+'<table role="presentation" border="0" cellpadding="0" cellspacing="0">'+
+'<tr><td style="padding-bottom: 8px; border-bottom: 2px solid #EEA422; color: #3B5E9A; font-size: 11px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; '+F+'">Detalhes</td></tr>'+
+'</table></td></tr>\n'+
+
+secoes+
+
+'<!-- BOTÃO --><tr><td align="center" style="padding-bottom: 28px;">'+
+'<table role="presentation" border="0" cellpadding="0" cellspacing="0">'+
+'<tr><td align="center" style="background-color: #EEA422; border-radius: 8px;">'+
+'<a href="'+link+'" target="_blank" style="display: inline-block; padding: 14px 28px; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none; '+F+' letter-spacing: 0.3px;">Acessar página de novidades completa &#8594;</a>'+
+'</td></tr></table>'+
+'</td></tr>\n'+
+
+'<!-- FOOTER --><tr><td>'+
+'<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #3B5E9A; border-radius: 12px;">'+
+'<tr><td style="padding: 18px 22px; color: #ffffff; font-size: 13px; line-height: 1.5; '+F+'">'+
+'Dúvidas? Acesse o menu <strong style="color: #EEA422;">eSuporte</strong> no Portal Gente de Sucesso.'+
+'</td></tr></table>'+
+'</td></tr>\n'+
+
+'<tr><td style="height: 20px; line-height: 20px; font-size: 0;">&nbsp;</td></tr>\n'+
+
+'</table></td></tr></table>\n'+
+'<!-- Marketing Cloud -->\n'+
+'<div style="display:none; mso-hide:all;">\n'+
+'<a href="%%profile_center_url%%">Atualizar preferências</a>\n'+
+'<a href="%%unsub_center_url%%">Descadastrar</a>\n'+
+'</div>\n'+
+'</body></html>'
+  );
 }
 // ── BOLETIM INLINE/PRODUTO ────────────────────────────────────────────────────
 var INL_PRODUTOS=[]; // [{produto, oss:[{osId,titulo,descricao,badge,hasImagem,textoLivre,pdfB64,pdfNome,aiSugestaoTitulo,aiSugestaoDesc,_gerando,aprovado,open}]}]
@@ -1910,6 +2074,52 @@ function ossParaApropriar(){
     return false;
   });
 }
+
+// Apropriação automática — distribui horas igualmente entre OSs disponíveis
+// para todos os dias sem apropriação (ou com apropriação incompleta)
+function apropriarAutomatico(){
+  var ossDisp=ossParaApropriar();
+  if(!ossDisp.length){toast('Nenhuma OS disponível para apropriar','err');return}
+
+  var diasSemAprop=S.pontos.filter(function(p){
+    if(!p.horasTrabalhadas||p.horasTrabalhadas<=0)return false;
+    var total=(p.apropriacoes||[]).reduce(function(a,x){return a+x.horas},0);
+    return total<p.horasTrabalhadas*0.95; // considera incompleto se < 95% apropriado
+  });
+
+  if(!diasSemAprop.length){toast('Todos os dias já estão apropriados ✓');return}
+
+  var n=ossDisp.length;
+  var confirmMsg=diasSemAprop.length+' dia(s) sem apropriação completa.\n'+
+    'Distribuir igualmente entre '+n+' OS(s) disponíveis?\n\n'+
+    'As OSs que já possuem apropriação manual serão mantidas — apenas dias sem nenhuma apropriação serão preenchidos.';
+  if(!confirm(confirmMsg))return;
+
+  var salvos=0;
+  var promises=diasSemAprop.map(function(p){
+    var jaTemAprop=(p.apropriacoes||[]).length>0;
+    if(jaTemAprop)return Promise.resolve(); // preserva apropriações manuais existentes
+
+    // Rateio igual entre todas as OSs disponíveis
+    var base=Math.floor(100/n),rem=100-base*n;
+    var novasAprop=ossDisp.map(function(os,i){
+      var pct=base+(i<rem?1:0);
+      return{osId:os.id,horas:parseFloat((p.horasTrabalhadas*pct/100).toFixed(2))};
+    });
+    p.apropriacoes=novasAprop;
+    // Atualiza estado local de sliders
+    if(_apropState[p.id]){
+      _apropState[p.id].oss=ossDisp.map(function(os,i){return{osId:os.id,pct:base+(i<rem?1:0)}});
+    }
+    salvos++;
+    return dbSalvarPonto(p).catch(function(){});
+  });
+
+  Promise.all(promises).then(function(){
+    renderAprop();renderDash();
+    toast(salvos>0?salvos+' dia(s) apropriados automaticamente ✓':'Nenhum dia novo para apropriar');
+  });
+}
 function getApropState(p){
   if(!_apropState[p.id]){
     var oss=(p.apropriacoes||[]).map(function(a){return{osId:a.osId,pct:p.horasTrabalhadas>0?Math.round(a.horas/p.horasTrabalhadas*100):0}});
@@ -2035,32 +2245,97 @@ function renderSliderTrack(el,st,p){
 
 // ── CSV IMPORT ────────────────────────────────────────────────────────────────
 function detectSep(text){var first=text.split('\n')[0]||'';if((first.match(/;/g)||[]).length>=(first.match(/,/g)||[]).length)return';';if((first.match(/\t/g)||[]).length>0)return'\t';return','}
+
 function importCSV(input){
   var file=input.files[0];if(!file)return;
   var reader=new FileReader();
   reader.onload=function(e){
     var text=e.target.result,sep=detectSep(text);
     var lines=text.split('\n').map(function(l){return l.trim()}).filter(Boolean);
+    if(!lines.length){toast('Arquivo vazio','err');return}
+
+    // Localizar os índices das colunas pelo cabeçalho da primeira linha
+    var header=lines[0].split(sep).map(function(c){return c.replace(/"/g,'').trim()});
+    var iJornada=header.indexOf('jornadaTextBox');
+    var iDia=header.indexOf('diaTextBox');
+    var iData=header.indexOf('dataTextBox');
+    var iMarcacoes=header.indexOf('marcacoesTextBox');
+
+    // Se não achou cabeçalho, tenta fallback por posição (formato antigo)
+    var usaFallback=(iData===-1||iMarcacoes===-1);
+
     var imported=0,versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
-    lines.forEach(function(line){
-      var cols=line.split(sep).map(function(c){return c.replace(/"/g,'').trim()});
-      if(cols.length<3)return;
-      var rawData=cols[0],dia=cols[1];
+    // Agrupar por data — cada data pode ter múltiplas linhas (linhas de quebra)
+    var porData={};
+
+    lines.forEach(function(line,lineIdx){
+      if(lineIdx===0)return; // pula cabeçalho
+      // Parse respeitando aspas
+      var cols=[];var cur='';var inQ=false;
+      for(var ci=0;ci<line.length;ci++){
+        var ch=line[ci];
+        if(ch==='"'){inQ=!inQ}
+        else if(ch===sep&&!inQ){cols.push(cur.trim());cur=''}
+        else{cur+=ch}
+      }
+      cols.push(cur.trim());
+
+      var rawData,dia,marcacoes,jornada;
+
+      if(!usaFallback){
+        // Formato correto: usa índices do cabeçalho
+        // ATENÇÃO: conforme descrito, jornadaTextBox está na coluna seguinte (diaTextBox)
+        // Portanto o conteúdo real da jornada está em iDia, e o dia da semana está em iJornada
+        jornada = iJornada>-1 ? (cols[iDia]||'').replace(/"/g,'').trim() : '';
+        dia     = iJornada>-1 ? (cols[iJornada]||'').replace(/"/g,'').trim() : '';
+        rawData = iData>-1    ? (cols[iData]||'').replace(/"/g,'').trim()    : '';
+        marcacoes= iMarcacoes>-1 ? (cols[iMarcacoes]||'').replace(/"/g,'').trim() : '';
+      } else {
+        // Fallback posicional — detecta data e marcações por regex
+        rawData=cols.find(function(c){return/^\d{2}\/\d{2}\/\d{2,4}$/.test(c.trim())})||'';
+        dia='';
+        marcacoes=cols.find(function(c){return/\d{2}:\d{2}\s+\d{2}:\d{2}/.test(c)})||'';
+      }
+
       if(!rawData||!/\d/.test(rawData))return;
-      var data=rawData;
-      if(/\d{2}\/\d{2}\/\d{2,4}/.test(rawData)){var p=rawData.split('/');var ano=p[2].length===2?'20'+p[2]:p[2];data=ano+'-'+p[1]+'-'+p[0]}
-      var marcacoes=cols.find(function(c){return/\d{2}:\d{2}\s+\d{2}:\d{2}/.test(c)});
-      if(!marcacoes)return;
-      var ht=calcHorasStr(marcacoes.trim());
-      var ei=S.pontos.findIndex(function(p){return p.data===data});
-      var reg={id:uid(),data:data,dia:dia||'',marcacoes:marcacoes.trim(),horasTrabalhadas:ht,versaoId:versaoId,apropriacoes:[]};
-      if(ei>-1){reg.id=S.pontos[ei].id;reg.apropriacoes=S.pontos[ei].apropriacoes||[];S.pontos[ei]=reg}
-      else S.pontos.push(reg);imported++;
+      // Normalizar data para YYYY-MM-DD
+      var dataISO=rawData;
+      if(/\d{2}\/\d{2}\/\d{2,4}/.test(rawData)){
+        var p=rawData.split('/');var ano=p[2].length===2?'20'+p[2]:p[2];
+        dataISO=ano+'-'+p[1]+'-'+p[0];
+      }
+      if(!marcacoes)return; // linha sem marcações (linha de quebra/ocorrência)
+
+      // Acumula: se já existe entrada para esta data com marcações, mantém a mais completa
+      var marcStr=marcacoes.trim();
+      var numMarcacoes=(marcStr.match(/\d{2}:\d{2}/g)||[]).length;
+      if(!porData[dataISO]||numMarcacoes>(porData[dataISO].numMarcacoes||0)){
+        porData[dataISO]={data:dataISO,dia:dia||'',marcacoes:marcStr,numMarcacoes:numMarcacoes};
+      }
     });
-    S.pontos.sort(function(a,b){return b.data.localeCompare(a.data)});save();
-    var sepLabel=sep===';'?'ponto-e-vírgula':sep==='\t'?'tab':'vírgula';
-    document.getElementById('import-preview').innerHTML='<div style="margin-top:12px;padding:10px 14px;background:var(--green-dim);border-radius:var(--radius);font-size:13px;color:var(--green-text)">'+imported+' dia(s) importado(s) · separador: '+sepLabel+'</div>';
-    renderPontoList();renderDash();input.value='';
+
+    Object.values(porData).forEach(function(reg){
+      var ht=calcHorasStr(reg.marcacoes);
+      var ei=S.pontos.findIndex(function(p){return p.data===reg.data});
+      var novo={id:uid(),data:reg.data,dia:reg.dia,marcacoes:reg.marcacoes,horasTrabalhadas:ht,versaoId:versaoId,apropriacoes:[]};
+      if(ei>-1){novo.id=S.pontos[ei].id;novo.apropriacoes=S.pontos[ei].apropriacoes||[];S.pontos[ei]=novo}
+      else{S.pontos.push(novo)}
+      imported++;
+    });
+
+    S.pontos.sort(function(a,b){return b.data.localeCompare(a.data)});
+    // Salva no Supabase
+    var promises=Object.values(porData).map(function(reg){
+      var p=S.pontos.find(function(x){return x.data===reg.data});
+      return p?dbSalvarPonto(p).catch(function(){}):Promise.resolve();
+    });
+    Promise.all(promises).then(function(){
+      document.getElementById('import-preview').innerHTML=
+        '<div style="margin-top:12px;padding:10px 14px;background:var(--green-dim);border-radius:var(--radius);font-size:13px;color:var(--green-text)">'+
+        imported+' dia(s) importado(s) com sucesso.</div>';
+      renderPontoList();renderDash();
+    });
+    input.value='';
   };
   reader.readAsText(file,'UTF-8');
 }
