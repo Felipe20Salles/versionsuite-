@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VersionSuite v10.5</title>
+<title>VersionSuite v10.7</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -228,6 +228,12 @@ textarea.form-input{resize:vertical;min-height:70px}
 /* PREFS */
 .pref-section{margin-bottom:24px}
 .pref-section-title{font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+.role-badge-admin{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
+.role-badge-membro{background:rgba(99,102,241,.15);color:#6366f1;border:1px solid rgba(99,102,241,.3)}
+.role-badge-visualizador{background:rgba(107,114,128,.15);color:#9ca3af;border:1px solid rgba(107,114,128,.2)}
+.user-card{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card2);border-radius:var(--radius);border:1px solid var(--border)}
+.user-avatar-sm{width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0}
+.user-avatar-initials{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0}
 .color-palette{display:flex;flex-wrap:wrap;gap:8px}
 .color-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s}
 .color-swatch:hover{transform:scale(1.15)}.color-swatch.selected{border-color:var(--text);box-shadow:0 0 0 2px var(--bg)}
@@ -268,8 +274,35 @@ textarea.form-input{resize:vertical;min-height:70px}
 <div class="app">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <div class="logo-mark">Version<em>Suite</em></div>
-      <div class="logo-sub">Gestão de entregas</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Chama externa -->
+          <path d="M16 2C16 2 10 8 10 14c0 2.5 1 4.5 2.5 6C11.5 18 11 16.5 11 15c0-3 3-6 3-6s-0.5 3 1.5 5c0.5 0.7 1 1.3 1.5 2 0.5-1 0.8-2.2 0.8-3.5 0-1.5-0.8-3-0.8-3s3 2.5 3 6.5c0 1.2-0.3 2.3-0.8 3.2C20.7 18.8 21 17.4 21 16c0-4-3-8-3-8s0.5 2-0.5 4C18.5 10 16 6 16 2z" fill="url(#flamGrad1)"/>
+          <!-- Núcleo da chama -->
+          <path d="M16 12C16 12 13 15.5 13 18.5c0 1.7 0.8 3.1 2 4C14.5 21.5 14 20.3 14 19c0-2 1.5-3.5 1.5-3.5s0.2 1.5 1 2.5C17 17.5 18 16 18 14.5c0-0.8-0.2-1.5-0.2-1.5S19.5 15 19.5 18c0 0.8-0.2 1.6-0.5 2.2 1-1 1.5-2.3 1.5-3.7C20.5 13.5 18 11 16 12z" fill="url(#flamGrad2)"/>
+          <!-- Ponta brilhante -->
+          <ellipse cx="16" cy="22" rx="2.5" ry="3.5" fill="url(#flamGrad3)" opacity="0.9"/>
+          <defs>
+            <linearGradient id="flamGrad1" x1="16" y1="2" x2="16" y2="28" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="var(--accent)"/>
+              <stop offset="60%" stop-color="#f97316"/>
+              <stop offset="100%" stop-color="#ef4444"/>
+            </linearGradient>
+            <linearGradient id="flamGrad2" x1="16" y1="12" x2="16" y2="26" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#fbbf24"/>
+              <stop offset="100%" stop-color="#f97316"/>
+            </linearGradient>
+            <linearGradient id="flamGrad3" x1="16" y1="18" x2="16" y2="26" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#fde68a"/>
+              <stop offset="100%" stop-color="#fbbf24"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div>
+          <div class="logo-mark">Version<em>Suite</em></div>
+          <div class="logo-sub">Gestão de entregas</div>
+        </div>
+      </div>
     </div>
     <nav class="sidebar-nav">
       <div class="nav-section">
@@ -418,53 +451,61 @@ textarea.form-input{resize:vertical;min-height:70px}
 
         <!-- ===== ABA INLINE/PRODUTO ===== -->
         <div id="bol-screen-inline" style="display:none">
-          <!-- Config Inline -->
+          <!-- Config Inline — igual ao Email mas sem grupo, com campos do inline -->
           <div style="background:linear-gradient(135deg,rgba(59,94,154,.12),rgba(238,164,34,.06));border:1px solid rgba(59,94,154,.25);border-radius:var(--radius-xl);padding:18px 22px;margin-bottom:20px">
-            <div style="font-size:11px;font-weight:600;color:#7da8e8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px">📱 Configuração do Inline</div>
+            <div style="font-size:11px;font-weight:600;color:#7da8e8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px">📱 Cabeçalho do Inline</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">
               <div><label class="form-label">Identificação da versão</label><input class="form-input" id="inl-versao" placeholder="Ex: VERSÃO ABRIL 2026"></div>
               <div><label class="form-label">Data de entrega</label><input type="date" class="form-input" id="inl-entrega"></div>
               <div><label class="form-label">Link novidades completas</label><input class="form-input" id="inl-link" placeholder="https://..."></div>
             </div>
-            <div><label class="form-label">Texto introdutório (aparece na Home)</label><textarea class="form-input" id="inl-intro" placeholder="Esta versão chega para tornar sua rotina mais ágil, segura e estratégica..." style="min-height:60px"></textarea></div>
+            <div><label class="form-label">Texto introdutório (Home)</label><textarea class="form-input" id="inl-intro" placeholder="Esta versão chega para tornar sua rotina mais ágil..." style="min-height:52px"></textarea></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+              <button class="btn btn-ghost btn-sm" onclick="inlSalvarRascunho()">💾 Salvar rascunho</button>
+              <button class="btn btn-ghost btn-sm" onclick="inlCarregarRascunho()">📂 Carregar rascunho</button>
+            </div>
           </div>
 
-          <!-- Produtos do Inline -->
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-            <div style="font-size:14px;font-weight:500">Produtos no boletim inline</div>
-            <button class="btn btn-primary btn-sm" onclick="inlAdicionarProduto()">+ Adicionar produto</button>
+          <!-- API Key (compartilhada) -->
+          <div id="inl-apikey-block" style="background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:12px;color:var(--muted);white-space:nowrap">🔑 Chave API (Anthropic):</span>
+            <input id="inl-api-key" type="password" class="form-input" style="flex:1;font-size:12px" placeholder="sk-ant-..." oninput="localStorage.setItem('vs_bol_apikey',this.value)">
           </div>
-          <div id="inl-produtos-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px"></div>
 
-          <!-- Gerar -->
+          <!-- Lista de OSs (mesma lógica do E-mail) -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div style="font-size:14px;font-weight:500">OSs no boletim inline</div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-primary btn-sm" onclick="inlAdicionarOS()">+ Adicionar OS</button>
+            </div>
+          </div>
+          <div id="inl-os-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px"></div>
+
+          <!-- Ações -->
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px">
             <button class="btn btn-primary" onclick="inlGerarHTML()" style="background:#1B5EAD;border-color:#1B5EAD">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,6 1,8 4,10"/><polyline points="12,6 15,8 12,10"/><line x1="9" y1="3" x2="7" y2="13"/></svg>Gerar HTML Inline (Home + Produtos)
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="4,6 1,8 4,10"/><polyline points="12,6 15,8 12,10"/><line x1="9" y1="3" x2="7" y2="13"/></svg>Gerar HTML Inline
             </button>
-            <button class="btn btn-ghost btn-sm" onclick="inlPreview()">👁 Pré-visualizar Home</button>
+            <button class="btn btn-ghost btn-sm" onclick="inlPreview()">👁 Pré-visualizar</button>
           </div>
 
-          <!-- Output Inline -->
+          <!-- Output -->
           <div id="inl-preview-panel" style="display:none;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-xl);padding:20px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
               <div style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px">HTML Gerado — Inline</div>
               <div style="display:flex;gap:8px">
-                <button class="btn btn-sm btn-ghost" onclick="inlCopiarHTML('home')">📋 Copiar Home</button>
-                <button class="btn btn-sm" style="background:#EEA422;border-color:#EEA422;color:#fff" onclick="inlDownloadAll()">⬇ Download todos</button>
+                <button class="btn btn-sm btn-ghost" onclick="inlCopiarHTML()">📋 Copiar</button>
+                <button class="btn btn-sm" style="background:#EEA422;border-color:#EEA422;color:#fff" onclick="inlDownloadAll()">⬇ Download</button>
               </div>
             </div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:8px">Home (Step 0):</div>
-            <div id="inl-html-home" style="background:#0a0a0d;border:1px solid var(--border2);border-radius:var(--radius-lg);padding:14px;font-family:var(--mono);font-size:11px;color:#a8b5c8;line-height:1.7;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all;margin-bottom:12px"></div>
-            <div id="inl-produtos-outputs"></div>
+            <div id="inl-html-home" style="background:#0a0a0d;border:1px solid var(--border2);border-radius:var(--radius-lg);padding:14px;font-family:var(--mono);font-size:11px;color:#a8b5c8;line-height:1.7;max-height:300px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></div>
           </div>
-
-          <!-- Visual preview inline -->
           <div id="inl-visual-preview" style="display:none;margin-top:20px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-              <div style="font-size:13px;font-weight:500">Pré-visualização — Home Inline (700×400)</div>
+              <div style="font-size:13px;font-weight:500">Pré-visualização Inline</div>
               <button class="btn btn-xs btn-ghost" onclick="document.getElementById('inl-visual-preview').style.display='none'">Fechar</button>
             </div>
-            <div style="width:700px;max-width:100%;overflow:auto;border:2px dashed var(--border2);border-radius:var(--radius-lg)"><div id="inl-visual-content" style="width:700px;background:#fff"></div></div>
+            <div style="max-width:700px;overflow:auto;border:2px dashed var(--border2);border-radius:var(--radius-lg);background:#fff"><div id="inl-visual-content"></div></div>
           </div>
         </div>
       </div>
@@ -545,6 +586,19 @@ textarea.form-input{resize:vertical;min-height:70px}
 
       <!-- PREFERENCIAS -->
       <div id="screen-preferencias" class="screen">
+        <!-- USUÁRIOS DA PLATAFORMA -->
+        <div class="pref-section" id="pref-section-users">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <div class="pref-section-title" style="margin-bottom:0">Usuários da plataforma</div>
+            <span id="pref-role-badge" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(124,111,247,.15);color:#7c6ff7;border:1px solid rgba(124,111,247,.3)">—</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">
+            Gerencie quem pode acessar a VersionSuite e seus níveis de permissão. Somente <strong>Admins</strong> podem alterar roles.
+          </div>
+          <div id="users-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+          <div id="users-list-hint" style="font-size:11px;color:var(--hint)">Usuários aparecem automaticamente após o primeiro login com Google.</div>
+        </div>
+
         <div class="pref-section">
           <div class="pref-section-title">Aparência</div>
           <div class="theme-toggle" onclick="toggleTheme()">
@@ -814,18 +868,173 @@ var CORES=[
   {name:'Rosa',hex:'#ec4899',rgb:'236,72,153'},{name:'Vermelho',hex:'#ef4444',rgb:'239,68,68'},
   {name:'Teal',hex:'#14b8a6',rgb:'20,184,166'},{name:'Roxo',hex:'#a855f7',rgb:'168,85,247'}
 ];
-// Gera uma cor consistente a partir do nome — mesmo nome sempre retorna a mesma cor da paleta
+// ── SISTEMA DE USUÁRIOS / ROLES ───────────────────────────────────────────────
+// Roles: 'admin' | 'membro' | 'visualizador'
+// Armazenado em profiles.prefs.role + profiles.prefs.displayName + profiles.prefs.color
+// Admin pode alterar roles de outros. Membro/Visualizador só vê.
+
+var S_USERS=[];  // lista de { id, email, displayName, avatar, role, colorIdx }
+
+var ROLE_LABELS={admin:'Admin',membro:'Membro',visualizador:'Visualizador'};
+var ROLE_PRIORITY={admin:0,membro:1,visualizador:2};
+
+function currentUserRole(){
+  var u=S_USERS.find(function(x){return x.id===CURRENT_USER.id});
+  return u?u.role:'membro';
+}
+function isAdmin(){return currentUserRole()==='admin';}
+
+// Carrega todos os profiles do Supabase para popular lista de usuários
+async function loadUsers(){
+  try{
+    var {data:profiles}=await sb.from('profiles').select('id,prefs');
+    if(!profiles)return;
+    S_USERS=profiles.map(function(p){
+      var prefs=p.prefs||{};
+      return{
+        id:p.id,
+        email:prefs.email||'',
+        displayName:prefs.displayName||prefs.email||'Usuário',
+        avatar:prefs.avatar||'',
+        role:prefs.role||'membro',
+        colorIdx:prefs.colorIdx!==undefined?prefs.colorIdx:null
+      };
+    });
+    // Atribui colorIdx únicos para quem não tem (ordem de cadastro)
+    var usedIdx=S_USERS.filter(function(u){return u.colorIdx!==null}).map(function(u){return u.colorIdx});
+    var next=0;
+    S_USERS.forEach(function(u){
+      if(u.colorIdx===null){
+        while(usedIdx.indexOf(next)>-1)next++;
+        u.colorIdx=next;usedIdx.push(next);next++;
+      }
+    });
+    // Seed do mapa de cores por nome
+    var nomes=S_USERS.map(function(u){return u.displayName});
+    // Reseta e reconstrói o mapa com índices fixos por colorIdx
+    S_USERS.forEach(function(u){
+      var key=(u.displayName||'').trim().split(' ')[0];
+      if(key)_USER_COLOR_MAP[key]=u.colorIdx;
+    });
+    _USER_COLOR_NEXT=Math.max(S_USERS.length,_USER_COLOR_NEXT);
+    // Também usa nomes das OSs como fallback
+    seedUserColors(S.oss.map(function(o){return o.atribuicao||''}).filter(Boolean));
+  }catch(e){console.warn('loadUsers:',e);}
+}
+
+async function saveUserRole(userId,newRole){
+  var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
+  u.role=newRole;
+  await sb.from('profiles').update({prefs:{
+    email:u.email,displayName:u.displayName,avatar:u.avatar,
+    role:newRole,colorIdx:u.colorIdx
+  }}).eq('id',userId);
+}
+
+function renderUsersPrefs(){
+  // Badge do role do usuário logado
+  var myRole=currentUserRole();
+  var badge=document.getElementById('pref-role-badge');
+  if(badge){
+    badge.textContent=ROLE_LABELS[myRole]||myRole;
+    badge.className='';
+    badge.style.cssText='font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;';
+    if(myRole==='admin')badge.style.cssText+='background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)';
+    else if(myRole==='membro')badge.style.cssText+='background:rgba(99,102,241,.15);color:#6366f1;border:1px solid rgba(99,102,241,.3)';
+    else badge.style.cssText+='background:rgba(107,114,128,.15);color:#9ca3af;border:1px solid rgba(107,114,128,.2)';
+  }
+
+  var el=document.getElementById('users-list');if(!el)return;
+  if(!S_USERS.length){el.innerHTML='<div style="font-size:12px;color:var(--hint)">Nenhum usuário registrado ainda.</div>';return;}
+
+  // Ordena: admins primeiro, depois alfabético
+  var sorted=S_USERS.slice().sort(function(a,b){
+    var rp=(ROLE_PRIORITY[a.role]||1)-(ROLE_PRIORITY[b.role]||1);
+    if(rp!==0)return rp;
+    return a.displayName.localeCompare(b.displayName);
+  });
+
+  el.innerHTML=sorted.map(function(u){
+    var isMe=u.id===CURRENT_USER.id;
+    var cor=CORES[u.colorIdx%CORES.length]||CORES[0];
+    var initials=(u.displayName||'?').split(' ').slice(0,2).map(function(w){return w[0]}).join('').toUpperCase();
+
+    var avatarHtml=u.avatar?
+      '<img class="user-avatar-sm" src="'+u.avatar+'" alt="'+u.displayName+'" onerror="this.style.display=\'none\'">':
+      '<div class="user-avatar-initials" style="background:'+cor.hex+'">'+initials+'</div>';
+
+    var roleHtml='';
+    if(isAdmin()&&!isMe){
+      // Admin pode mudar role de outros via select
+      roleHtml='<select onchange="saveUserRole(\''+u.id+'\',this.value)" style="border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:11px;padding:3px 6px;border-radius:4px;cursor:pointer">'+
+        ['admin','membro','visualizador'].map(function(r){
+          return'<option value="'+r+'"'+(u.role===r?' selected':'')+'>'+ROLE_LABELS[r]+'</option>';
+        }).join('')+
+      '</select>';
+    }else{
+      var roleClass=u.role==='admin'?'role-badge-admin':u.role==='visualizador'?'role-badge-visualizador':'role-badge-membro';
+      roleHtml='<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;" class="'+roleClass+'">'+ROLE_LABELS[u.role]+'</span>';
+    }
+
+    // Cor do usuário (dot + nome da cor)
+    var colorDot='<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">'+
+      '<span style="width:8px;height:8px;border-radius:50%;background:'+cor.hex+';display:inline-block"></span>'+cor.name+'</span>';
+
+    return'<div class="user-card">'+
+      avatarHtml+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13px;font-weight:500;color:var(--text)">'+u.displayName+(isMe?' <span style="font-size:10px;color:var(--hint)">(você)</span>':'')+' </div>'+
+        '<div style="font-size:11px;color:var(--hint);margin-top:1px">'+colorDot+'</div>'+
+      '</div>'+
+      roleHtml+
+    '</div>';
+  }).join('');
+}
+
+// Registra/atualiza o profile do usuário atual no Supabase após login
+async function upsertCurrentUserProfile(){
+  if(!CURRENT_USER)return;
+  var meta=CURRENT_USER.user_metadata||{};
+  var displayName=meta.full_name||meta.name||CURRENT_USER.email||'Usuário';
+  var avatar=meta.avatar_url||meta.picture||'';
+  var email=CURRENT_USER.email||'';
+  // Busca profile existente
+  var {data:existing}=await sb.from('profiles').select('prefs').eq('id',CURRENT_USER.id).maybeSingle();
+  var existPrefs=existing?existing.prefs||{}:{};
+  // Só sobrescreve displayName/avatar/email; preserva role e colorIdx
+  var newPrefs=Object.assign({},existPrefs,{displayName:displayName,avatar:avatar,email:email});
+  if(!newPrefs.role)newPrefs.role='membro';
+  if(newPrefs.colorIdx===undefined)newPrefs.colorIdx=null; // será atribuído em loadUsers
+  await sb.from('profiles').upsert({id:CURRENT_USER.id,prefs:newPrefs},{onConflict:'id'});
+}
+
+
+// Cada usuário recebe uma cor da paleta. Cores não se repetem entre usuários cadastrados.
+// Mapa global: primeiro_nome → índice da cor (populado por carregarProfiles)
+var _USER_COLOR_MAP={};  // { 'Felipe': 0, 'Laura': 3, ... }
+var _USER_COLOR_NEXT=0;  // próximo índice disponível
+
 function corPorNome(nome){
   if(!nome)return null;
-  var hash=0;
-  for(var i=0;i<nome.length;i++){hash=((hash<<5)-hash)+nome.charCodeAt(i);hash|=0;}
-  var cor=CORES[Math.abs(hash)%CORES.length];
-  return cor;
+  var key=nome.trim().split(' ')[0]; // usa primeiro nome como chave
+  // Se já tem cor atribuída, usa ela
+  if(_USER_COLOR_MAP[key]!==undefined)return CORES[_USER_COLOR_MAP[key]%CORES.length];
+  // Novo usuário: atribui próxima cor disponível (sem repetir)
+  _USER_COLOR_MAP[key]=_USER_COLOR_NEXT++;
+  return CORES[_USER_COLOR_MAP[key]%CORES.length];
+}
+function seedUserColors(nomes){
+  // Pré-popula o mapa com ordem consistente (ordem alfabética garante mesma cor sempre)
+  var sorted=nomes.slice().sort();
+  sorted.forEach(function(n){
+    var key=n.trim().split(' ')[0];
+    if(_USER_COLOR_MAP[key]===undefined){_USER_COLOR_MAP[key]=_USER_COLOR_NEXT++;}
+  });
 }
 // Retorna o HTML do badge de atribuição com visual idêntico ao badge de produto
 function badgeAtribuicao(atribuicao){
   if(!atribuicao)return'';
-  var primeiro=atribuicao.split(' ')[0];
+  var primeiro=atribuicao.trim().split(' ')[0];
   var cor=corPorNome(primeiro);
   if(!cor)return'';
   return'<span class="badge" style="background:rgba('+cor.rgb+',.12);color:'+cor.hex+';border:1px solid rgba('+cor.rgb+',.2)">'+primeiro+'</span>';
@@ -888,19 +1097,19 @@ function setAccent(hex,rgb){S.prefs.accent=hex;S.prefs.accentRgb=rgb;save();appl
 function toggleTheme(){S.prefs.lightMode=!S.prefs.lightMode;save();applyPrefs()}
 function renderProdutos(){
   var el=document.getElementById('produtos-list');if(!el)return;
+  var canEdit=isAdmin();
   var gt=S.prefs.produtos.filter(function(p){return(PLINHA[p]||'Gestão de Talentos')==='Gestão de Talentos'});
   var pag=S.prefs.produtos.filter(function(p){return(PLINHA[p]||'')===('Pagadoria')});
 
   function mkItem(p){
     var i=S.prefs.produtos.indexOf(p);
-    var linha=PLINHA[p]||'Gestão de Talentos';
     return'<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card2);border-radius:var(--radius);border:1px solid var(--border)">'+
       '<span style="flex:1;font-size:13px">'+p+'</span>'+
-      '<span style="font-size:14px;color:var(--hint);cursor:pointer" onclick="removeProduto('+i+')">×</span></div>';
+      (canEdit?'<span style="font-size:14px;color:var(--hint);cursor:pointer" onclick="removeProduto('+i+')">×</span>':'')+
+    '</div>';
   }
 
   var html='';
-  // Grupo Gestão de Talentos
   html+='<div style="margin-bottom:14px">'+
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
       '<span class="badge tag-gt" style="font-size:10px">Gestão de Talentos</span>'+
@@ -909,7 +1118,6 @@ function renderProdutos(){
     (gt.length?'<div style="display:flex;flex-direction:column;gap:6px">'+gt.map(mkItem).join('')+'</div>':
       '<div style="font-size:12px;color:var(--hint);padding:8px 10px">Nenhum produto cadastrado</div>')+
   '</div>';
-  // Grupo Pagadoria
   html+='<div>'+
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
       '<span class="badge tag-pag" style="font-size:10px">Pagadoria</span>'+
@@ -920,6 +1128,8 @@ function renderProdutos(){
   '</div>';
 
   el.innerHTML=html;
+  var addBtn=document.querySelector('[onclick="addProduto()"]');
+  if(addBtn)addBtn.style.display=canEdit?'':'none';
   populateProdutoSel();
 }
 var _addProdutoLinha='gt';
@@ -987,7 +1197,7 @@ function goScreen(name){
   if(name==='boletim'){setBolTab(BOL_TAB);setTimeout(bolCarregarAPIKey,50)}
   if(name==='ponto')renderPontoList();
   if(name==='historico')renderHist();
-  if(name==='preferencias'){renderPalette();renderProdutos()}
+  if(name==='preferencias'){renderPalette();renderProdutos();renderUsersPrefs()}
   if(name==='agenda')renderAgenda();
 }
 
@@ -1346,7 +1556,8 @@ function bolConfirmarAddOS(){
   BOL_OSS[BOL_TAB].push({
     id:uid(),osId:osId,num:os.num,titulo:document.getElementById('bol-add-titulo').value.trim()||os.titulo,
     produto:os.produto,badge:'melhoria',descricao:'',pdfB64:null,pdfNome:null,textoLivre:'',
-    hasImagem:false,aiSugestaoTitulo:'',aiSugestaoDesc:'',aprovado:false,open:true,_gerando:false
+    imagens:[],  // array de {link:'',legenda:'',posicao:'fim'} — substituiu hasImagem
+    aiSugestaoTitulo:'',aiSugestaoDesc:'',aprovado:false,open:true,_gerando:false
   });
   closeModal('modal-bol-os');bolRenderOSList();
 }
@@ -1434,25 +1645,40 @@ function bolRenderOSItem(os){
       '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+badgeSel+'</div>'+
       '<div class="form-group"><label class="form-label">Título no boletim</label>'+
         '<input class="form-input" value="'+escHtml(os.titulo)+'" placeholder="Título que aparece no boletim" oninput="bolUpdateOS(\''+os.id+'\',\'titulo\',this.value)"></div>'+
+      // ── TOOLBAR DE FORMATAÇÃO AVANÇADA ──────────────────────────────────
       '<div class="form-group"><label class="form-label">Descrição</label>'+
         '<div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">'+
-          // Toolbar Office-style
           '<div style="display:flex;align-items:center;gap:2px;padding:4px 6px;background:var(--card2);border-bottom:1px solid var(--border);flex-wrap:wrap">'+
-            '<button type="button" title="Negrito" onclick="bolFormatDesc(\''+os.id+'\',\'bold\')" style="width:26px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;font-weight:700;font-size:13px;color:var(--text);display:flex;align-items:center;justify-content:center" onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'"><b>B</b></button>'+
-            '<button type="button" title="Itálico" onclick="bolFormatDesc(\''+os.id+'\',\'italic\')" style="width:26px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;font-size:13px;color:var(--text);display:flex;align-items:center;justify-content:center" onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'"><i>I</i></button>'+
-            '<button type="button" title="Sublinhado" onclick="bolFormatDesc(\''+os.id+'\',\'underline\')" style="width:26px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;font-size:13px;color:var(--text);display:flex;align-items:center;justify-content:center" onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'"><u>U</u></button>'+
-            '<div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>'+
-            '<button type="button" title="&lt;strong&gt; tag" onclick="bolFormatDesc(\''+os.id+'\',\'strong\')" style="width:46px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;font-size:10px;color:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--mono)" onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'">&lt;b&gt;</button>'+
-            '<button type="button" title="Parágrafo &lt;p&gt;" onclick="bolFormatDesc(\''+os.id+'\',\'p\')" style="width:46px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;font-size:10px;color:var(--accent);display:flex;align-items:center;justify-content:center;font-family:var(--mono)" onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'">&lt;p&gt;</button>'+
-            '<div style="width:1px;height:18px;background:var(--border);margin:0 4px"></div>'+
-            '<button type="button" title="Limpar formatação" onclick="bolFormatDesc(\''+os.id+'\',\'clear\')" style="width:26px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;font-size:12px;color:var(--muted);display:flex;align-items:center;justify-content:center" onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'">✕</button>'+
+            // --- Texto ---
+            bolTbBtn('B','<b>B</b>','Negrito','bold',os.id,'font-weight:700')+
+            bolTbBtn('I','<i>I</i>','Itálico','italic',os.id)+
+            bolTbBtn('U','<u>U</u>','Sublinhado','underline',os.id)+
+            '<div style="width:1px;height:18px;background:var(--border);margin:0 3px"></div>'+
+            // --- Listas ---
+            bolTbBtn('ul','<span style="font-size:11px">&#8226;&#8212;</span>','Lista com marcadores','ul',os.id,'',52)+
+            bolTbBtn('ol','<span style="font-size:11px">1&#8212;</span>','Lista numerada','ol',os.id,'',52)+
+            '<div style="width:1px;height:18px;background:var(--border);margin:0 3px"></div>'+
+            // --- Alinhamento ---
+            bolTbBtn('left','<svg width="12" height="10" viewBox="0 0 12 10"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.5"/><line x1="0" y1="4" x2="8" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="0" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5"/><line x1="0" y1="10" x2="6" y2="10" stroke="currentColor" stroke-width="1.5"/></svg>','Alinhar à esquerda','align-left',os.id,'',32)+
+            bolTbBtn('center','<svg width="12" height="10" viewBox="0 0 12 10"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.5"/><line x1="2" y1="4" x2="10" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="0" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5"/><line x1="3" y1="10" x2="9" y2="10" stroke="currentColor" stroke-width="1.5"/></svg>','Centralizar','align-center',os.id,'',32)+
+            bolTbBtn('right','<svg width="12" height="10" viewBox="0 0 12 10"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.5"/><line x1="4" y1="4" x2="12" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="0" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5"/><line x1="6" y1="10" x2="12" y2="10" stroke="currentColor" stroke-width="1.5"/></svg>','Alinhar à direita','align-right',os.id,'',32)+
+            '<div style="width:1px;height:18px;background:var(--border);margin:0 3px"></div>'+
+            // --- HTML tags ---
+            bolTbBtn('p','&lt;p&gt;','Parágrafo','p',os.id,'font-size:10px;color:var(--accent);font-family:var(--mono)',44)+
+            bolTbBtn('clr','✕','Limpar HTML da seleção','clear',os.id,'font-size:11px;color:var(--muted)',28)+
           '</div>'+
-          '<textarea id="bol-desc-'+os.id+'" placeholder="Descrição da melhoria (HTML permitido)..." oninput="bolUpdateOS(\''+os.id+'\',\'descricao\',this.value)" style="width:100%;min-height:90px;padding:10px;border:none;outline:none;background:var(--card);color:var(--text);font-size:13px;font-family:var(--font);resize:vertical;box-sizing:border-box">'+escHtml(os.descricao)+'</textarea>'+
+          '<textarea id="bol-desc-'+os.id+'" placeholder="Descrição (HTML aceito: &lt;p&gt;, &lt;ul&gt;, &lt;ol&gt;, &lt;strong&gt;, &lt;em&gt;, &lt;u&gt;)..." oninput="bolUpdateOS(\''+os.id+'\',\'descricao\',this.value)" style="width:100%;min-height:100px;padding:10px;border:none;outline:none;background:var(--card);color:var(--text);font-size:13px;font-family:var(--font);resize:vertical;box-sizing:border-box">'+escHtml(os.descricao)+'</textarea>'+
         '</div>'+
       '</div>'+
-      '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--muted);margin-bottom:14px">'+
-        '<input type="checkbox" '+(os.hasImagem?'checked':'')+' style="width:15px;height:15px;accent-color:var(--accent)" onchange="bolUpdateOS(\''+os.id+'\',\'hasImagem\',this.checked)">'+
-        'Esta OS tem imagem no boletim (espaço reservado)</label>'+
+      // ── GESTOR DE IMAGENS MÚLTIPLAS ─────────────────────────────────────
+      '<div class="form-group">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+          '<label class="form-label" style="margin-bottom:0">Imagens no boletim</label>'+
+          '<button type="button" class="btn btn-xs btn-ghost" onclick="bolAddImagem(\''+os.id+'\')" style="color:var(--accent)">+ Adicionar imagem</button>'+
+        '</div>'+
+        '<div id="bol-imagens-'+os.id+'">'+bolRenderImagensEditor(os)+'</div>'+
+        '<div style="font-size:11px;color:var(--hint);margin-top:4px">Posicione imagens ao longo do texto. O link é opcional — deixe vazio para gerar um espaço reservado.</div>'+
+      '</div>'+
       '<div style="display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--border)">'+
         (!os.aprovado?'<button class="btn btn-sm btn-primary" onclick="bolAprovar(\''+os.id+'\')">✓ Aprovar</button>':'<button class="btn btn-sm" style="color:var(--amber-text);border-color:var(--amber-text)" onclick="bolDesaprovar(\''+os.id+'\')">↺ Editar</button>')+
         '<button class="btn btn-sm btn-danger" onclick="bolRemoverOS(\''+os.id+'\')">Remover</button>'+
@@ -1461,9 +1687,66 @@ function bolRenderOSItem(os){
 }
 
 function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+// Helper: gera botão da toolbar
+function bolTbBtn(key,label,title,cmd,osId,extraStyle,w){
+  var width=w||28;
+  return'<button type="button" title="'+title+'" onclick="bolFormatDesc(\''+osId+'\',\''+cmd+'\')" '+
+    'style="width:'+width+'px;height:26px;border:none;border-radius:4px;background:transparent;cursor:pointer;'+
+    'font-size:13px;color:var(--text);display:flex;align-items:center;justify-content:center;'+(extraStyle||'')+'" '+
+    'onmouseover="this.style.background=\'var(--border)\'" onmouseout="this.style.background=\'transparent\'">'+label+'</button>';
+}
+
+// Renderiza a lista de imagens do editor
+function bolRenderImagensEditor(os){
+  var imagens=os.imagens||[];
+  if(!imagens.length)return'<div style="font-size:12px;color:var(--hint);padding:6px 0">Nenhuma imagem adicionada.</div>';
+  return imagens.map(function(img,ii){
+    return'<div style="background:var(--card2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+        '<span style="font-size:11px;font-weight:700;color:var(--accent)">🖼 Imagem '+(ii+1)+'</span>'+
+        '<button type="button" class="btn btn-xs btn-danger" onclick="bolRemoveImagem(\''+os.id+'\','+ii+')">✕</button>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+        '<div><label class="form-label" style="font-size:10px">Link da imagem (URL)</label>'+
+          '<input class="form-input" style="font-size:12px" placeholder="https://... (vazio = placeholder)" value="'+escHtml(img.link||'')+'" oninput="bolUpdateImagem(\''+os.id+'\','+ii+',\'link\',this.value)"></div>'+
+        '<div><label class="form-label" style="font-size:10px">Legenda</label>'+
+          '<input class="form-input" style="font-size:12px" placeholder="Texto da legenda (opcional)" value="'+escHtml(img.legenda||'')+'" oninput="bolUpdateImagem(\''+os.id+'\','+ii+',\'legenda\',this.value)"></div>'+
+      '</div>'+
+      '<div style="margin-top:8px"><label class="form-label" style="font-size:10px">Posição no texto</label>'+
+        '<select class="form-input" style="font-size:12px" onchange="bolUpdateImagem(\''+os.id+'\','+ii+',\'posicao\',this.value)">'+
+          ['inicio','meio','fim'].map(function(pos){
+            return'<option value="'+pos+'"'+(img.posicao===pos?' selected':'')+'>'+
+              {inicio:'Antes do texto',meio:'Entre parágrafos (meio)',fim:'Após o texto'}[pos]+'</option>';
+          }).join('')+
+        '</select>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function bolAddImagem(osId){
+  var os=bolFindOS(osId);if(!os)return;
+  if(!os.imagens)os.imagens=[];
+  os.imagens.push({link:'',legenda:'',posicao:'fim'});
+  var el=document.getElementById('bol-imagens-'+osId);
+  if(el)el.innerHTML=bolRenderImagensEditor(os);
+}
+function bolRemoveImagem(osId,idx){
+  var os=bolFindOS(osId);if(!os||!os.imagens)return;
+  os.imagens.splice(idx,1);
+  var el=document.getElementById('bol-imagens-'+osId);
+  if(el)el.innerHTML=bolRenderImagensEditor(os);
+}
+function bolUpdateImagem(osId,idx,field,val){
+  var os=bolFindOS(osId);if(!os||!os.imagens||!os.imagens[idx])return;
+  os.imagens[idx][field]=val;
+}
+
 function bolFindOS(id){return BOL_OSS[BOL_TAB].find(function(o){return o.id===id})}
 function bolToggleOS(id){var os=bolFindOS(id);if(!os)return;os.open=!os.open;var b=document.getElementById('bol-body-'+id);if(b)b.style.display=os.open?'block':'none'}
 function bolUpdateOS(id,field,val){var os=bolFindOS(id);if(!os)return;os[field]=val}
+
 function bolFormatDesc(id,cmd){
   var ta=document.getElementById('bol-desc-'+id);if(!ta)return;
   var start=ta.selectionStart,end=ta.selectionEnd;
@@ -1475,6 +1758,18 @@ function bolFormatDesc(id,cmd){
   else if(cmd==='underline') ins='<u>'+(sel||'texto')+'</u>';
   else if(cmd==='strong') ins='<strong>'+(sel||'texto')+'</strong>';
   else if(cmd==='p')  ins='<p>'+(sel||'')+'</p>';
+  else if(cmd==='ul'){
+    // Transforma linhas selecionadas em <ul><li>...</li></ul>
+    var lines=(sel||'item').split('\n').filter(function(l){return l.trim()});
+    ins='<ul>\n'+lines.map(function(l){return'  <li>'+l.trim()+'</li>'}).join('\n')+'\n</ul>';
+  }
+  else if(cmd==='ol'){
+    var lines2=(sel||'item').split('\n').filter(function(l){return l.trim()});
+    ins='<ol>\n'+lines2.map(function(l){return'  <li>'+l.trim()+'</li>'}).join('\n')+'\n</ol>';
+  }
+  else if(cmd==='align-left')   ins='<p style="text-align:left">'+(sel||'')+'</p>';
+  else if(cmd==='align-center') ins='<p style="text-align:center">'+(sel||'')+'</p>';
+  else if(cmd==='align-right')  ins='<p style="text-align:right">'+(sel||'')+'</p>';
   else if(cmd==='clear'&&sel) ins=sel.replace(/<[^>]+>/g,'');
   else{ta.focus();return}
   ta.value=before+ins+after;
@@ -1696,6 +1991,32 @@ function bolBuildHTML(oss,linha){
         '<div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;">Espaço para imagem</div>'+
         '</td></tr></table>'
       ):'';
+      // Suporte a múltiplas imagens com posição
+      var imagens=o.imagens||[];
+      function buildImgHtml(img){
+        var hasLink=img.link&&img.link.trim();
+        return'<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td height="10" style="height:10px;font-size:0">&nbsp;</td></tr></table>'+
+          (hasLink?
+            '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #e5e7eb;border-radius:8px;overflow:hidden"><tr><td align="center">'+
+              '<img src="'+img.link+'" alt="'+(img.legenda||'')+'" style="max-width:100%;height:auto;display:block">'+
+            '</td></tr>'+
+            (img.legenda?'<tr><td style="padding:6px 12px;font-size:11px;color:#888;text-align:center;'+F+'">'+img.legenda+'</td></tr>':'')+
+            '</table>'
+          :
+            '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background:repeating-linear-gradient(45deg,#f4f7fb,#f4f7fb 8px,#eaf0f9 8px,#eaf0f9 16px);border:2px dashed #3B5E9A;border-radius:8px"><tr>'+
+            '<td style="padding:20px 16px;text-align:center;color:#3B5E9A;'+F+'">'+
+            '<div style="font-size:22px;margin-bottom:4px">&#128247;</div>'+
+            '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em">'+
+              (img.legenda?img.legenda:'Espaço para imagem')+'</div>'+
+            '</td></tr></table>'
+          )+
+          '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr><td height="8" style="height:8px;font-size:0">&nbsp;</td></tr></table>';
+      }
+      var imgInicio=imagens.filter(function(img){return img.posicao==='inicio'}).map(buildImgHtml).join('');
+      var imgMeio=imagens.filter(function(img){return img.posicao==='meio'}).map(buildImgHtml).join('');
+      var imgFim=imagens.filter(function(img){return img.posicao==='fim'}).map(buildImgHtml).join('');
+      // Legado: hasImagem boolean (compatibilidade reversa)
+      if(!imagens.length&&o.hasImagem){imgFim=buildImgHtml({link:'',legenda:'',posicao:'fim'})}
       return(
         spacer+
         '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fafbfc; border: 1px solid #e5e7eb; border-radius: 10px;">'+
@@ -1708,8 +2029,8 @@ function bolBuildHTML(oss,linha){
             '</td>'+
             '<td valign="middle" style="font-size: 15px; font-weight: 700; color: #111111; '+F+'">'+o.titulo+'</td>'+
           '</tr></table>'+
-          '<p style="margin: 0; font-size: 13px; color: #555555; line-height: 1.6; '+F+'">'+o.descricao+'</p>'+
-          imgBlock+
+          '<p style="margin: 0; font-size: 13px; color: #555555; line-height: 1.6; '+F+'">'+imgInicio+o.descricao+imgMeio+'</p>'+
+          imgFim+
         '</td></tr></table>'
       );
     }).join('');
@@ -1833,7 +2154,287 @@ secoes+
   );
 }
 // ── BOLETIM INLINE/PRODUTO ────────────────────────────────────────────────────
-var INL_PRODUTOS=[]; // [{produto, oss:[{osId,titulo,descricao,badge,hasImagem,textoLivre,pdfB64,pdfNome,aiSugestaoTitulo,aiSugestaoDesc,_gerando,aprovado,open}]}]
+// ── BOLETIM INLINE — usa BOL_OSS['inl'] como estado (mesma lógica do e-mail) ─
+var BOL_OSS_INL=[];  // [{...mesmo schema do e-mail...}]
+
+function inlRenderOSList(){
+  var el=document.getElementById('inl-os-list');if(!el)return;
+  if(!BOL_OSS_INL.length){
+    el.innerHTML='<div style="text-align:center;padding:32px;color:var(--hint);font-size:13px">Nenhuma OS adicionada.</div>';
+    return;
+  }
+  el.innerHTML=BOL_OSS_INL.map(function(os){return bolRenderOSItem_inl(os)}).join('');
+  BOL_OSS_INL.forEach(function(os){
+    var ta=document.getElementById('bol-desc-inl-'+os.id);
+    if(ta)ta.value=os.descricao||'';
+    var taLivre=document.getElementById('bol-texto-inl-'+os.id);
+    if(taLivre)taLivre.value=os.textoLivre||'';
+  });
+}
+
+function bolRenderOSItem_inl(os){
+  var badgeSel=Object.keys(BOL_BADGE_STYLES).map(function(k){
+    var bs=BOL_BADGE_STYLES[k];
+    return'<span onclick="inlSetBadge(\''+os.id+'\',\''+k+'\')" style="cursor:pointer;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;background:'+bs.bg+';color:'+bs.color+';border:2px solid '+(os.badge===k?bs.color:'transparent')+'">'+(bs.label)+'</span>';
+  }).join('');
+  var F="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
+  var bodyStyle=os.open?'display:block':'display:none';
+  return'<div id="inl-item-'+os.id+'" style="background:var(--card);border:1px solid '+(os.aprovado?'rgba(62,207,142,.3)':'var(--border)')+';border-radius:var(--radius-lg);overflow:hidden">'+
+    '<div style="display:flex;align-items:center;gap:10px;padding:12px 16px;cursor:pointer;user-select:none" onclick="inlToggleOS(\''+os.id+'\')">'+
+      '<div style="width:8px;height:8px;border-radius:50%;background:'+(os.aprovado?'var(--green)':os._gerando?'var(--accent)':'var(--border2)')+';flex-shrink:0"></div>'+
+      '<span style="font-family:var(--mono);font-size:11px;color:var(--hint);min-width:60px">OS '+os.num+'</span>'+
+      '<span style="font-size:13px;font-weight:500;flex:1">'+os.titulo+'</span>'+
+      '<span style="font-size:11px;color:var(--hint)">'+os.produto+'</span>'+
+      (os.aprovado?'<span style="font-size:11px;background:var(--green-dim);color:var(--green-text);padding:2px 8px;border-radius:10px">✓ Aprovado</span>':'')+
+    '</div>'+
+    '<div id="inl-body-'+os.id+'" style="'+bodyStyle+';padding:14px 16px;border-top:1px solid var(--border)">'+
+      // IA / texto livre
+      '<div style="background:var(--card2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:10px">'+
+        '<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">'+
+          '<span>✍ Texto livre</span>'+
+          '<button class="btn btn-xs btn-primary" onclick="inlGerarComTextoOS(\''+os.id+'\')" style="font-size:10px">✦ Gerar com IA</button>'+
+        '</div>'+
+        '<textarea id="bol-texto-inl-'+os.id+'" class="form-input" placeholder="Cole rascunho ou notas — IA reformata no estilo do boletim." style="min-height:70px;font-size:12px;resize:vertical">'+escHtml(os.textoLivre||'')+'</textarea>'+
+      '</div>'+
+      // Tipo + Título
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.3px">Tipo</div>'+
+      '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">'+badgeSel+'</div>'+
+      '<div class="form-group"><label class="form-label">Título no boletim</label>'+
+        '<input class="form-input" value="'+escHtml(os.titulo)+'" placeholder="Título" oninput="inlUpdateOS(\''+os.id+'\',\'titulo\',this.value)"></div>'+
+      // Toolbar idêntica ao e-mail
+      '<div class="form-group"><label class="form-label">Descrição</label>'+
+        '<div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">'+
+          '<div style="display:flex;align-items:center;gap:2px;padding:4px 6px;background:var(--card2);border-bottom:1px solid var(--border);flex-wrap:wrap">'+
+            bolTbBtn('B','<b>B</b>','Negrito','bold-inl',os.id,'font-weight:700')+
+            bolTbBtn('I','<i>I</i>','Itálico','italic-inl',os.id)+
+            bolTbBtn('U','<u>U</u>','Sublinhado','underline-inl',os.id)+
+            '<div style="width:1px;height:18px;background:var(--border);margin:0 3px"></div>'+
+            bolTbBtn('ul','<span style="font-size:11px">&#8226;&#8212;</span>','Marcadores','ul-inl',os.id,'',52)+
+            bolTbBtn('ol','<span style="font-size:11px">1&#8212;</span>','Numerada','ol-inl',os.id,'',52)+
+            '<div style="width:1px;height:18px;background:var(--border);margin:0 3px"></div>'+
+            bolTbBtn('left','<svg width="12" height="10" viewBox="0 0 12 10"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.5"/><line x1="0" y1="4" x2="8" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="0" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5"/></svg>','Esquerda','align-left-inl',os.id,'',32)+
+            bolTbBtn('center','<svg width="12" height="10" viewBox="0 0 12 10"><line x1="0" y1="1" x2="12" y2="1" stroke="currentColor" stroke-width="1.5"/><line x1="2" y1="4" x2="10" y2="4" stroke="currentColor" stroke-width="1.5"/><line x1="0" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5"/></svg>','Centro','align-center-inl',os.id,'',32)+
+            bolTbBtn('p','&lt;p&gt;','Parágrafo','p-inl',os.id,'font-size:10px;color:var(--accent);font-family:var(--mono)',44)+
+            bolTbBtn('clr','✕','Limpar','clear-inl',os.id,'font-size:11px;color:var(--muted)',28)+
+          '</div>'+
+          '<textarea id="bol-desc-inl-'+os.id+'" placeholder="Descrição..." oninput="inlUpdateOS(\''+os.id+'\',\'descricao\',this.value)" style="width:100%;min-height:90px;padding:10px;border:none;outline:none;background:var(--card);color:var(--text);font-size:13px;font-family:var(--font);resize:vertical;box-sizing:border-box">'+escHtml(os.descricao)+'</textarea>'+
+        '</div>'+
+      '</div>'+
+      // Imagens múltiplas
+      '<div class="form-group">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+          '<label class="form-label" style="margin-bottom:0">Imagens</label>'+
+          '<button type="button" class="btn btn-xs btn-ghost" onclick="inlAddImagem(\''+os.id+'\')" style="color:var(--accent)">+ Imagem</button>'+
+        '</div>'+
+        '<div id="inl-imagens-'+os.id+'">'+bolRenderImagensEditor_inl(os)+'</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px;padding-top:10px;border-top:1px solid var(--border)">'+
+        (!os.aprovado?'<button class="btn btn-sm btn-primary" onclick="inlAprovar(\''+os.id+'\')">✓ Aprovar</button>':'<button class="btn btn-sm" style="color:var(--amber-text);border-color:var(--amber-text)" onclick="inlDesaprovar(\''+os.id+'\')">↺ Editar</button>')+
+        '<button class="btn btn-sm btn-danger" onclick="inlRemoverOS(\''+os.id+'\')">Remover</button>'+
+      '</div>'+
+    '</div></div>';
+}
+
+// Imagens no inline (mesmo padrão do e-mail)
+function bolRenderImagensEditor_inl(os){
+  var imagens=os.imagens||[];
+  if(!imagens.length)return'<div style="font-size:12px;color:var(--hint);padding:6px 0">Nenhuma imagem.</div>';
+  return imagens.map(function(img,ii){
+    return'<div style="background:var(--card2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px">'+
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+        '<span style="font-size:11px;font-weight:700;color:var(--accent)">🖼 Imagem '+(ii+1)+'</span>'+
+        '<button type="button" class="btn btn-xs btn-danger" onclick="inlRemoveImagem(\''+os.id+'\','+ii+')">✕</button>'+
+      '</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+        '<div><label class="form-label" style="font-size:10px">Link (URL)</label>'+
+          '<input class="form-input" style="font-size:12px" value="'+escHtml(img.link||'')+'" oninput="inlUpdateImagem(\''+os.id+'\','+ii+',\'link\',this.value)"></div>'+
+        '<div><label class="form-label" style="font-size:10px">Legenda</label>'+
+          '<input class="form-input" style="font-size:12px" value="'+escHtml(img.legenda||'')+'" oninput="inlUpdateImagem(\''+os.id+'\','+ii+',\'legenda\',this.value)"></div>'+
+      '</div>'+
+      '<div style="margin-top:8px"><label class="form-label" style="font-size:10px">Posição</label>'+
+        '<select class="form-input" style="font-size:12px" onchange="inlUpdateImagem(\''+os.id+'\','+ii+',\'posicao\',this.value)">'+
+          ['inicio','meio','fim'].map(function(pos){return'<option value="'+pos+'"'+(img.posicao===pos?' selected':'')+'>'+{inicio:'Início',meio:'Meio',fim:'Fim'}[pos]+'</option>'}).join('')+
+        '</select></div>'+
+    '</div>';
+  }).join('');
+}
+
+function inlFindOS(id){return BOL_OSS_INL.find(function(o){return o.id===id})}
+function inlToggleOS(id){var os=inlFindOS(id);if(!os)return;os.open=!os.open;var b=document.getElementById('inl-body-'+id);if(b)b.style.display=os.open?'block':'none'}
+function inlUpdateOS(id,field,val){var os=inlFindOS(id);if(!os)return;os[field]=val}
+function inlSetBadge(id,badge){var os=inlFindOS(id);if(!os)return;os.badge=badge;var el=document.getElementById('inl-item-'+id);if(el){var tmp=document.createElement('div');tmp.innerHTML=bolRenderOSItem_inl(os);el.replaceWith(tmp.firstChild)}}
+function inlAprovar(id){var os=inlFindOS(id);if(!os)return;if(!os.titulo){toast('Preencha o título antes de aprovar','err');return}os.aprovado=true;os.open=false;var el=document.getElementById('inl-item-'+id);if(el){var tmp=document.createElement('div');tmp.innerHTML=bolRenderOSItem_inl(os);el.replaceWith(tmp.firstChild)}}
+function inlDesaprovar(id){var os=inlFindOS(id);if(!os)return;os.aprovado=false;os.open=true;var el=document.getElementById('inl-item-'+id);if(el){var tmp=document.createElement('div');tmp.innerHTML=bolRenderOSItem_inl(os);el.replaceWith(tmp.firstChild)}}
+function inlRemoverOS(id){BOL_OSS_INL=BOL_OSS_INL.filter(function(o){return o.id!==id});inlRenderOSList()}
+function inlAddImagem(id){var os=inlFindOS(id);if(!os)return;if(!os.imagens)os.imagens=[];os.imagens.push({link:'',legenda:'',posicao:'fim'});var el=document.getElementById('inl-imagens-'+id);if(el)el.innerHTML=bolRenderImagensEditor_inl(os)}
+function inlRemoveImagem(id,idx){var os=inlFindOS(id);if(!os||!os.imagens)return;os.imagens.splice(idx,1);var el=document.getElementById('inl-imagens-'+id);if(el)el.innerHTML=bolRenderImagensEditor_inl(os)}
+function inlUpdateImagem(id,idx,field,val){var os=inlFindOS(id);if(!os||!os.imagens||!os.imagens[idx])return;os.imagens[idx][field]=val}
+
+// bolFormatDesc para o inline (sufixo -inl nos cmds)
+function bolFormatDesc_inl(id,cmd){
+  var ta=document.getElementById('bol-desc-inl-'+id);if(!ta)return;
+  var realCmd=cmd.replace(/-inl$/,'');
+  var start=ta.selectionStart,end=ta.selectionEnd;
+  var sel=ta.value.substring(start,end);
+  var before=ta.value.substring(0,start),after=ta.value.substring(end);
+  var ins='';
+  if(realCmd==='bold')ins='<strong>'+(sel||'texto')+'</strong>';
+  else if(realCmd==='italic')ins='<em>'+(sel||'texto')+'</em>';
+  else if(realCmd==='underline')ins='<u>'+(sel||'texto')+'</u>';
+  else if(realCmd==='ul'){var ll=(sel||'item').split('\n').filter(function(l){return l.trim()});ins='<ul>\n'+ll.map(function(l){return'  <li>'+l.trim()+'</li>'}).join('\n')+'\n</ul>';}
+  else if(realCmd==='ol'){var ll2=(sel||'item').split('\n').filter(function(l){return l.trim()});ins='<ol>\n'+ll2.map(function(l){return'  <li>'+l.trim()+'</li>'}).join('\n')+'\n</ol>';}
+  else if(realCmd==='align-left')ins='<p style="text-align:left">'+(sel||'')+'</p>';
+  else if(realCmd==='align-center')ins='<p style="text-align:center">'+(sel||'')+'</p>';
+  else if(realCmd==='p')ins='<p>'+(sel||'')+'</p>';
+  else if(realCmd==='clear'&&sel)ins=sel.replace(/<[^>]+>/g,'');
+  else{ta.focus();return}
+  ta.value=before+ins+after;
+  ta.dispatchEvent(new Event('input'));
+  var pos=start+ins.length;ta.setSelectionRange(pos,pos);ta.focus();
+}
+
+// Conectar cliques da toolbar inline ao bolFormatDesc_inl
+var _origBolFormatDesc=bolFormatDesc;
+bolFormatDesc=function(id,cmd){
+  if(cmd.endsWith('-inl')){bolFormatDesc_inl(id,cmd)}
+  else{_origBolFormatDesc(id,cmd)}
+};
+
+function inlAdicionarOS(){
+  // Abre o modal de OS do e-mail mas redireciona o destino para BOL_OSS_INL
+  var psel=document.getElementById('bol-add-produto');
+  psel.innerHTML=S.prefs.produtos.map(function(p){return'<option value="'+p+'">'+p+'</option>'}).join('');
+  var vsel=document.getElementById('bol-add-versao');
+  vsel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+'</option>'}).join('');
+  if(S.versaoK)vsel.value=S.versaoK;
+  document.getElementById('bol-add-titulo').value='';
+  bolAtualizarOSSelect();
+  // Tag para saber que confirmar vai para o inline
+  document.getElementById('modal-bol-os').dataset.destino='inl';
+  openModal('modal-bol-os');
+}
+
+// Sobrescreve bolConfirmarAddOS para suportar destino inline
+var _origBolConfirmarAddOS=bolConfirmarAddOS;
+bolConfirmarAddOS=function(){
+  var dest=document.getElementById('modal-bol-os').dataset.destino;
+  if(dest==='inl'){
+    var osId=document.getElementById('bol-add-os-sel').value;
+    if(!osId){toast('Selecione uma OS','err');return}
+    var os=S.oss.find(function(o){return o.id===osId});if(!os)return;
+    BOL_OSS_INL.push({
+      id:uid(),osId:osId,num:os.num,
+      titulo:document.getElementById('bol-add-titulo').value.trim()||os.titulo,
+      produto:os.produto,badge:'melhoria',descricao:'',pdfB64:null,pdfNome:null,textoLivre:'',
+      imagens:[],aiSugestaoTitulo:'',aiSugestaoDesc:'',aprovado:false,open:true,_gerando:false
+    });
+    closeModal('modal-bol-os');
+    document.getElementById('modal-bol-os').dataset.destino='';
+    inlRenderOSList();
+  }else{
+    document.getElementById('modal-bol-os').dataset.destino='';
+    _origBolConfirmarAddOS();
+  }
+};
+
+async function inlGerarComTextoOS(id){
+  var os=inlFindOS(id);if(!os)return;
+  var texto=(document.getElementById('bol-texto-inl-'+id)&&document.getElementById('bol-texto-inl-'+id).value.trim())||'';
+  if(!texto){toast('Preencha o texto livre antes de gerar','err');return}
+  var apiKey=localStorage.getItem('vs_bol_apikey')||'';
+  var keyEl=document.getElementById('bol-api-key')||document.getElementById('inl-api-key');
+  if(keyEl)apiKey=keyEl.value.trim()||apiKey;
+  if(!apiKey){toast('Configure a chave de API','err');return}
+  os._gerando=true;var el=document.getElementById('inl-item-'+id);if(el){var tmp=document.createElement('div');tmp.innerHTML=bolRenderOSItem_inl(os);el.replaceWith(tmp.firstChild)}
+  try{
+    var prompt='Atue como Product Marketing Manager B2B SaaS. Com base no texto abaixo (OS '+os.num+' — '+os.produto+'), gere um comunicado de evolução de produto:\n\nEstrutura:\n  Prezados clientes,\n  [abertura], [o que mudou], [novo comportamento], [valor entregue].\n  Atenciosamente, Time de Produtos\n\nTom corporativo, elegante, sem bullet points. Classifique o TIPO: "novo"|"melhoria"|"legal"|"ajuste".\n\nTexto:\n"""\n'+texto+'\n"""\n\nJSON (sem markdown):\n{"titulo":"título curto (máx 8 palavras)","descricao":"comunicado em HTML com <p> e <strong>","badge":"[novo|melhoria|legal|ajuste]"}';
+    var resp=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
+    if(!resp.ok){var e=await resp.json();throw new Error(e.error&&e.error.message||'Erro '+resp.status)}
+    var data=await resp.json();
+    var txt=data.content.map(function(c){return c.text||''}).join('');
+    var result=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    os.titulo=result.titulo||os.titulo;os.descricao=result.descricao||'';os.badge=result.badge||'melhoria';
+    os._gerando=false;os.open=true;
+    var el2=document.getElementById('inl-item-'+id);if(el2){var tmp2=document.createElement('div');tmp2.innerHTML=bolRenderOSItem_inl(os);el2.replaceWith(tmp2.firstChild)}
+    toast('✦ Sugestão aplicada — revise e aprove');
+  }catch(err){os._gerando=false;toast('Erro IA: '+err.message,'err')}
+}
+
+function inlSalvarRascunho(){
+  var uid8=CURRENT_USER?CURRENT_USER.id.slice(0,8):'anon';
+  localStorage.setItem('vs_inl_rascunho_'+uid8,JSON.stringify({oss:BOL_OSS_INL,hdr:{versao:(document.getElementById('inl-versao')||{}).value,entrega:(document.getElementById('inl-entrega')||{}).value,link:(document.getElementById('inl-link')||{}).value,intro:(document.getElementById('inl-intro')||{}).value}}));
+  toast('Rascunho inline salvo!');
+}
+function inlCarregarRascunho(){
+  var uid8=CURRENT_USER?CURRENT_USER.id.slice(0,8):'anon';
+  var raw=localStorage.getItem('vs_inl_rascunho_'+uid8);
+  if(!raw){toast('Nenhum rascunho inline salvo','err');return}
+  try{var dados=JSON.parse(raw);BOL_OSS_INL=dados.oss||[];
+    if(dados.hdr){var h=dados.hdr;['versao','entrega','link','intro'].forEach(function(f){var el=document.getElementById('inl-'+f);if(el&&h[f])el.value=h[f]});}
+    inlRenderOSList();toast('Rascunho inline carregado!');
+  }catch(e){toast('Erro ao carregar rascunho','err')}
+}
+
+function inlGerarHTML(){
+  if(!BOL_OSS_INL.length){toast('Adicione ao menos uma OS','err');return}
+  var versao=(document.getElementById('inl-versao').value||'VERSÃO ATUAL');
+  var entrega=document.getElementById('inl-entrega').value;
+  var link=document.getElementById('inl-link').value||'https://centraldocliente.lg.com.br';
+  var intro=document.getElementById('inl-intro').value||'Esta versão chega para tornar sua rotina mais ágil, segura e estratégica.';
+  var entregaFmt=entrega?new Date(entrega+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}):'';
+  var F="font-family:Arial,Helvetica,sans-serif;";
+  // Agrupar por produto
+  var porProd={};BOL_OSS_INL.forEach(function(o){if(!porProd[o.produto])porProd[o.produto]=[];porProd[o.produto].push(o)});
+  var produtos=Object.keys(porProd);
+  // Cards de produto para a Home
+  var prodCards=produtos.map(function(p){
+    var qtd=porProd[p].length;
+    return'<td style="padding:4px" valign="top" width="'+Math.floor(100/Math.max(produtos.length,1))+'%">'+
+    '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background:#fff;border-radius:8px;border:1px solid #e5eaf1"><tr><td style="padding:12px">'+
+      '<p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1B5EAD;'+F+'">'+p+'</p>'+
+      '<p style="margin:0;font-size:11px;color:#7a8294;'+F+'">'+qtd+' novidade'+(qtd>1?'s':'')+'</p>'+
+    '</td></tr></table></td>';
+  }).join('');
+  // Home HTML
+  var homeHtml='<!-- Home (Step 0) —  '+versao+' -->\n'+
+    '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="700" style="background:#f5f7fa;border-radius:12px;overflow:hidden"><tr><td style="background:#1B5EAD;padding:24px 28px">'+
+    '<p style="margin:0 0 4px;font-size:11px;color:rgba(255,255,255,.7);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;'+F+'">LG Lugar de Gente</p>'+
+    '<p style="margin:0;font-size:20px;font-weight:700;color:#fff;'+F+'">'+versao+'</p>'+
+    (entregaFmt?'<p style="margin:4px 0 0;font-size:12px;color:rgba(255,255,255,.7);'+F+'">Entrega: '+entregaFmt+'</p>':'')+
+    '</td></tr><tr><td style="padding:20px 28px">'+
+    '<p style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.6;'+F+'">'+intro+'</p>'+
+    '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"><tr>'+prodCards+'</tr></table>'+
+    '<table role="presentation" border="0" cellpadding="0" cellspacing="0" style="margin-top:20px"><tr>'+
+    '<td style="background:#EEA422;border-radius:6px"><a href="'+link+'" style="display:block;padding:10px 22px;color:#fff;font-size:13px;font-weight:700;text-decoration:none;'+F+'">Ver novidades completas →</a></td>'+
+    '</tr></table></td></tr></table>';
+  document.getElementById('inl-html-home').textContent=homeHtml;
+  document.getElementById('inl-preview-panel').style.display='block';
+  document.getElementById('inl-preview-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+  toast('HTML inline gerado!');
+}
+function inlPreview(){
+  var el=document.getElementById('inl-html-home');
+  if(!el||!el.textContent){inlGerarHTML();return}
+  document.getElementById('inl-visual-content').innerHTML=el.textContent;
+  document.getElementById('inl-visual-preview').style.display='block';
+  document.getElementById('inl-visual-preview').scrollIntoView({behavior:'smooth'});
+}
+function inlCopiarHTML(){
+  var txt=document.getElementById('inl-html-home').textContent;
+  navigator.clipboard.writeText(txt).then(function(){toast('HTML copiado!')}).catch(function(){toast('Erro ao copiar','err')});
+}
+function inlDownloadAll(){
+  var txt=document.getElementById('inl-html-home').textContent;
+  var versao=(document.getElementById('inl-versao').value||'XX').replace(/\s/g,'-');
+  var blob=new Blob([txt],{type:'text/html'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='inline_'+versao+'.html';a.click();toast('Download iniciado!');
+}
+// ── stub INL_PRODUTOS mantido para compatibilidade ──
+var INL_PRODUTOS=[];function inlAdicionarProduto(){toast('Use "+ Adicionar OS" no novo painel','err')}
+
+
 
 function inlAdicionarProduto(){
   var psel=document.getElementById('inl-add-produto-sel');
@@ -2933,8 +3534,16 @@ function renderAgenda(){
       var dStr=d.toISOString().slice(0,10);
       var isHoje=dStr===todayStr;
       var dayNum=d.getDate();
-      // Publicações neste dia
       var pubsDia=pubs.filter(function(p){return p.inicio<=dStr&&p.fim>=dStr});
+      // Cor de fundo: tint translúcido do canal com mais publicações no dia
+      var cellBg='';
+      if(pubsDia.length&&!isHoje){
+        var cnt={};pubsDia.forEach(function(p){cnt[p.tipo]=(cnt[p.tipo]||0)+1});
+        var top=Object.keys(cnt).reduce(function(a,b){return cnt[a]>=cnt[b]?a:b});
+        var hx=CANAL_COLORS[top]||'#888';
+        var cr=parseInt(hx.slice(1,3),16),cg=parseInt(hx.slice(3,5),16),cb=parseInt(hx.slice(5,7),16);
+        cellBg='background:rgba('+cr+','+cg+','+cb+',.09);border-color:rgba('+cr+','+cg+','+cb+',.28)';
+      }
       var MAX_PILLS=3;
       var pills=pubsDia.slice(0,MAX_PILLS).map(function(p){
         var cor=CANAL_COLORS[p.tipo]||'#888';
@@ -2944,8 +3553,8 @@ function renderAgenda(){
         return'<div class="agenda-pub-pill '+cls+'" style="background:'+cor+'" onclick="openEditPub(\''+p.id+'\')" title="'+p.titulo+'">'+
           (showLabel?p.titulo:'')+'</div>';
       }).join('');
-      if(pubsDia.length>MAX_PILLS)pills+='<div style="font-size:9px;color:var(--hint);padding:1px 4px">+' +(pubsDia.length-MAX_PILLS)+' mais</div>';
-      return'<div class="agenda-day-cell'+(isHoje?' hoje-cell':'')+'">'+
+      if(pubsDia.length>MAX_PILLS)pills+='<div style="font-size:9px;color:var(--hint);padding:1px 4px">+'+(pubsDia.length-MAX_PILLS)+' mais</div>';
+      return'<div class="agenda-day-cell'+(isHoje?' hoje-cell':'')+'" style="'+(isHoje?'':cellBg)+'">'+
         '<div class="agenda-day-num'+(isHoje?' hoje-num':'')+'">'+dayNum+'</div>'+pills+'</div>';
     }).join('');
     gridHtml+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">'+cells+'</div>';
@@ -3089,6 +3698,7 @@ async function load(){
     _loadedAt=Date.now();
     // Carregar nomes para filtro de atribuição
     await carregarProfiles();
+    await loadUsers();
   }catch(e){console.error('Erro ao carregar:',e)}
 }
 
@@ -3182,7 +3792,17 @@ async function dbDeletarProduto(nome){
 
 // Preferências
 async function dbSalvarPrefs(){
-  await sb.from('profiles').update({prefs:{accent:S.prefs.accent,accentRgb:S.prefs.accentRgb,lightMode:S.prefs.lightMode}}).eq('id',CURRENT_USER.id);
+  // Preserva campos do profile (role, displayName, etc.) ao salvar preferências visuais
+  var me=S_USERS.find(function(u){return u.id===CURRENT_USER.id});
+  var meta=CURRENT_USER.user_metadata||{};
+  await sb.from('profiles').update({prefs:{
+    accent:S.prefs.accent,accentRgb:S.prefs.accentRgb,lightMode:S.prefs.lightMode,
+    role:me?me.role:'membro',
+    displayName:me?me.displayName:(meta.full_name||meta.name||''),
+    avatar:me?me.avatar:(meta.avatar_url||meta.picture||''),
+    email:CURRENT_USER.email||'',
+    colorIdx:me?me.colorIdx:null
+  }}).eq('id',CURRENT_USER.id);
 }
 
 // ── PATCH NAS FUNÇÕES EXISTENTES ──────────────────────────────────────────────
@@ -3492,6 +4112,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     CURRENT_USER=session.user;
     updateUserBadge(session.user);
     setLoadingMsg('Carregando dados...');
+    await upsertCurrentUserProfile();
     await load();
     applyPrefs();
     mostrarApp();
@@ -3522,6 +4143,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       document.getElementById('login-screen').style.display='none';
       document.getElementById('loading-screen').style.display='flex';
       setLoadingMsg('Carregando dados...');
+      await upsertCurrentUserProfile();
       await load();
       applyPrefs();
       mostrarApp();
