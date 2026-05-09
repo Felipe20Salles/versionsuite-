@@ -3497,8 +3497,15 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     mostrarApp();
     renderDash();
     // ── Paralelo ──────────────────────────────────────────
+    if (typeof Paralelo !== 'undefined') {
+  Paralelo.identify({ userId: session.user.id, email: session.user.email })
+  Paralelo.page('dashboard')
+} else {
+  window.addEventListener('load', function() {
     Paralelo.identify({ userId: session.user.id, email: session.user.email })
     Paralelo.page('dashboard')
+  })
+}
     // ──────────────────────────────────────────────────────
   }else{
     mostrarLogin();
@@ -3520,8 +3527,15 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       mostrarApp();
       renderDash();
       // ── Paralelo ────────────────────────────────────────
-      Paralelo.identify({ userId: session.user.id, email: session.user.email })
-      Paralelo.page('dashboard')
+      if (typeof Paralelo !== 'undefined') {
+  Paralelo.identify({ userId: session.user.id, email: session.user.email })
+  Paralelo.page('dashboard')
+} else {
+  window.addEventListener('load', function() {
+    Paralelo.identify({ userId: session.user.id, email: session.user.email })
+    Paralelo.page('dashboard')
+  })
+}
       // ────────────────────────────────────────────────────
     }else if(event==='SIGNED_OUT'){
       _appIniciado=false;
