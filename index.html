@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>VersionSuite v10.4</title>
+<title>VersionSuite v10.5</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -366,7 +366,7 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div style="font-size:11px;font-weight:600;color:#7da8e8;text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px">📋 Cabeçalho do Boletim</div>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px">
               <div><label class="form-label">Versão</label><input class="form-input" id="bol-hdr-versao" placeholder="Ex: 26.3"></div>
-              <div><label class="form-label">Grupo de Produtos</label><select class="form-input" id="bol-hdr-grupo"><option value="GT">Gestão de Talentos</option><option value="PAG">Pagadoria</option></select></div>
+              <div><label class="form-label">Grupo de Produtos</label><select class="form-input" id="bol-hdr-grupo" onchange="bolSyncGrupo(this.value)"><option value="GT">Gestão de Talentos</option><option value="PAG">Pagadoria</option></select></div>
               <div><label class="form-label">Data da entrega</label><input type="date" class="form-input" id="bol-hdr-entrega"></div>
               <div><label class="form-label">Data do boletim</label><input type="date" class="form-input" id="bol-hdr-boletim"></div>
             </div>
@@ -888,13 +888,38 @@ function setAccent(hex,rgb){S.prefs.accent=hex;S.prefs.accentRgb=rgb;save();appl
 function toggleTheme(){S.prefs.lightMode=!S.prefs.lightMode;save();applyPrefs()}
 function renderProdutos(){
   var el=document.getElementById('produtos-list');if(!el)return;
-  el.innerHTML=S.prefs.produtos.map(function(p,i){
+  var gt=S.prefs.produtos.filter(function(p){return(PLINHA[p]||'Gestão de Talentos')==='Gestão de Talentos'});
+  var pag=S.prefs.produtos.filter(function(p){return(PLINHA[p]||'')===('Pagadoria')});
+
+  function mkItem(p){
+    var i=S.prefs.produtos.indexOf(p);
     var linha=PLINHA[p]||'Gestão de Talentos';
     return'<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--card2);border-radius:var(--radius);border:1px solid var(--border)">'+
-      '<span class="badge '+(linha==='Pagadoria'?'tag-pag':'tag-gt')+'" style="font-size:10px">'+linha+'</span>'+
       '<span style="flex:1;font-size:13px">'+p+'</span>'+
       '<span style="font-size:14px;color:var(--hint);cursor:pointer" onclick="removeProduto('+i+')">×</span></div>';
-  }).join('');
+  }
+
+  var html='';
+  // Grupo Gestão de Talentos
+  html+='<div style="margin-bottom:14px">'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+      '<span class="badge tag-gt" style="font-size:10px">Gestão de Talentos</span>'+
+      '<span style="font-size:11px;color:var(--hint)">'+gt.length+' produto(s)</span>'+
+    '</div>'+
+    (gt.length?'<div style="display:flex;flex-direction:column;gap:6px">'+gt.map(mkItem).join('')+'</div>':
+      '<div style="font-size:12px;color:var(--hint);padding:8px 10px">Nenhum produto cadastrado</div>')+
+  '</div>';
+  // Grupo Pagadoria
+  html+='<div>'+
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
+      '<span class="badge tag-pag" style="font-size:10px">Pagadoria</span>'+
+      '<span style="font-size:11px;color:var(--hint)">'+pag.length+' produto(s)</span>'+
+    '</div>'+
+    (pag.length?'<div style="display:flex;flex-direction:column;gap:6px">'+pag.map(mkItem).join('')+'</div>':
+      '<div style="font-size:12px;color:var(--hint);padding:8px 10px">Nenhum produto cadastrado</div>')+
+  '</div>';
+
+  el.innerHTML=html;
   populateProdutoSel();
 }
 var _addProdutoLinha='gt';
@@ -1063,13 +1088,29 @@ function setFiltroAtrib(btn,nome){
   document.querySelectorAll('#filtro-atrib-chips .filter-chip').forEach(function(b){b.classList.remove('active')});
   btn.classList.add('active');S.filtroAtrib=nome;renderKanban();
 }
+// Cache de nomes dos usuários da plataforma
+var _PROFILES_NOMES=[];
+async function carregarProfiles(){
+  if(_PROFILES_NOMES.length)return;
+  try{
+    // Extrair nomes: usuário atual + todos que aparecem nas OSs
+    var nomeAtual='';
+    if(CURRENT_USER){var m=CURRENT_USER.user_metadata||{};nomeAtual=(m.full_name||m.name||'').trim();}
+    var nomesOSs=[...new Set(S.oss.map(function(o){return(o.atribuicao||'').trim()}).filter(Boolean))];
+    var todos=[nomeAtual,...nomesOSs].filter(Boolean).map(function(n){
+      var pts=n.split(/\s+/);return pts.length>=2?pts[0]+' '+pts[pts.length-1]:pts[0];
+    });
+    _PROFILES_NOMES=[...new Set(todos)].sort();
+  }catch(e){_PROFILES_NOMES=[];}
+}
 function renderAtribChips(){
   var vid=S.versaoK;
-  var oss=vid?S.oss.filter(function(o){return o.versaoId===vid}):S.oss;
-  var nomes=[...new Set(oss.map(function(o){
+  var ossVersao=vid?S.oss.filter(function(o){return o.versaoId===vid}):S.oss;
+  var nomesOSs=ossVersao.map(function(o){
     var a=(o.atribuicao||'').trim();if(!a)return null;
-    var pts=a.split(' ');return pts.length>=2?pts[0]+' '+pts[pts.length-1]:pts[0];
-  }).filter(Boolean))].sort();
+    var pts=a.split(/\s+/);return pts.length>=2?pts[0]+' '+pts[pts.length-1]:pts[0];
+  }).filter(Boolean);
+  var nomes=[...new Set([..._PROFILES_NOMES,...nomesOSs])].filter(Boolean).sort();
   var el=document.getElementById('filtro-atrib-chips');if(!el)return;
   el.innerHTML=nomes.map(function(n){
     var cor=corPorNome(n.split(' ')[0]);var isActive=S.filtroAtrib===n;
@@ -1261,9 +1302,15 @@ function setBolMainTab(tab){
   else inlRenderProdutos();
 }
 
-function setBolTab(t){
-  // mantida para compatibilidade mas não usada com sub-abas
-  BOL_TAB=t;bolRenderOSList();
+function setBolTab(t){BOL_TAB=t;bolRenderOSList();}
+function bolSyncGrupo(val){
+  // Sincroniza BOL_TAB com o seletor Grupo de Produtos
+  BOL_TAB=val.toLowerCase()==='pag'?'pag':'gt';
+  bolRenderOSList();
+}
+function bolGetGrupoAtual(){
+  var el=document.getElementById('bol-hdr-grupo');
+  return el?el.value:'GT';
 }
 
 function bolAdicionarOS(){
@@ -1570,13 +1617,21 @@ function bolSalvarRascunho(){
 function bolCarregarRascunho(){
   var grupo=bolGetGrupoAtual();
   var chave=bolGetRascunhoKey(grupo);
-  var raw=localStorage.getItem(chave);
+  // Fallback: chave antiga (sem userId) para não perder rascunhos anteriores
+  var raw=localStorage.getItem(chave)||localStorage.getItem('vs_bol_rascunho_'+grupo.toLowerCase());
   if(!raw){var grupoLabel=grupo==='GT'?'Gestão de Talentos':'Pagadoria';toast('Nenhum rascunho salvo para '+grupoLabel,'err');return}
-  var dados=JSON.parse(raw);BOL_OSS=dados.oss||{gt:[],pag:[]};
-  if(dados.hdr){document.getElementById('bol-hdr-versao').value=dados.hdr.versao||'';document.getElementById('bol-hdr-entrega').value=dados.hdr.entrega||'';document.getElementById('bol-hdr-boletim').value=dados.hdr.boletim||'';document.getElementById('bol-hdr-link').value=dados.hdr.link||''}
-  bolRenderOSList();
-  var grupoLabel=grupo==='GT'?'Gestão de Talentos':'Pagadoria';
-  toast('Rascunho carregado — '+grupoLabel+'!');
+  try{
+    var dados=JSON.parse(raw);BOL_OSS=dados.oss||{gt:[],pag:[]};
+    if(dados.hdr){
+      document.getElementById('bol-hdr-versao').value=dados.hdr.versao||'';
+      document.getElementById('bol-hdr-entrega').value=dados.hdr.entrega||'';
+      document.getElementById('bol-hdr-boletim').value=dados.hdr.boletim||'';
+      document.getElementById('bol-hdr-link').value=dados.hdr.link||'';
+    }
+    bolRenderOSList();
+    var grupoLabel=grupo==='GT'?'Gestão de Talentos':'Pagadoria';
+    toast('Rascunho carregado — '+grupoLabel+'!');
+  }catch(e){toast('Erro ao carregar rascunho','err')}
 }
 
 function bolSlugify(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')}
@@ -2506,13 +2561,15 @@ function importPontoXLSX(input){
           var tempos=marcStr.match(/\d{2}:\d{2}/g)||[];
           if(tempos.length<2)return; // sem saída registrada — pular
 
-          // Horas trabalhadas: tentar usar o campo já calculado pelo sistema
-          var htStr=String(row[iHT]||'').trim();
-          var ht=0;
-          if(/^\d{2}:\d{2}$/.test(htStr)){
-            var parts=htStr.split(':');ht=parseInt(parts[0])+(parseInt(parts[1])/60);
-          }else{
-            ht=calcHorasStr(tempos.join('  '));
+          // Sempre recalcular horasTrabalhadas a partir das marcações reais
+          // (o campo HorasTrabalhadas do XLSX pode ser fração Excel ou estar ausente)
+          var marcStr4=tempos.join(' ');
+          var ht=tempos.length>=4?calcHorasStr(marcStr4):0;
+          if(ht<=0&&tempos.length>=2){
+            // Fallback: entrada → saída sem descontar almoço
+            function toMin2(t){var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1])}
+            ht=Math.max(0,(toMin2(tempos[tempos.length-1])-toMin2(tempos[0]))/60);
+            ht=parseFloat(ht.toFixed(2));
           }
 
           porData[dataISO]={data:dataISO,dia:diaVal,marcacoes:tempos.join('  '),horasTrabalhadas:ht};
@@ -2831,13 +2888,17 @@ function renderAgenda(){
     return p.inicio<=mesFim.toISOString().slice(0,10)&&p.fim>=mesInicio.toISOString().slice(0,10);
   });
 
-  // Legenda
+  // Legenda: uma entrada por canal presente no mês (não por publicação)
   var legEl=document.getElementById('agenda-legenda');
-  legEl.innerHTML=pubs.map(function(p){
-    var cor=CANAL_COLORS[p.tipo]||'#888';
-    return'<div class="agenda-leg-item" onclick="openEditPub(\''+p.id+'\')">'+
+  var canaisPresentes=[...new Set(pubs.map(function(p){return p.tipo}))];
+  legEl.innerHTML=canaisPresentes.map(function(tipo){
+    var cor=CANAL_COLORS[tipo]||'#888';
+    var label=CANAL_LABELS[tipo]||tipo;
+    var count=pubs.filter(function(p){return p.tipo===tipo}).length;
+    return'<div class="agenda-leg-item">'+
       '<div class="agenda-leg-dot" style="background:'+cor+'"></div>'+
-      '<span>'+p.titulo+(p.produto&&p.produto!=='Todos'?' · '+p.produto:'')+' <span style="font-size:10px;color:var(--hint)">('+fmtDate(p.inicio)+' – '+fmtDate(p.fim)+')</span></span></div>';
+      '<span>'+label+' <span style="font-size:10px;color:var(--hint)">('+count+')</span></span>'+
+    '</div>';
   }).join('');
 
   // Gerar dias do mês
@@ -3026,6 +3087,8 @@ async function load(){
 
     if(!S.versaoK&&S.versoes.length)S.versaoK=S.versoes[0].id;
     _loadedAt=Date.now();
+    // Carregar nomes para filtro de atribuição
+    await carregarProfiles();
   }catch(e){console.error('Erro ao carregar:',e)}
 }
 
