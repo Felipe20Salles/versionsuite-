@@ -3551,7 +3551,9 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
  <!-- Paralelo SDK -->
 <script>
 (function() {
-  fetch('https://lunacy-repurpose-flashcard.ngrok-free.dev/paralelo.js', {
+  var API_URL = 'https://lunacy-repurpose-flashcard.ngrok-free.dev'
+  var SDK_KEY = 'b5e61607853319386147b0894baf59aa9a231640fd7f1116'
+  fetch(API_URL + '/paralelo.js', {
     headers: { 'ngrok-skip-browser-warning': 'true' }
   })
   .then(function(r) { return r.text() })
@@ -3559,7 +3561,9 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     var s = document.createElement('script')
     s.textContent = code
     document.head.appendChild(s)
-    console.log('[Paralelo] SDK carregado via fetch')
+    window.__paralelo_api_url = API_URL
+    window.__paralelo_sdk_key = SDK_KEY
+    console.log('[Paralelo] SDK carregado')
   })
   .catch(function(e) { console.error('[Paralelo] Falha ao carregar SDK', e) })
 })()
