@@ -1884,10 +1884,21 @@ function bolGerarHTML(){
   toast('HTML gerado!');
 }
 function bolPreview(){
-  var oss=BOL_OSS[BOL_TAB];if(!oss.length){toast('Adicione OSs primeiro','err');return}
-  document.getElementById('bol-visual-content').innerHTML=bolBuildHTML(oss,BOL_TAB);
-  document.getElementById('bol-visual-preview').style.display='block';
-  document.getElementById('bol-visual-preview').scrollIntoView({behavior:'smooth'});
+  var oss=BOL_OSS[BOL_TAB];
+  if(!oss||!oss.length){toast('Adicione OSs primeiro','err');return}
+  var html=bolBuildHTML(oss,BOL_TAB);
+  var wrap=document.getElementById('bol-visual-preview');
+  var cont=document.getElementById('bol-visual-content');
+  // Usar iframe para isolar o CSS do boletim
+  cont.innerHTML='<iframe id="bol-preview-iframe" style="width:100%;min-height:600px;border:none;border-radius:var(--radius-lg)" frameborder="0"></iframe>';
+  var iframe=document.getElementById('bol-preview-iframe');
+  iframe.onload=function(){};
+  var doc=iframe.contentDocument||iframe.contentWindow.document;
+  doc.open();doc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:20px;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif}</style></head><body>'+html+'</body></html>');doc.close();
+  // Ajustar altura após renderizar
+  setTimeout(function(){try{iframe.style.height=doc.body.scrollHeight+40+'px'}catch(e){}},300);
+  wrap.style.display='block';
+  wrap.scrollIntoView({behavior:'smooth'});
 }
 function bolCopiarHTML(){navigator.clipboard.writeText(document.getElementById('bol-html-output').textContent).then(function(){toast('HTML copiado!')}).catch(function(){toast('Erro ao copiar','err')})}
 function bolDownloadHTML(){
@@ -2415,11 +2426,22 @@ function inlGerarHTML(){
   toast('HTML inline gerado!');
 }
 function inlPreview(){
+  if(!BOL_OSS_INL||!BOL_OSS_INL.length){toast('Adicione OSs primeiro','err');return}
+  // Gerar HTML se ainda não gerado
   var el=document.getElementById('inl-html-home');
-  if(!el||!el.textContent){inlGerarHTML();return}
-  document.getElementById('inl-visual-content').innerHTML=el.textContent;
-  document.getElementById('inl-visual-preview').style.display='block';
-  document.getElementById('inl-visual-preview').scrollIntoView({behavior:'smooth'});
+  if(!el||!el.textContent.trim())inlGerarHTML();
+  // Renderizar em iframe isolado
+  var html=el?el.textContent:'';
+  if(!html){return}
+  var wrap=document.getElementById('inl-visual-preview');
+  var cont=document.getElementById('inl-visual-content');
+  cont.innerHTML='<iframe id="inl-preview-iframe" style="width:700px;max-width:100%;min-height:450px;border:none" frameborder="0"></iframe>';
+  var iframe=document.getElementById('inl-preview-iframe');
+  var doc=iframe.contentDocument||iframe.contentWindow.document;
+  doc.open();doc.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:0;padding:0;background:#f5f7fa}</style></head><body>'+html+'</body></html>');doc.close();
+  setTimeout(function(){try{iframe.style.height=doc.body.scrollHeight+20+'px'}catch(e){}},300);
+  wrap.style.display='block';
+  wrap.scrollIntoView({behavior:'smooth'});
 }
 function inlCopiarHTML(){
   var txt=document.getElementById('inl-html-home').textContent;
@@ -2431,171 +2453,8 @@ function inlDownloadAll(){
   var blob=new Blob([txt],{type:'text/html'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='inline_'+versao+'.html';a.click();toast('Download iniciado!');
 }
-// ── stub INL_PRODUTOS mantido para compatibilidade ──
-var INL_PRODUTOS=[];function inlAdicionarProduto(){toast('Use "+ Adicionar OS" no novo painel','err')}
-
-
-
-function inlAdicionarProduto(){
-  var psel=document.getElementById('inl-add-produto-sel');
-  if(!psel){
-    // Criar modal simples
-    var prod=prompt('Qual produto deseja adicionar?\n\n'+S.prefs.produtos.join('\n'));
-    if(!prod||!prod.trim())return;
-    if(INL_PRODUTOS.find(function(p){return p.produto===prod.trim()})){toast('Produto já adicionado','err');return}
-    INL_PRODUTOS.push({produto:prod.trim(),oss:[]});
-    inlRenderProdutos();return;
-  }
-}
-
-function inlRenderProdutos(){
-  var el=document.getElementById('inl-produtos-list');if(!el)return;
-  if(!INL_PRODUTOS.length){
-    el.innerHTML='<div style="text-align:center;padding:32px;color:var(--hint);font-size:13px">Nenhum produto adicionado. Clique em "+ Adicionar produto".</div>';
-    return;
-  }
-  el.innerHTML=INL_PRODUTOS.map(function(p,pi){
-    var ossRows=p.oss.map(function(os,oi){
-      return'<div style="background:var(--card2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px">'+
-        '<div style="width:7px;height:7px;border-radius:50%;background:'+(os.aprovado?'var(--green)':'var(--border2)')+'"></div>'+
-        '<div style="flex:1;font-size:13px;font-weight:500">'+os.titulo+'</div>'+
-        '<span style="font-size:10px;padding:2px 7px;border-radius:10px;background:'+(BOL_BADGE_STYLES[os.badge]||BOL_BADGE_STYLES.melhoria).bg+';color:'+(BOL_BADGE_STYLES[os.badge]||BOL_BADGE_STYLES.melhoria).color+'">'+(BOL_BADGE_STYLES[os.badge]||BOL_BADGE_STYLES.melhoria).label+'</span>'+
-        '<button class="btn btn-xs btn-ghost" onclick="inlEditarOS('+pi+','+oi+')">✏</button>'+
-        '<button class="btn btn-xs btn-danger" onclick="inlRemoverOS('+pi+','+oi+')">✕</button>'+
-      '</div>';
-    }).join('');
-    return'<div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:12px;overflow:hidden">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card2)">'+
-        '<span style="font-size:14px;font-weight:500">'+p.produto+'</span>'+
-        '<div style="display:flex;gap:6px">'+
-          '<button class="btn btn-xs btn-primary" onclick="inlAdicionarOSProduto('+pi+')">+ OS</button>'+
-          '<button class="btn btn-xs btn-danger" onclick="inlRemoverProduto('+pi+')">Remover produto</button>'+
-        '</div>'+
-      '</div>'+
-      '<div style="padding:12px 16px">'+(ossRows||'<div style="font-size:12px;color:var(--hint)">Nenhuma OS. Clique em "+ OS".</div>')+'</div>'+
-    '</div>';
-  }).join('');
-}
-
-function inlAdicionarProduto(){
-  var prods=S.prefs.produtos.filter(function(p){return!INL_PRODUTOS.find(function(x){return x.produto===p})});
-  if(!prods.length){toast('Todos os produtos já foram adicionados','err');return}
-  var prod=prods[0];
-  // Modal simples via prompt
-  var escolha=prompt('Produto a adicionar (copie e cole um da lista):\n\n'+prods.join('\n'));
-  if(!escolha||!escolha.trim())return;
-  escolha=escolha.trim();
-  if(!S.prefs.produtos.includes(escolha)){toast('Produto não encontrado','err');return}
-  if(INL_PRODUTOS.find(function(p){return p.produto===escolha})){toast('Já adicionado','err');return}
-  INL_PRODUTOS.push({produto:escolha,oss:[]});
-  inlRenderProdutos();
-}
-
-function inlRemoverProduto(pi){
-  if(!confirm('Remover produto e todas as suas OSs?'))return;
-  INL_PRODUTOS.splice(pi,1);inlRenderProdutos();
-}
-
-function inlAdicionarOSProduto(pi){
-  var p=INL_PRODUTOS[pi];if(!p)return;
-  // Busca OSs do produto na versão ativa
-  var oss=S.oss.filter(function(o){return o.produto===p.produto});
-  var jaAdic=p.oss.map(function(o){return o.osId});
-  oss=oss.filter(function(o){return jaAdic.indexOf(o.id)===-1});
-  var opcoes=oss.map(function(o,i){return i+1+') '+o.titulo+' (OS '+o.num+')'}).join('\n');
-  var resp=prompt('Selecione o número da OS:\n\n'+(opcoes||'Nenhuma OS disponível para '+p.produto));
-  if(!resp)return;
-  var idx=parseInt(resp)-1;
-  if(isNaN(idx)||idx<0||idx>=oss.length){toast('Seleção inválida','err');return}
-  var os=oss[idx];
-  p.oss.push({osId:os.id,num:os.num,titulo:os.titulo,descricao:'',badge:'melhoria',hasImagem:false,
-    textoLivre:'',pdfB64:null,pdfNome:null,aiSugestaoTitulo:'',aiSugestaoDesc:'',aprovado:false,open:true,_gerando:false});
-  inlRenderProdutos();
-  toast('OS adicionada — abra o editor para preencher a descrição');
-}
-
-function inlRemoverOS(pi,oi){INL_PRODUTOS[pi].oss.splice(oi,1);inlRenderProdutos()}
-
-function inlEditarOS(pi,oi){
-  var p=INL_PRODUTOS[pi],os=p&&p.oss[oi];if(!os)return;
-  // Usar mesmo modal de edição do boletim email
-  var badge=BOL_BADGE_STYLES[os.badge]||BOL_BADGE_STYLES.melhoria;
-  var html='<div style="background:var(--card2);border:1px solid var(--border2);border-radius:var(--radius-xl);padding:20px;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:400;width:560px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)">'+
-    '<div style="font-size:16px;font-weight:500;margin-bottom:16px">Editar OS — '+os.titulo+'</div>'+
-    '<div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Tipo</div>'+
-    '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">'+
-      Object.keys(BOL_BADGE_STYLES).map(function(k){var bs=BOL_BADGE_STYLES[k];return'<span onclick="inlSetBadge('+pi+','+oi+',\''+k+'\')" id="inl-badge-'+k+'" style="cursor:pointer;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;background:'+bs.bg+';color:'+bs.color+';border:2px solid '+(os.badge===k?bs.color:'transparent')+'">'+bs.label+'</span>'}).join('')+
-    '</div>'+
-    '<div class="form-group"><label class="form-label">Título no boletim</label><input id="inl-edit-titulo" class="form-input" value="'+escHtml(os.titulo)+'"></div>'+
-    '<div class="form-group"><label class="form-label">Descrição (HTML permitido)</label><textarea id="inl-edit-desc" class="form-input" style="min-height:100px">'+escHtml(os.descricao)+'</textarea></div>'+
-    '<div class="form-group"><label class="form-label">Texto livre para IA (opcional)</label><textarea id="inl-edit-texto" class="form-input" style="min-height:70px" placeholder="Cole rascunho ou notas — IA formata no estilo do boletim">'+escHtml(os.textoLivre||'')+'</textarea></div>'+
-    '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:var(--muted);margin-bottom:16px"><input type="checkbox" id="inl-edit-img" '+(os.hasImagem?'checked':'')+' style="width:15px;height:15px;accent-color:var(--accent)"> Esta OS tem imagem (espaço reservado)</label>'+
-    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
-      '<button class="btn btn-primary btn-sm" onclick="inlSalvarOS('+pi+','+oi+')">Salvar</button>'+
-      '<button class="btn btn-sm btn-ghost" onclick="inlGerarComTextoOS('+pi+','+oi+')" style="color:var(--accent)">✦ Gerar com IA</button>'+
-      '<button class="btn btn-sm btn-ghost" onclick="document.getElementById(\'inl-edit-overlay\').remove()">Cancelar</button>'+
-    '</div>'+
-  '</div>'+
-  '<div style="position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:399" onclick="document.getElementById(\'inl-edit-overlay\').remove()"></div>';
-  var overlay=document.createElement('div');overlay.id='inl-edit-overlay';overlay.innerHTML=html;document.body.appendChild(overlay);
-}
-
-function inlSetBadge(pi,oi,badge){
-  var os=INL_PRODUTOS[pi]&&INL_PRODUTOS[pi].oss[oi];if(!os)return;
-  os.badge=badge;
-  Object.keys(BOL_BADGE_STYLES).forEach(function(k){
-    var el=document.getElementById('inl-badge-'+k);if(!el)return;
-    var bs=BOL_BADGE_STYLES[k];el.style.borderColor=k===badge?bs.color:'transparent';
-  });
-}
-
-function inlSalvarOS(pi,oi){
-  var os=INL_PRODUTOS[pi]&&INL_PRODUTOS[pi].oss[oi];if(!os)return;
-  os.titulo=document.getElementById('inl-edit-titulo').value.trim()||os.titulo;
-  os.descricao=document.getElementById('inl-edit-desc').value;
-  os.textoLivre=document.getElementById('inl-edit-texto').value;
-  os.hasImagem=document.getElementById('inl-edit-img').checked;
-  os.aprovado=!!os.titulo&&!!os.descricao;
-  document.getElementById('inl-edit-overlay').remove();
-  inlRenderProdutos();toast('OS salva');
-}
-
-async function inlGerarComTextoOS(pi,oi){
-  var os=INL_PRODUTOS[pi]&&INL_PRODUTOS[pi].oss[oi];if(!os)return;
-  var texto=(document.getElementById('inl-edit-texto')&&document.getElementById('inl-edit-texto').value.trim())||'';
-  if(!texto){toast('Preencha o texto livre antes de gerar','err');return}
-  var apiKey=localStorage.getItem('vs_bol_apikey')||'';
-  var keyEl=document.getElementById('bol-api-key');if(keyEl)apiKey=keyEl.value.trim()||apiKey;
-  if(!apiKey){toast('Configure a chave de API na aba Boletim E-mail','err');return}
-  toast('✦ IA gerando...');
-  try{
-    var prompt='Atue como Product Marketing Manager B2B SaaS. Com base no texto abaixo, gere para o boletim inline (produto: '+os.titulo+') um comunicado de evolu00e700e3o com estrutura: Prezados clientes, [abertura], [o que mudou], [novo comportamento], [valor entregue]. Atenciosamente, Time de Produtos. Tom corporativo, elegante, sem bullet points, portugu00eas corporativo brasileiro. Defina TIPO: "novo","melhoria","legal","ajuste" e T00cdTULO CURTO (m00e1x 8 palavras).\n\nTexto:\n"""\n'+texto+'\n"""\n\nJSON (descricao em HTML com <p> e <strong>):\n{"titulo":"...","descricao":"...","badge":"melhoria"}';
-    var response=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-5',max_tokens:2000,messages:[{role:'user',content:prompt}]})});
-    if(!response.ok){var e=await response.json();throw new Error(e.error&&e.error.message||'Erro '+response.status)}
-    var data=await response.json();
-    var txt=data.content.map(function(c){return c.text||''}).join('');
-    var result=JSON.parse(txt.replace(/```json|```/g,'').trim());
-    var tEl=document.getElementById('inl-edit-titulo');if(tEl)tEl.value=result.titulo;
-    var dEl=document.getElementById('inl-edit-desc');if(dEl)dEl.value=result.descricao;
-    inlSetBadge(pi,oi,result.badge||'melhoria');os.badge=result.badge||'melhoria';
-    toast('✦ Sugestão aplicada — revise e salve');
-  }catch(err){toast('Erro IA: '+err.message,'err')}
-}
-
-function inlGerarHTML(){
-  if(!INL_PRODUTOS.length){toast('Adicione ao menos um produto','err');return}
-  var versao=document.getElementById('inl-versao').value||'VERSÃO ATUAL';
-  var entrega=document.getElementById('inl-entrega').value;
-  var link=document.getElementById('inl-link').value||'https://centraldocliente.lg.com.br';
-  var intro=document.getElementById('inl-intro').value||'Esta versão chega para tornar sua rotina mais ágil, segura e estratégica. Selecione um produto abaixo para conferir as melhorias.';
-  var entregaFmt=entrega?new Date(entrega+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long',year:'numeric'}):'';
-
-  // Gerar HTML da Home (Step 0) - 700x400, apenas tabelas+inline styles, sem style/meta/link
-  var prodCards=INL_PRODUTOS.map(function(p,pi){
-    var qtd=p.oss.length;
-    return'<td style="padding:4px" valign="top" width="'+(Math.floor(100/Math.max(INL_PRODUTOS.length,1)))+'%">'+
+// ── stub INL_PRODUTOS removido — sistema usa BOL_OSS_INL ──
+var INL_PRODUTOS=[];
     '<div style="background-color:#ffffff;border-radius:8px;border:1px solid #e5eaf1;padding:10px 12px">'+
     '<div style="background-color:#fff4e0;border-radius:8px;color:#b86f00;display:inline-block;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:bold;padding:2px 7px">'+qtd+' melhoria'+(qtd!==1?'s':'')+'</div>'+
     '<div style="color:#0f1f35;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;height:34px;line-height:1.3;margin-top:6px;overflow:hidden">'+p.produto+'</div>'+
