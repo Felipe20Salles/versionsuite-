@@ -1947,6 +1947,7 @@ function bolFmtDateShort(d){if(!d)return'';return new Date(d+'T12:00:00').toLoca
 function bolBuildHTML(oss,linha){
   var versao=document.getElementById('bol-hdr-versao').value||'XX.X';
   var entrega=document.getElementById('bol-hdr-entrega').value;
+  var boletim=document.getElementById('bol-hdr-boletim').value;
   var link=document.getElementById('bol-hdr-link').value||'https://centraldocliente.lg.com.br/hc/pt-br/articles/49937285581723';
 
   // Agrupar por produto
