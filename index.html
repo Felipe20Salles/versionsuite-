@@ -1540,8 +1540,11 @@ function bolAtualizarOSSelect(){
   var vid=document.getElementById('bol-add-versao').value;
   var ossel=document.getElementById('bol-add-os-sel');
   var oss=S.oss.filter(function(o){return o.versaoId===vid&&o.produto===prod});
-  // Remover já adicionadas
-  var jaAdicionadas=BOL_OSS[BOL_TAB].map(function(o){return o.osId});
+  // Remover já adicionadas — verifica o destino do modal (e-mail ou inline)
+  var destino=document.getElementById('modal-bol-os').dataset.destino;
+  var jaAdicionadas=destino==='inl'
+    ?BOL_OSS_INL.map(function(o){return o.osId})
+    :BOL_OSS[BOL_TAB].map(function(o){return o.osId});
   oss=oss.filter(function(o){return jaAdicionadas.indexOf(o.id)===-1});
   if(!oss.length){ossel.innerHTML='<option value="">Nenhuma OS disponível para este produto/versão</option>';return}
   ossel.innerHTML='<option value="">— selecione —</option>'+oss.map(function(o){
