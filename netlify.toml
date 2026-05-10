@@ -1,0 +1,16 @@
+[build]
+  publish = "."
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Só faz deploy automático da branch main
+[context.production]
+  branch = "main"
+
+# Branches de feature/fix não geram deploy
+[context.branch-deploy]
+  command = ""
+
+[context.deploy-preview]
+  command = ""
