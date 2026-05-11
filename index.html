@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>VersionSuite v10.7</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='16' y1='2' x2='16' y2='28' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%237c6ff7'/%3E%3Cstop offset='60%25' stop-color='%23f97316'/%3E%3Cstop offset='100%25' stop-color='%23ef4444'/%3E%3C/linearGradient%3E%3ClinearGradient id='g2' x1='16' y1='12' x2='16' y2='26' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%23fbbf24'/%3E%3Cstop offset='100%25' stop-color='%23f97316'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M16 2C16 2 10 8 10 14c0 2.5 1 4.5 2.5 6C11.5 18 11 16.5 11 15c0-3 3-6 3-6s-0.5 3 1.5 5c0.5 0.7 1 1.3 1.5 2 0.5-1 0.8-2.2 0.8-3.5 0-1.5-0.8-3-0.8-3s3 2.5 3 6.5c0 1.2-0.3 2.3-0.8 3.2C20.7 18.8 21 17.4 21 16c0-4-3-8-3-8s0.5 2-0.5 4C18.5 10 16 6 16 2z' fill='url(%23g1)'/%3E%3Cpath d='M16 12C16 12 13 15.5 13 18.5c0 1.7 0.8 3.1 2 4C14.5 21.5 14 20.3 14 19c0-2 1.5-3.5 1.5-3.5s0.2 1.5 1 2.5C17 17.5 18 16 18 14.5c0-0.8-0.2-1.5-0.2-1.5S19.5 15 19.5 18c0 0.8-0.2 1.6-0.5 2.2 1-1 1.5-2.3 1.5-3.7C20.5 13.5 18 11 16 12z' fill='url(%23g2)'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -250,7 +251,7 @@ textarea.form-input{resize:vertical;min-height:70px}
 <div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;flex-direction:column">
   <div style="text-align:center;max-width:360px;padding:40px 32px;background:var(--card);border:1px solid var(--border);border-radius:20px">
     <div style="font-family:var(--mono);font-size:22px;font-weight:500;margin-bottom:6px">Version<span style="color:var(--accent)">Suite</span></div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:32px">Gestão de entregas · LG Lugar de Gente</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:32px">Gestão de entregas</div>
     <button onclick="loginGoogle()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:12px;padding:13px 20px;background:#fff;border:1.5px solid #e0e0e8;border-radius:10px;font-size:14px;font-weight:500;color:#333;cursor:pointer;transition:all .15s;font-family:var(--font)">
       <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Entrar com Google
@@ -528,6 +529,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div class="tab active" onclick="setPontoTab(this,'tab-registro')">Registro diário</div>
           <div class="tab" onclick="setPontoTab(this,'tab-importar')">Importar Ponto</div>
           <div class="tab" onclick="setPontoTab(this,'tab-aprop')">Apropriação</div>
+          <div class="tab" onclick="setPontoTab(this,'tab-exportar')">Exportar Horas</div>
         </div>
         <div id="tab-registro"><div id="ponto-list"></div></div>
         <div id="tab-importar" style="display:none">
@@ -558,14 +560,28 @@ textarea.form-input{resize:vertical;min-height:70px}
           </div>
         </div>
         <div id="tab-aprop" style="display:none">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap">
-            <div style="font-size:13px;color:var(--muted)">Distribua as horas de cada dia entre as OSs da versão.</div>
-            <button class="btn btn-sm" onclick="apropriarAutomatico()" style="gap:6px;display:flex;align-items:center">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><polyline points="8,5 8,8 10,10"/><path d="M5,2.5 A6,6 0 0,1 13,5" stroke-dasharray="2 1"/></svg>
-              Apropriar automaticamente
-            </button>
-          </div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Distribua as horas de cada dia entre as OSs da versão. Use <strong>⚡ Auto</strong> para apropriar automaticamente dias sem lançamento.</div>
           <div id="aprop-list"></div>
+        </div>
+        <div id="tab-exportar" style="display:none">
+          <div class="card" style="margin-bottom:16px">
+            <div style="font-size:13px;font-weight:500;margin-bottom:12px">Exportar horas para Redmine</div>
+            <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+              <div class="form-group" style="margin:0;min-width:140px">
+                <label class="form-label">Data inicial</label>
+                <input type="date" class="form-input" id="exp-data-ini">
+              </div>
+              <div class="form-group" style="margin:0;min-width:140px">
+                <label class="form-label">Data final</label>
+                <input type="date" class="form-input" id="exp-data-fim">
+              </div>
+              <button class="btn btn-sm btn-primary" onclick="renderExportarHoras()">Visualizar</button>
+            </div>
+            <div id="export-preview"></div>
+            <div id="export-download" style="display:none;margin-top:14px">
+              <button class="btn btn-sm" onclick="downloadRedmineCSV()">⬇ Baixar CSV (Redmine)</button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -627,6 +643,12 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div class="pref-section-title">Produtos cadastrados</div>
           <div id="produtos-list" style="display:flex;flex-direction:column;gap:6px"></div>
           <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addProduto()">+ Adicionar produto</button>
+        </div>
+        <div class="pref-section">
+          <div class="pref-section-title">Tipo de Atividade</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Tipos usados ao exportar horas para o Redmine.</div>
+          <div id="tipo-atividade-list" style="display:flex;flex-direction:column;gap:6px"></div>
+          <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addTipoAtividade()">+ Adicionar tipo</button>
         </div>
         <div class="pref-section" id="pref-section-visitor">
           <div class="pref-section-title">Acesso de Visitantes</div>
@@ -926,18 +948,31 @@ function currentUserRole(){
   return u?u.role:'membro';
 }
 function isAdmin(){return currentUserRole()==='admin';}
+function isVisualizador(){return currentUserRole()==='visualizador';}
+function canEditOS(os){
+  var role=currentUserRole();
+  if(role==='admin')return true;
+  if(role==='visualizador')return false;
+  return !!(os&&CURRENT_USER&&os.createdBy===CURRENT_USER.id);
+}
+function canEditVersao(v){
+  var role=currentUserRole();
+  if(role==='admin')return true;
+  if(role==='visualizador')return false;
+  return !!(v&&CURRENT_USER&&v.createdBy===CURRENT_USER.id);
+}
 
 // Carrega todos os profiles do Supabase para popular lista de usuários
 async function loadUsers(){
   try{
-    var {data:profiles}=await sb.from('profiles').select('id,prefs');
+    var {data:profiles}=await sb.from('profiles').select('id,nome,prefs');
     if(!profiles)return;
     S_USERS=profiles.map(function(p){
       var prefs=p.prefs||{};
       return{
         id:p.id,
         email:prefs.email||'',
-        displayName:prefs.displayName||prefs.email||'Usuário',
+        displayName:p.nome||prefs.displayName||prefs.email||'Usuário',
         avatar:prefs.avatar||'',
         role:prefs.role||'membro',
         colorIdx:prefs.colorIdx!==undefined?prefs.colorIdx:null
@@ -1124,6 +1159,13 @@ var DIAS=['Dom.','Seg.','Ter.','Qua.','Qui.','Sex.','Sáb.'];
 var DIAS_SEMANA=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var ELABELS={novidade:'Novidade de versão',help:'Help (Zendesk)',tutorial:'Tutorial',evidencia:'Evidência de entrega'};
+function getOSClassificacao(os){
+  var aplicaveis=Object.values(os.entregas||{}).filter(function(e){return e.aplicavel}).length;
+  if(aplicaveis===0)return{label:'S',title:'Sem entregas',color:'var(--muted)'};
+  if(aplicaveis===1)return{label:'P',title:'Pequena (1 entrega)',color:'#10b981'};
+  if(aplicaveis===2)return{label:'M',title:'Média (2 entregas)',color:'#f59e0b'};
+  return{label:'G',title:'Grande ('+aplicaveis+' entregas)',color:'#ef4444'};
+}
 var SEG_COLORS=['#6366f1','#3b82f6','#10b981','#f59e0b','#ec4899','#ef4444','#a855f7','#14b8a6','#f97316','#84cc16'];
 var CANAL_LABELS={inline:'Inline/Banner',email:'E-mail',entregate:'Entre a Gente',webinar:'Webinar',teams:'Teams'};
 var CANAL_COLORS={inline:'#6366f1',email:'#3b82f6',entregate:'#10b981',webinar:'#f59e0b',teams:'#7c3aed'};
@@ -1290,7 +1332,7 @@ function goScreen(name){
   if(name==='boletim'){setBolTab(BOL_TAB);setTimeout(bolCarregarAPIKey,50)}
   if(name==='ponto')renderPontoList();
   if(name==='historico')renderHist();
-  if(name==='preferencias'){renderPalette();renderProdutos();renderUsersPrefs();
+  if(name==='preferencias'){renderPalette();renderProdutos();renderUsersPrefs();renderTipoAtividades();
     var pf=document.getElementById('pref-visitor-pass');if(pf)pf.value=localStorage.getItem('vs_visitor_pass')||'';
     renderVisitorLog();
   }
@@ -1429,9 +1471,14 @@ function renderKanban(){
       var isIncompleta=isEncerrada&&k!=='concluido';
       var prevBtn=prevK&&!isEncerrada?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+prevK+'\')">← '+statusLabel(prevK)+'</button>':'';
       var nextBtn=nextK?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+nextK+'\')">'+(nextK==='concluido'?'✓ ':'')+statusLabel(nextK)+' →</button>':'';
+      var clf=getOSClassificacao(os);
+      var canEd=canEditOS(os);
       return'<div class="os-card'+(isIncompleta?' os-incompleta':'')+'">'+
         '<div class="os-card-body">'+
-          '<div class="os-num">OS '+os.num+(os.link?' <a href="'+os.link+'" target="_blank" style="color:var(--accent);text-decoration:none;font-size:10px" onclick="event.stopPropagation()">↗</a>':'')+'</div>'+
+          '<div class="os-num">OS '+os.num+
+            ' <span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.08);color:'+clf.color+'" title="'+clf.title+'">'+clf.label+'</span>'+
+            (os.link?' <a href="'+os.link+'" target="_blank" style="color:var(--accent);text-decoration:none;font-size:10px" onclick="event.stopPropagation()">↗</a>':'')+
+          '</div>'+
           '<div class="os-title-text">'+os.titulo+'</div>'+
           '<div style="display:flex;align-items:center;justify-content:space-between">'+
             '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
@@ -1445,8 +1492,8 @@ function renderKanban(){
         '</div>'+
         '<div class="os-card-actions">'+
           '<div class="os-action-row">'+
-            '<button class="os-action-btn edit" onclick="event.stopPropagation();openEditOS(\''+os.id+'\')">✏ Editar</button>'+
-            '<button class="os-action-btn del" onclick="event.stopPropagation();deleteOS(\''+os.id+'\')">✕ Deletar</button>'+
+            (canEd?'<button class="os-action-btn edit" onclick="event.stopPropagation();openEditOS(\''+os.id+'\')">✏ Editar</button>':'')+
+            (canEd?'<button class="os-action-btn del" onclick="event.stopPropagation();deleteOS(\''+os.id+'\')">✕ Deletar</button>':'')+
             '<button class="os-action-btn aprop" onclick="event.stopPropagation();goAprop(\''+os.id+'\')">⏱ Apropriar</button>'+
           '</div>'+
           (prevBtn||nextBtn?'<div class="os-action-row">'+prevBtn+nextBtn+'</div>':'')+
@@ -1511,6 +1558,7 @@ function openNovaOS(){
 }
 function openEditOS(osId){
   var os=S.oss.find(function(o){return o.id===osId});if(!os)return;
+  if(!canEditOS(os)){toast('Sem permissão para editar esta OS','err');return}
   S.editOS=osId;
   document.getElementById('modal-os-title').textContent='Editar OS';
   document.getElementById('modal-os-error').style.display='none';
@@ -1547,6 +1595,7 @@ function salvarOS(){
     atribuicao:document.getElementById('os-atribuicao').value.trim(),
     versaoId:vid,
     criadaEm:old?old.criadaEm:new Date().toISOString(),
+    createdBy:old?old.createdBy:(CURRENT_USER?CURRENT_USER.id:null),
     entregas:{novidade:mkE(document.getElementById('e-novidade').checked,old&&old.entregas.novidade),
       help:mkE(document.getElementById('e-help').checked,old&&old.entregas.help),
       tutorial:mkE(document.getElementById('e-tutorial').checked,old&&old.entregas.tutorial),
@@ -2529,21 +2578,24 @@ function inlDownloadAll(){
 }
 
 // ── PONTO ─────────────────────────────────────────────────────────────────────
+var _PONTO_TABS=['tab-registro','tab-importar','tab-aprop','tab-exportar'];
 function setPontoTab(btn,tabId){
-  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+  document.querySelectorAll('#screen-ponto .tab').forEach(function(t){t.classList.remove('active')});
   btn.classList.add('active');
-  ['tab-registro','tab-importar','tab-aprop'].forEach(function(id){document.getElementById(id).style.display='none'});
+  _PONTO_TABS.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none'});
   document.getElementById(tabId).style.display='block';
   if(tabId==='tab-aprop')renderAprop();
   if(tabId==='tab-registro')renderPontoList();
+  if(tabId==='tab-exportar')renderExportarHoras();
 }
 function setPontoTabById(tabId){
   var tabs=document.querySelectorAll('#screen-ponto .tab');
-  var idx={'tab-registro':0,'tab-importar':1,'tab-aprop':2}[tabId]||2;
+  var idx={'tab-registro':0,'tab-importar':1,'tab-aprop':2,'tab-exportar':3}[tabId]||2;
   tabs.forEach(function(t,i){t.classList.toggle('active',i===idx)});
-  ['tab-registro','tab-importar','tab-aprop'].forEach(function(id){document.getElementById(id).style.display='none'});
+  _PONTO_TABS.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none'});
   document.getElementById(tabId).style.display='block';
   if(tabId==='tab-aprop')renderAprop();
+  if(tabId==='tab-exportar')renderExportarHoras();
 }
 function openNovoRegistro(){
   document.getElementById('modal-ponto-title').textContent='Registrar dia de ponto';
@@ -2761,6 +2813,37 @@ function getApropState(p){
   }
   return _apropState[p.id];
 }
+function autoApropDia(pid){
+  var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;
+  var ossDisp=ossParaApropriar();
+  var meuNome=getDisplayName().trim();
+  var minhaOss=ossDisp.filter(function(o){return(o.atribuicao||'').trim()===meuNome});
+  var check=minhaOss.length?minhaOss:ossDisp;
+  if(!check.length){toast('Nenhuma OS disponível para apropriar','err');return}
+  var chkHtml=check.map(function(o,i){
+    var vn=S.versoes.find(function(x){return x.id===o.versaoId});
+    return'<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;cursor:pointer">'+
+      '<input type="checkbox" id="auto-ck-'+i+'" '+(minhaOss.length?'checked':'')+' style="width:14px;height:14px">'+
+      '<span>OS '+o.num+' – '+o.titulo.slice(0,38)+(vn?' <span style="color:var(--muted)">('+vn.nome+')</span>':'')+'</span></label>';
+  }).join('');
+  modalConfirm(
+    '⚡ Apropriação automática — '+fmtDate(p.data),
+    '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Selecione as OSs para distribuir as <strong>'+p.horasTrabalhadas.toFixed(2)+'h</strong> deste dia:</div>'+
+    '<div style="max-height:240px;overflow-y:auto;padding:4px 0">'+chkHtml+'</div>',
+    'Aplicar e editar','btn-primary'
+  ).then(function(ok){
+    if(!ok)return;
+    var selecionadas=check.filter(function(o,i){var cb=document.getElementById('auto-ck-'+i);return cb&&cb.checked});
+    if(!selecionadas.length){toast('Nenhuma OS selecionada','err');return}
+    var n=selecionadas.length;
+    var base=Math.floor(100/n),rem=100-base*n;
+    var st=getApropState(p);
+    st.oss=selecionadas.map(function(o,i){return{osId:o.id,pct:base+(i<rem?1:0)}});
+    st.editing=true;
+    redrawApropDay(p,ossDisp);
+    setTimeout(function(){attachSlider(pid)},50);
+  });
+}
 function renderAprop(){
   var el=document.getElementById('aprop-list');
   if(!S.pontos.length){el.innerHTML='<div style="color:var(--hint);font-size:13px">Nenhum registro de ponto. Adicione dias no "Registro diário".</div>';return}
@@ -2782,7 +2865,8 @@ function renderApropDay(p,st,ossDisp){
     '<span class="ponto-day-horas">'+h.toFixed(2)+'h disponíveis</span></div>'+
     '<div class="aprop-bar-wrap"><div class="aprop-bar-fill '+barCls+'" style="width:'+pct+'%"></div></div>';
   if(!st.editing){
-    var rows=st.oss.length?(st.oss.map(function(item,i){
+    var hasAprop=st.oss.length>0;
+    var rows=hasAprop?(st.oss.map(function(item,i){
       var os=S.oss.find(function(o){return o.id===item.osId});
       return'<div class="rateio-os-row"><div class="rateio-os-dot" style="background:'+SEG_COLORS[i%SEG_COLORS.length]+'"></div>'+
         '<div class="rateio-os-name">'+(os?'OS '+os.num+' – '+os.titulo.slice(0,30):item.osId)+'</div>'+
@@ -2790,7 +2874,11 @@ function renderApropDay(p,st,ossDisp){
         '<div class="rateio-os-h">'+(h*item.pct/100).toFixed(2)+'h</div></div>';
     }).join('')):
     '<div style="font-size:12px;color:var(--hint)">Nenhuma OS apropriada.</div>';
-    return header+'<div class="aprop-section-day">'+rows+'<button class="btn btn-sm btn-ghost" style="margin-top:10px" onclick="startEditAprop(\''+p.id+'\')">✏ Editar apropriação</button></div>';
+    var btns='<div style="display:flex;gap:6px;margin-top:10px">'+
+      '<button class="btn btn-sm btn-ghost" onclick="startEditAprop(\''+p.id+'\')">✏ Editar manualmente</button>'+
+      (!hasAprop?'<button class="btn btn-sm" onclick="autoApropDia(\''+p.id+'\')">⚡ Auto</button>':'')+
+      '</div>';
+    return header+'<div class="aprop-section-day">'+rows+btns+'</div>';
   }
   var ossOpts='<option value="">— selecione —</option>'+ossDisp.map(function(o){
     var v=S.versoes.find(function(x){return x.id===o.versaoId});
@@ -3382,13 +3470,13 @@ function renderHist(){
       '<div class="hist-stat"><div class="hist-stat-val">'+horasAprop.toFixed(1)+'h</div><div class="hist-stat-lbl">Horas Aprop.</div></div>'+
       '<div class="hist-stat"><div class="hist-stat-val">'+pct+'%</div><div class="hist-stat-lbl">Progresso</div></div>'+
       '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">'+
-        (!v.ativa?'<button class="btn btn-xs btn-ghost" onclick="reativarVersao(\''+v.id+'\')">Reativar</button>':'')+
-        '<button class="btn btn-xs btn-ghost" onclick="editarVersao(\''+v.id+'\')" title="Editar versão">'+
+        (canEditVersao(v)&&!v.ativa?'<button class="btn btn-xs btn-ghost" onclick="reativarVersao(\''+v.id+'\')">Reativar</button>':'')+
+        (canEditVersao(v)?'<button class="btn btn-xs btn-ghost" onclick="editarVersao(\''+v.id+'\')" title="Editar versão">'+
           '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2l3 3-9 9H2v-3L11 2z"/></svg>'+
-        '</button>'+
-        '<button class="btn btn-xs btn-danger" onclick="excluirVersao(\''+v.id+'\')" title="Excluir versão">'+
+        '</button>':'')+
+        (canEditVersao(v)?'<button class="btn btn-xs btn-danger" onclick="excluirVersao(\''+v.id+'\')" title="Excluir versão">'+
           '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="2,4 14,4"/><path d="M6,4V2h4v2"/><path d="M3,4l1,10h8l1-10"/><line x1="6" y1="7" x2="6" y2="11"/><line x1="10" y1="7" x2="10" y2="11"/></svg>'+
-        '</button>'+
+        '</button>':'')+
       '</div>'+
     '</div>';
   }).join('');
@@ -3553,7 +3641,7 @@ async function load(){
     var {data:versoes}=await sb.from('versoes').select('*').order('created_at',{ascending:false});
     S.versoes=(versoes||[]).map(function(v){return{
       id:v.id,nome:v.nome,data:v.data,boletim:v.boletim,
-      ativa:v.ativa,encerradaEm:v.encerrada_em
+      ativa:v.ativa,encerradaEm:v.encerrada_em,createdBy:v.created_by||null
     }});
 
     // OSs
@@ -3562,7 +3650,7 @@ async function load(){
       id:o.id,num:o.num,titulo:o.titulo,produto:o.produto,
       status:o.status,obs:o.obs||'',link:o.link||'',atribuicao:o.atribuicao||'',
       versaoId:o.versao_id,entregas:o.entregas||{},
-      criadaEm:o.created_at
+      criadaEm:o.created_at,createdBy:o.created_by||null
     }});
 
     // Pontos (apenas do usuário)
@@ -3709,6 +3797,7 @@ function openNovaVersao(){
 
 function editarVersao(vid){
   var v=S.versoes.find(function(x){return x.id===vid});if(!v)return;
+  if(!canEditVersao(v)){toast('Sem permissão para editar esta versão','err');return}
   _editingVersaoId=vid;
   document.getElementById('modal-versao-title').textContent='Editar versão';
   document.getElementById('btn-salvar-versao').textContent='Salvar alterações';
@@ -3765,6 +3854,7 @@ function reativarVersao(vid){
 function excluirVersao(vid){
   var v=S.versoes.find(function(x){return x.id===vid});
   if(!v)return;
+  if(!canEditVersao(v)){toast('Sem permissão para excluir esta versão','err');return}
   var ossCount=S.oss.filter(function(o){return o.versaoId===vid}).length;
   var aviso=ossCount>0?'\n⚠️ Esta versão possui '+ossCount+' OS(s) que também serão excluídas.':'';
   if(!confirm('Excluir a versão "'+v.nome+'" permanentemente?'+aviso+'\n\nEsta ação não pode ser desfeita.'))return;
@@ -3793,6 +3883,7 @@ function salvarOS(){
     obs:document.getElementById('os-obs').value,link:document.getElementById('os-link').value.trim(),
     atribuicao:document.getElementById('os-atribuicao').value.trim(),
     versaoId:vid,criadaEm:old?old.criadaEm:new Date().toISOString(),
+    createdBy:old?old.createdBy:(CURRENT_USER?CURRENT_USER.id:null),
     entregas:{novidade:mkE(document.getElementById('e-novidade').checked,old&&old.entregas.novidade),
       help:mkE(document.getElementById('e-help').checked,old&&old.entregas.help),
       tutorial:mkE(document.getElementById('e-tutorial').checked,old&&old.entregas.tutorial),
@@ -3805,6 +3896,8 @@ function salvarOS(){
 }
 
 function deleteOS(osId){
+  var os=S.oss.find(function(o){return o.id===osId});
+  if(!canEditOS(os)){toast('Sem permissão para deletar esta OS','err');return}
   if(!confirm('Remover esta OS?'))return;
   dbDeletarOS(osId).then(function(){
     S.oss=S.oss.filter(function(o){return o.id!==osId});
@@ -3926,6 +4019,83 @@ function toggleTheme(){
   S.prefs.lightMode=!S.prefs.lightMode;applyPrefs();
   dbSalvarPrefs().catch(function(){});
 }
+// ── TIPO ATIVIDADE (localStorage: vs_tipo_atividade) ─────────────────────────
+function getTipoAtividades(){
+  try{var v=JSON.parse(localStorage.getItem('vs_tipo_atividade'));if(Array.isArray(v)&&v.length)return v}catch(e){}
+  return['Documentação'];
+}
+function saveTipoAtividades(arr){localStorage.setItem('vs_tipo_atividade',JSON.stringify(arr))}
+function renderTipoAtividades(){
+  var arr=getTipoAtividades();
+  var el=document.getElementById('tipo-atividade-list');if(!el)return;
+  el.innerHTML=arr.map(function(t,i){
+    return'<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--card2);border-radius:var(--radius);border:1px solid var(--border2)">'+
+      '<span style="flex:1;font-size:13px">'+t+'</span>'+
+      '<span style="color:var(--hint);cursor:pointer;font-size:16px;padding:0 4px" onclick="removeTipoAtividade('+i+')" title="Remover">×</span>'+
+    '</div>';
+  }).join('');
+}
+function addTipoAtividade(){
+  var nome=prompt('Nome do tipo de atividade:','');
+  if(!nome||!nome.trim())return;
+  var arr=getTipoAtividades();
+  if(arr.indexOf(nome.trim())>-1){toast('Tipo já existe','err');return}
+  arr.push(nome.trim());saveTipoAtividades(arr);renderTipoAtividades();toast('Tipo adicionado');
+}
+function removeTipoAtividade(i){
+  var arr=getTipoAtividades();arr.splice(i,1);saveTipoAtividades(arr);renderTipoAtividades();toast('Tipo removido');
+}
+
+// ── EXPORTAR HORAS (Redmine CSV) ──────────────────────────────────────────────
+var REDMINE_FORMATO_HORAS='decimal';
+var _exportRows=[];
+function renderExportarHoras(){
+  var ini=document.getElementById('exp-data-ini').value;
+  var fim=document.getElementById('exp-data-fim').value;
+  var preview=document.getElementById('export-preview');
+  var dlBtn=document.getElementById('export-download');
+  if(!ini||!fim){preview.innerHTML='<div style="font-size:12px;color:var(--hint)">Selecione um período e clique em Visualizar.</div>';dlBtn.style.display='none';return}
+  var tipos=getTipoAtividades();
+  var tiposOpts=tipos.map(function(t){return'<option>'+t+'</option>'}).join('');
+  var rows=[];
+  S.pontos.filter(function(p){return p.data>=ini&&p.data<=fim&&p.horasTrabalhadas>0}).forEach(function(p){
+    (p.apropriacoes||[]).forEach(function(a){
+      var os=S.oss.find(function(o){return o.id===a.osId});
+      rows.push({osNum:os?os.num:'?',data:p.data,horas:a.horas,tipo:tipos[0]||'Documentação',_osId:a.osId});
+    });
+  });
+  _exportRows=rows;
+  if(!rows.length){preview.innerHTML='<div style="font-size:12px;color:var(--hint)">Nenhuma apropriação encontrada no período.</div>';dlBtn.style.display='none';return}
+  var thead='<tr><th style="text-align:left;padding:6px 10px;font-size:11px;font-weight:600;color:var(--muted)">Número OS</th>'+
+    '<th style="text-align:left;padding:6px 10px;font-size:11px;font-weight:600;color:var(--muted)">Data</th>'+
+    '<th style="text-align:left;padding:6px 10px;font-size:11px;font-weight:600;color:var(--muted)">Tempo</th>'+
+    '<th style="text-align:left;padding:6px 10px;font-size:11px;font-weight:600;color:var(--muted)">Atividade</th></tr>';
+  var tbody=rows.map(function(r,i){
+    return'<tr style="border-top:1px solid var(--border2)">'+
+      '<td style="padding:6px 10px;font-size:12px;font-family:var(--mono)">'+r.osNum+'</td>'+
+      '<td style="padding:6px 10px;font-size:12px">'+fmtDate(r.data)+'</td>'+
+      '<td style="padding:6px 10px;font-size:12px">'+r.horas.toFixed(2)+'h</td>'+
+      '<td style="padding:6px 10px"><select class="form-input" style="padding:2px 6px;font-size:12px;height:28px" onchange="_exportRows['+i+'].tipo=this.value">'+tiposOpts+'</select></td>'+
+    '</tr>';
+  }).join('');
+  preview.innerHTML='<table style="width:100%;border-collapse:collapse;background:var(--card2);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border2)"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';
+  dlBtn.style.display='block';
+}
+function downloadRedmineCSV(){
+  if(!_exportRows.length){toast('Nada para exportar','err');return}
+  var lines=['Numero OS;Data;Tempo;Atividade'];
+  _exportRows.forEach(function(r){
+    var h=REDMINE_FORMATO_HORAS==='decimal'?r.horas.toFixed(2):Math.floor(r.horas)+':'+(Math.round((r.horas%1)*60)).toString().padStart(2,'0');
+    lines.push(r.osNum+';'+r.data+';'+h+';'+r.tipo);
+  });
+  var blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  var hoje=new Date().toISOString().slice(0,10).replace(/-/g,'');
+  a.href=url;a.download='redmine_horas_'+hoje+'.csv';a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── MODAL CONFIRM (substitui confirm() nativo) ────────────────────────────────
 var _confirmResolve=null;
 function modalConfirm(titulo,msg,okLabel,okClass){
