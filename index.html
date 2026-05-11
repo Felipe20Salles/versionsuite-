@@ -1947,7 +1947,7 @@ async function bolGerarComTexto(osId){
   var apiKey=(document.getElementById('bol-api-key')&&document.getElementById('bol-api-key').value.trim())||localStorage.getItem('vs_bol_apikey')||'';
   if(!apiKey){os._gerando=false;bolRerenderItem(os);toast('Configure a chave de API no cabeçalho','err');return}
   try{
-    var prompt='Atue como Product Marketing Manager / Product Owner B2B SaaS, especialista em transformar propostas técnicas de evolução de produto em comunicados comerciais claros, elegantes e corporativos para clientes.\n\nCom base no texto abaixo sobre a OS '+os.num+' ('+os.produto+'), gere um comunicado oficial de evolução de produto.\n\nEstrutura obrigatória do comunicado:\n  Prezados clientes,\n  [Abertura curta informando a disponibilização da melhoria, citando o módulo.]\n  [O que mudou no produto.]\n  [Novo comportamento / funcionamento.]\n  [Valor entregue ao cliente.]\n  Atenciosamente, Time de Produtos\n\nTom: corporativo, elegante, objetivo, positivo, sem bullet points, português corporativo brasileiro.\n\nAlém do comunicado, classifique o TIPO da entrega com base no conteúdo:\n- "novo" → funcionalidade ou fluxo completamente inédito no sistema\n- "melhoria" → aprimoramento, ajuste de usabilidade, evolução de feature existente\n- "legal" → obrigação legal, fiscal, trabalhista ou regulatória (LGPD, eSocial, etc.)\n- "ajuste" → correção de bug, comportamento incorreto ou inconsistência\n\nIMPORTANTE: Analise cuidadosamente o conteúdo para definir o tipo correto. Não use "melhoria" como padrão se o conteúdo indica claramente outro tipo.\n\nTexto fornecido:\n"""\n'+texto+'\n"""\n\nResponda APENAS em JSON sem markdown (sem blocos de código, sem explicações):\n{"titulo":"título curto para o card do boletim (máx 8 palavras)","descricao":"comunicado completo em HTML com <p> e <strong>","badge":"[novo|melhoria|legal|ajuste]"}';
+    var prompt='Atue como Product Marketing Manager / Product Owner B2B SaaS, especialista em transformar propostas técnicas de evolução de produto em comunicados comerciais claros, elegantes e corporativos para clientes.\n\nCom base no texto abaixo sobre a OS '+os.num+' ('+os.produto+'), gere um comunicado oficial de evolução de produto.\n\nEstrutura obrigatória do comunicado (sem saudação e sem assinatura):\n  [Abertura curta informando a disponibilização da melhoria, citando o módulo.]\n  [O que mudou no produto.]\n  [Novo comportamento / funcionamento.]\n  [Valor entregue ao cliente.]\n\nRegras de formatação:\n- Use a tag <strong> em TODOS os botões, menus e nomes de funcionalidades mencionados no texto.\n- Não inclua "Prezados clientes" nem assinatura de fechamento.\n\nTom: corporativo, elegante, objetivo, positivo, sem bullet points, português corporativo brasileiro.\n\nAlém do comunicado, classifique o TIPO da entrega com base no conteúdo:\n- "novo" → funcionalidade ou fluxo completamente inédito no sistema\n- "melhoria" → aprimoramento, ajuste de usabilidade, evolução de feature existente\n- "legal" → obrigação legal, fiscal, trabalhista ou regulatória (LGPD, eSocial, etc.)\n- "ajuste" → correção de bug, comportamento incorreto ou inconsistência\n\nIMPORTANTE: Analise cuidadosamente o conteúdo para definir o tipo correto. Não use "melhoria" como padrão se o conteúdo indica claramente outro tipo.\n\nTexto fornecido:\n"""\n'+texto+'\n"""\n\nResponda APENAS em JSON sem markdown (sem blocos de código, sem explicações):\n{"titulo":"título curto para o card do boletim (máx 8 palavras)","descricao":"comunicado completo em HTML com <p> e <strong>","badge":"[novo|melhoria|legal|ajuste]"}';
     var response=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
@@ -1980,7 +1980,7 @@ function bolCarregarAPIKey(){
 async function bolCallAnthropicPDF(pdfB64,osNum,produto){
   var apiKey=(document.getElementById('bol-api-key').value.trim())||localStorage.getItem('vs_bol_apikey')||'';
   if(!apiKey){throw new Error('Chave de API não configurada. Insira sua chave no campo "🔑 Chave de API Anthropic" acima.')}
-  var prompt='Atue como Product Marketing Manager / Product Owner B2B SaaS. Analise a Proposta de Solução (OS '+osNum+' — '+produto+') e gere um comunicado oficial de evolução de produto.\n\nEstrutura:\n  Prezados clientes,\n  [Abertura curta informando a disponibilização, citando o módulo.]\n  [O que mudou no produto.]\n  [Novo comportamento / funcionamento.]\n  [Valor entregue ao cliente.]\n  Atenciosamente, Time de Produtos\n\nTom: corporativo, elegante, objetivo, sem bullet points, português corporativo brasileiro.\n\nClassifique o TIPO da entrega com base no conteúdo do documento:\n- "novo" → funcionalidade ou fluxo completamente inédito no sistema\n- "melhoria" → aprimoramento, ajuste de usabilidade, evolução de feature existente\n- "legal" → obrigação legal, fiscal, trabalhista ou regulatória (LGPD, eSocial, CNIS, etc.)\n- "ajuste" → correção de bug, comportamento incorreto ou inconsistência\n\nIMPORTANTE: Leia atentamente o documento. Se mencionar legislação, decreto, portaria, conformidade ou obrigação legal → "legal". Se descreve criação de algo novo inexistente → "novo". Se corrige algo que estava errado → "ajuste". Caso contrário → "melhoria".\n\nResponda APENAS em JSON sem markdown:\n{"titulo":"título curto para o card (máx 8 palavras)","descricao":"comunicado completo em HTML com <p> e <strong>","badge":"[novo|melhoria|legal|ajuste]"}';
+  var prompt='Atue como Product Marketing Manager / Product Owner B2B SaaS. Analise a Proposta de Solução (OS '+osNum+' — '+produto+') e gere um comunicado oficial de evolução de produto.\n\nEstrutura (sem saudação e sem assinatura):\n  [Abertura curta informando a disponibilização, citando o módulo.]\n  [O que mudou no produto.]\n  [Novo comportamento / funcionamento.]\n  [Valor entregue ao cliente.]\n\nRegras de formatação:\n- Use a tag <strong> em TODOS os botões, menus e nomes de funcionalidades mencionados no texto.\n- Não inclua "Prezados clientes" nem assinatura de fechamento.\n\nTom: corporativo, elegante, objetivo, sem bullet points, português corporativo brasileiro.\n\nClassifique o TIPO da entrega com base no conteúdo do documento:\n- "novo" → funcionalidade ou fluxo completamente inédito no sistema\n- "melhoria" → aprimoramento, ajuste de usabilidade, evolução de feature existente\n- "legal" → obrigação legal, fiscal, trabalhista ou regulatória (LGPD, eSocial, CNIS, etc.)\n- "ajuste" → correção de bug, comportamento incorreto ou inconsistência\n\nIMPORTANTE: Leia atentamente o documento. Se mencionar legislação, decreto, portaria, conformidade ou obrigação legal → "legal". Se descreve criação de algo novo inexistente → "novo". Se corrige algo que estava errado → "ajuste". Caso contrário → "melhoria".\n\nResponda APENAS em JSON sem markdown:\n{"titulo":"título curto para o card (máx 8 palavras)","descricao":"comunicado completo em HTML com <p> e <strong>","badge":"[novo|melhoria|legal|ajuste]"}';
   var response=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
@@ -2243,7 +2243,28 @@ function bolBuildHTML(oss,linha){
 '<!-- INTRO --><tr><td style="padding-bottom: 20px;">'+
 '<table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f7fb; border-radius: 12px; border-left: 4px solid #EEA422;">'+
 '<tr><td style="padding: 18px 22px; color: #444444; font-size: 14px; line-height: 1.65; '+F+'">'+
-'Em resposta aos feedbacks dos nossos clientes, esta versão traz evoluções focadas em <strong style="color: #3B5E9A;">eficiência operacional, conformidade legal e usabilidade</strong>. Clique em cada produto abaixo para ir direto aos destaques.'+
+(function(){
+  var badges=oss.map(function(o){return o.badge||'melhoria'});
+  var hasLegal=badges.indexOf('legal')>-1;
+  var hasNovo=badges.indexOf('novo')>-1;
+  var hasMelhoria=badges.indexOf('melhoria')>-1;
+  var hasAjuste=badges.indexOf('ajuste')>-1;
+  var partes=[];
+  if(hasLegal)partes.push('adequações a obrigações legais e regulatórias');
+  if(hasNovo)partes.push('novas funcionalidades');
+  if(hasMelhoria)partes.push('melhorias de usabilidade e eficiência operacional');
+  if(hasAjuste)partes.push('ajustes e correções de comportamento');
+  if(!partes.length)partes.push('melhorias e evoluções de produto');
+  var lista='';
+  if(partes.length===1){
+    lista='<strong style="color:#3B5E9A;">'+partes[0]+'</strong>';
+  }else{
+    var last=partes[partes.length-1];
+    var rest=partes.slice(0,-1);
+    lista=rest.map(function(p){return'<strong style="color:#3B5E9A;">'+p+'</strong>'}).join(', ')+' e <strong style="color:#3B5E9A;">'+last+'</strong>';
+  }
+  return'Em resposta às solicitações de nossos clientes, esta versão abordará '+lista+'. Clique em cada produto para visualizar as novidades.';
+})() +
 '</td></tr></table>'+
 '</td></tr>\n'+
 
