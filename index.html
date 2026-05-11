@@ -384,10 +384,6 @@ textarea.form-input{resize:vertical;min-height:70px}
             <button class="filter-chip" onclick="setFiltro(this,'Gestão de Talentos')">GT</button>
             <button class="filter-chip" onclick="setFiltro(this,'Pagadoria')">Pagadoria</button>
           </div>
-          <div class="filter-bar" style="margin:0;border-left:1px solid var(--border);padding-left:8px">
-            <button class="filter-chip active" id="filtro-atrib-todos" onclick="setFiltroAtrib(this,'todos')">Todos</button>
-            <div id="filtro-atrib-chips" style="display:contents"></div>
-          </div>
           <div style="display:flex;align-items:center;gap:6px;border-left:1px solid var(--border);padding-left:8px">
             <span style="font-size:12px;color:var(--muted);white-space:nowrap">Atribuído a:</span>
             <select id="kanban-atrib-sel" class="form-input" style="padding:4px 8px;font-size:12px;height:auto" onchange="setFiltroAtribuicao(this.value)">
@@ -1393,47 +1389,11 @@ function salvarVersao(){
 // ── KANBAN ────────────────────────────────────────────────────────────────────
 function onVersaoChange(){S.versaoK=document.getElementById('kanban-versao-sel').value;renderKanban()}
 function setFiltro(btn,f){document.querySelectorAll('.filter-chip').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');S.filtro=f;renderKanban()}
-function setFiltroAtrib(btn,nome){
-  document.getElementById('filtro-atrib-todos').classList.remove('active');
-  document.querySelectorAll('#filtro-atrib-chips .filter-chip').forEach(function(b){b.classList.remove('active')});
-  btn.classList.add('active');S.filtroAtrib=nome;renderKanban();
-}
-// Cache de nomes dos usuários da plataforma
-var _PROFILES_NOMES=[];
-async function carregarProfiles(){
-  if(_PROFILES_NOMES.length)return;
-  try{
-    // Extrair nomes: usuário atual + todos que aparecem nas OSs
-    var nomeAtual='';
-    if(CURRENT_USER){var m=CURRENT_USER.user_metadata||{};nomeAtual=(m.full_name||m.name||'').trim();}
-    var nomesOSs=[...new Set(S.oss.map(function(o){return(o.atribuicao||'').trim()}).filter(Boolean))];
-    var todos=[nomeAtual,...nomesOSs].filter(Boolean).map(function(n){
-      var pts=n.split(/\s+/);return pts.length>=2?pts[0]+' '+pts[pts.length-1]:pts[0];
-    });
-    _PROFILES_NOMES=[...new Set(todos)].sort();
-  }catch(e){_PROFILES_NOMES=[];}
-}
-function renderAtribChips(){
-  var vid=S.versaoK;
-  var ossVersao=vid?S.oss.filter(function(o){return o.versaoId===vid}):S.oss;
-  var nomesOSs=ossVersao.map(function(o){
-    var a=(o.atribuicao||'').trim();if(!a)return null;
-    var pts=a.split(/\s+/);return pts.length>=2?pts[0]+' '+pts[pts.length-1]:pts[0];
-  }).filter(Boolean);
-  var nomes=[...new Set([..._PROFILES_NOMES,...nomesOSs])].filter(Boolean).sort();
-  var el=document.getElementById('filtro-atrib-chips');if(!el)return;
-  el.innerHTML=nomes.map(function(n){
-    var cor=corPorNome(n.split(' ')[0]);var isActive=S.filtroAtrib===n;
-    return'<button class="filter-chip'+(isActive?' active':'')+'" onclick="setFiltroAtrib(this,\''+n+'\')" '+
-      (isActive&&cor?'style="background:'+cor.hex+';color:#fff;border-color:'+cor.hex+'"':'')+'>'+n+'</button>';
-  }).join('');
-}
 function statusLabel(k){return{afazer:'A fazer',andamento:'Em andamento',concluido:'Concluído'}[k]||k}
 function statusNext(k){return{afazer:'andamento',andamento:'concluido',concluido:null}[k]}
 function statusPrev(k){return{afazer:null,andamento:'afazer',concluido:'andamento'}[k]}
 
 function renderKanban(){
-  renderAtribChips();
   // Popular select "Atribuído a:"
   var atribSel=document.getElementById('kanban-atrib-sel');
   if(atribSel){
@@ -1454,14 +1414,6 @@ function renderKanban(){
   var isEncerrada=versao&&!versao.ativa;
   var oss=S.oss.filter(function(o){return o.versaoId===vid});
   if(S.filtro!=='todos')oss=oss.filter(function(o){return(PLINHA[o.produto]||'')===S.filtro});
-  // Filtro de atribuição por chips (primeiro+último nome)
-  if(S.filtroAtrib&&S.filtroAtrib!=='todos'){
-    oss=oss.filter(function(o){
-      var a=(o.atribuicao||'').trim();if(!a)return false;
-      var pts=a.split(' ');var nome=pts.length>=2?pts[0]+' '+pts[pts.length-1]:pts[0];
-      return nome===S.filtroAtrib;
-    });
-  }
   // Filtro de atribuição por select (nome exato)
   if(S.filtroAtribuicao&&S.filtroAtribuicao!=='todos'){
     oss=oss.filter(function(o){return(o.atribuicao||'').trim()===S.filtroAtribuicao});
