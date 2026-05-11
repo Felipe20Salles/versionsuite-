@@ -804,7 +804,7 @@ textarea.form-input{resize:vertical;min-height:70px}
 </div>
 
 <!-- MODAL VISITANTE -->
-<div class="modal-overlay" id="modal-visitor">
+<div class="modal-overlay" id="modal-visitor" style="z-index:600">
   <div class="modal" style="max-width:380px">
     <div class="modal-title">👁 Entrar como Visitante</div>
     <div class="form-group">
@@ -1027,16 +1027,49 @@ function renderUsersPrefs(){
     var colorDot='<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">'+
       '<span style="width:8px;height:8px;border-radius:50%;background:'+cor.hex+';display:inline-block"></span>'+cor.name+'</span>';
 
+    var nomeDisplay=isMe?(CURRENT_USER._displayName||u.displayName):u.displayName;
+    var editIcon=isMe?'<button onclick="editarNomeUsuario(\''+u.id+'\')" title="Editar nome" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 4px;color:var(--muted);line-height:1">✏</button>':'';
+
     return'<div class="user-card">'+
       avatarHtml+
       '<div style="flex:1;min-width:0">'+
-        '<div style="font-size:13px;font-weight:500;color:var(--text)">'+u.displayName+(isMe?' <span style="font-size:10px;color:var(--hint)">(você)</span>':'')+' </div>'+
+        '<div id="user-name-pref-'+u.id+'" style="font-size:13px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:4px">'+
+          '<span>'+nomeDisplay+(isMe?' <span style="font-size:10px;color:var(--hint)">(você)</span>':'')+' </span>'+
+          editIcon+
+        '</div>'+
         '<div style="font-size:11px;color:var(--hint);margin-top:1px">'+colorDot+'</div>'+
       '</div>'+
       roleHtml+
     '</div>';
   }).join('');
 }
+
+function editarNomeUsuario(userId){
+  var container=document.getElementById('user-name-pref-'+userId);if(!container)return;
+  var span=container.querySelector('span');
+  var nomeAtual=(CURRENT_USER._displayName||(span?span.textContent.replace('(você)','').trim():'')).trim();
+  container.innerHTML=
+    '<input id="nome-edit-input" class="form-input" style="padding:3px 8px;height:auto;font-size:13px;max-width:200px" value="'+nomeAtual+'">'+
+    '<button onclick="salvarNomeUsuario(\''+userId+'\')" title="Confirmar" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--green);line-height:1">✓</button>'+
+    '<button onclick="cancelarEdicaoNome()" title="Cancelar" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);line-height:1">✕</button>';
+  setTimeout(function(){var i=document.getElementById('nome-edit-input');if(i){i.focus();i.select()}},50);
+}
+async function salvarNomeUsuario(userId){
+  var input=document.getElementById('nome-edit-input');if(!input)return;
+  var novoNome=input.value.trim();
+  if(!novoNome){toast('Informe um nome','err');return}
+  try{
+    var {error}=await sb.from('profiles').update({nome:novoNome}).eq('id',userId);
+    if(error)throw error;
+    CURRENT_USER._displayName=novoNome;
+    var u=S_USERS.find(function(x){return x.id===userId});
+    if(u)u.displayName=novoNome;
+    document.getElementById('user-name').textContent=novoNome.split(' ')[0];
+    renderUsersPrefs();
+    toast('Nome atualizado!');
+  }catch(e){toast('Erro ao salvar: '+e.message,'err')}
+}
+function cancelarEdicaoNome(){renderUsersPrefs();}
 
 // Registra/atualiza o profile do usuário atual no Supabase após login
 async function upsertCurrentUserProfile(){
@@ -1084,7 +1117,10 @@ function badgeAtribuicao(atribuicao){
   var primeiro=atribuicao.trim().split(' ')[0];
   var cor=corPorNome(primeiro);
   if(!cor)return'';
-  return'<span class="badge" style="background:rgba('+cor.rgb+',.12);color:'+cor.hex+';border:1px solid rgba('+cor.rgb+',.2)">'+primeiro+'</span>';
+  var isMe=CURRENT_USER&&!CURRENT_USER.isVisitor&&atribuicao.trim()===getDisplayName().trim();
+  var extra=isMe?';font-weight:700;border-width:2px':'';
+  var label=primeiro+(isMe?' (você)':'');
+  return'<span class="badge" style="background:rgba('+cor.rgb+',.12);color:'+cor.hex+';border:1px solid rgba('+cor.rgb+',.2)'+extra+'">'+label+'</span>';
 }
 var PROD_SEG=['Admissão Digital','Gestão de Desempenho','LMS - Treinamento','Recrutamento e Seleção','Ponto'];
 var PLINHA={'Admissão Digital':'Gestão de Talentos','Gestão de Desempenho':'Gestão de Talentos','LMS - Treinamento':'Gestão de Talentos','Recrutamento e Seleção':'Gestão de Talentos','Ponto':'Pagadoria'};
@@ -3443,17 +3479,24 @@ function mostrarApp(){
 function setLoadingMsg(msg){
   var el=document.getElementById('loading-msg');if(el)el.textContent=msg;
 }
+function getDisplayName(){
+  if(!CURRENT_USER)return'Usuário';
+  if(CURRENT_USER.isVisitor)return CURRENT_USER.nome||'Visitante';
+  return CURRENT_USER._displayName
+    ||(CURRENT_USER.user_metadata&&(CURRENT_USER.user_metadata.full_name||CURRENT_USER.user_metadata.name))
+    ||CURRENT_USER.email
+    ||'Usuário';
+}
 function updateUserBadge(user){
   if(user&&user.isVisitor){
-    document.getElementById('user-name').textContent='👁 '+user.nome;
+    document.getElementById('user-name').textContent='👁 '+(user.nome||'Visitante');
     var img=document.getElementById('user-avatar');if(img)img.style.display='none';
     var vb=document.getElementById('visitor-topbar-badge');if(vb)vb.style.display='inline-block';
-    var el=document.getElementById('user-exit-label');if(el)el.textContent='Sair';
     return;
   }
   var vb=document.getElementById('visitor-topbar-badge');if(vb)vb.style.display='none';
-  var meta=user.user_metadata||{};
-  var nome=meta.full_name||meta.name||user.email||'Usuário';
+  var nome=getDisplayName();
+  var meta=(user&&user.user_metadata)||{};
   var avatar=meta.avatar_url||meta.picture||'';
   document.getElementById('user-name').textContent=nome.split(' ')[0];
   var img=document.getElementById('user-avatar');
@@ -3537,8 +3580,16 @@ async function load(){
       prods.forEach(function(p){PLINHA[p.nome]=p.grupo});
     }
 
-    // Preferências do usuário
-    var {data:prof}=await sb.from('profiles').select('prefs').eq('id',uid).single();
+    // Preferências do usuário + nome personalizado
+    var {data:prof}=await sb.from('profiles').select('nome, prefs').eq('id',uid).single();
+    if(prof&&prof.nome){
+      CURRENT_USER._displayName=prof.nome;
+      document.getElementById('user-name').textContent=prof.nome.split(' ')[0];
+    }else if(prof&&prof.nome===null){
+      // Primeiro login: semeia nome vindo do Google
+      var metaNome=(CURRENT_USER.user_metadata&&(CURRENT_USER.user_metadata.full_name||CURRENT_USER.user_metadata.name))||CURRENT_USER.email||'';
+      if(metaNome)sb.from('profiles').update({nome:metaNome}).eq('id',uid).then(function(){});
+    }
     if(prof&&prof.prefs){
       var pr=prof.prefs;
       if(pr.accent){S.prefs.accent=pr.accent;S.prefs.accentRgb=pr.accentRgb||S.prefs.accentRgb}
