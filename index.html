@@ -3672,8 +3672,6 @@ async function load(){
 
     if(!S.versaoK&&S.versoes.length)S.versaoK=S.versoes[0].id;
     _loadedAt=Date.now();
-    // Carregar nomes para filtro de atribuição
-    await carregarProfiles();
     await loadUsers();
   }catch(e){console.error('Erro ao carregar:',e)}
 }
