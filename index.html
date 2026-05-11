@@ -255,7 +255,16 @@ textarea.form-input{resize:vertical;min-height:70px}
       <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Entrar com Google
     </button>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+      <span style="font-size:11px;color:var(--hint)">ou</span>
+      <div style="flex:1;height:1px;background:var(--border)"></div>
+    </div>
+    <button onclick="abrirModalVisitante()" style="width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 20px;background:transparent;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-weight:500;color:var(--muted);cursor:pointer;margin-top:12px;font-family:var(--font)">
+      👁 Entrar como Visitante
+    </button>
     <div id="login-error" style="display:none;margin-top:14px;font-size:12px;color:var(--red-text);padding:8px 12px;background:var(--red-dim);border-radius:8px"></div>
+    <div id="login-msg" style="display:none;margin-top:14px;font-size:12px;color:var(--amber-text);padding:8px 12px;background:var(--amber-dim);border-radius:8px"></div>
     <div style="font-size:11px;color:var(--hint);margin-top:20px">Acesso restrito a usuários autorizados</div>
   </div>
 </div>
@@ -319,10 +328,10 @@ textarea.form-input{resize:vertical;min-height:70px}
         <div class="nav-item" onclick="goScreen('kanban')">
           <svg class="nav-icon" viewBox="0 0 16 16"><rect x="1" y="3" width="4" height="10" rx="1"/><rect x="6" y="3" width="4" height="7" rx="1"/><rect x="11" y="3" width="4" height="5" rx="1"/></svg>Kanban
         </div>
-        <div class="nav-item" onclick="goScreen('boletim')">
+        <div id="nav-boletim" class="nav-item" onclick="goScreen('boletim')">
           <svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 3h12v8a1 1 0 01-1 1H3a1 1 0 01-1-1V3z"/><polyline points="2,3 8,9 14,3"/></svg>Boletim
         </div>
-        <div class="nav-item" onclick="goScreen('ponto')">
+        <div id="nav-ponto" class="nav-item" onclick="goScreen('ponto')">
           <svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><polyline points="8,4 8,8 10,10"/></svg>Ponto &amp; Horas
         </div>
         <div class="nav-item" onclick="goScreen('agenda')">
@@ -331,7 +340,7 @@ textarea.form-input{resize:vertical;min-height:70px}
       </div>
     </nav>
     <div class="sidebar-footer">
-      <button class="btn btn-ghost btn-sm" onclick="goScreen('preferencias')" style="width:100%;justify-content:center;font-size:12px">
+      <button id="nav-preferencias" class="btn btn-ghost btn-sm" onclick="goScreen('preferencias')" style="width:100%;justify-content:center;font-size:12px">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.5"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4"/></svg>Preferências
       </button>
     </div>
@@ -345,7 +354,8 @@ textarea.form-input{resize:vertical;min-height:70px}
         <div id="user-badge" style="display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--card2);border-radius:20px;border:1px solid var(--border);cursor:pointer" onclick="confirmarLogout()">
           <img id="user-avatar" style="width:22px;height:22px;border-radius:50%;display:none">
           <span id="user-name" style="font-size:12px;color:var(--muted)">...</span>
-          <span style="font-size:10px;color:var(--hint)">Sair</span>
+          <span id="visitor-topbar-badge" style="display:none;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--amber-dim);color:var(--amber-text);border:1px solid var(--amber-text)">Visitante</span>
+          <span id="user-exit-label" style="font-size:10px;color:var(--hint)">Sair</span>
         </div>
       </div>
     </div>
@@ -377,6 +387,12 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div class="filter-bar" style="margin:0;border-left:1px solid var(--border);padding-left:8px">
             <button class="filter-chip active" id="filtro-atrib-todos" onclick="setFiltroAtrib(this,'todos')">Todos</button>
             <div id="filtro-atrib-chips" style="display:contents"></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;border-left:1px solid var(--border);padding-left:8px">
+            <span style="font-size:12px;color:var(--muted);white-space:nowrap">Atribuído a:</span>
+            <select id="kanban-atrib-sel" class="form-input" style="padding:4px 8px;font-size:12px;height:auto" onchange="setFiltroAtribuicao(this.value)">
+              <option value="todos">Todos</option>
+            </select>
           </div>
           <button class="btn btn-sm btn-ghost" onclick="document.getElementById('xlsx-input').click()" style="margin-left:auto">📥 Importar planilha</button>
           <input type="file" id="xlsx-input" accept=".xlsx,.xls" style="display:none" onchange="importXLSX(this)">
@@ -616,6 +632,18 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div id="produtos-list" style="display:flex;flex-direction:column;gap:6px"></div>
           <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addProduto()">+ Adicionar produto</button>
         </div>
+        <div class="pref-section" id="pref-section-visitor">
+          <div class="pref-section-title">Acesso de Visitantes</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Senha solicitada ao visitante no login. Se vazia, usa o padrão <code style="background:var(--card2);padding:1px 5px;border-radius:4px">visita2024</code>.</div>
+          <div class="form-group" style="max-width:280px">
+            <label class="form-label">Senha de acesso para visitantes</label>
+            <input type="password" class="form-input" id="pref-visitor-pass" placeholder="visita2024" oninput="salvarSenhaVisitante()">
+          </div>
+          <div style="margin-top:20px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:10px">Acessos recentes</div>
+            <div id="visitor-log-table" style="font-size:12px;color:var(--muted)">Nenhum acesso registrado.</div>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -744,9 +772,8 @@ textarea.form-input{resize:vertical;min-height:70px}
     <div class="form-row" style="gap:10px">
       <div class="form-group" style="flex:1"><label class="form-label">Produto</label><select class="form-input" id="os-produto"></select></div>
       <div class="form-group" style="flex:0 0 155px">
-        <label class="form-label">Atribuição</label>
-        <input class="form-input" id="os-atribuicao" placeholder="Responsável" list="atrib-list" autocomplete="off">
-        <datalist id="atrib-list"></datalist>
+        <label class="form-label">Atribuído</label>
+        <select class="form-input" id="os-atribuicao"></select>
       </div>
     </div>
     <!-- Versão + Status + Obs -->
@@ -772,6 +799,26 @@ textarea.form-input{resize:vertical;min-height:70px}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-os')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarOS()">Salvar OS</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VISITANTE -->
+<div class="modal-overlay" id="modal-visitor">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">👁 Entrar como Visitante</div>
+    <div class="form-group">
+      <label class="form-label">Seu nome</label>
+      <input class="form-input" id="visitor-nome" placeholder="Como quer ser chamado?" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Senha de acesso</label>
+      <input type="password" class="form-input" id="visitor-senha" placeholder="Senha fornecida pelo administrador">
+    </div>
+    <div id="visitor-error" style="display:none;font-size:12px;color:var(--red-text);padding:8px 12px;background:var(--red-dim);border-radius:8px;margin-top:4px"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-visitor')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarVisitante()">Entrar</button>
     </div>
   </div>
 </div>
@@ -1049,7 +1096,7 @@ var SEG_COLORS=['#6366f1','#3b82f6','#10b981','#f59e0b','#ec4899','#ef4444','#a8
 var CANAL_LABELS={inline:'Inline/Banner',email:'E-mail',entregate:'Entre a Gente',webinar:'Webinar',teams:'Teams'};
 var CANAL_COLORS={inline:'#6366f1',email:'#3b82f6',entregate:'#10b981',webinar:'#f59e0b',teams:'#7c3aed'};
 
-var S={versoes:[],oss:[],pontos:[],publicacoes:[],filtro:'todos',filtroAtrib:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
+var S={versoes:[],oss:[],pontos:[],publicacoes:[],filtro:'todos',filtroAtrib:'todos',filtroAtribuicao:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
   prefs:{accent:'#7c6ff7',accentRgb:'124,111,247',lightMode:false,produtos:PROD_SEG.slice()}};
 
 var _agendaMes=new Date().getMonth(),_agendaAno=new Date().getFullYear(),_agendaFiltro='todos';
@@ -1180,15 +1227,29 @@ function populateProdutoSel(){
 
 // ── NAV ──────────────────────────────────────────────────────────────────────
 function goScreen(name){
+  // Verificar expiração de sessão visitante
+  if(CURRENT_USER&&CURRENT_USER.isVisitor&&Date.now()>CURRENT_USER.expiraEm){
+    sessionStorage.removeItem('vs_visitor_session');
+    CURRENT_USER=null;
+    removerModoVisitante();
+    mostrarLogin('Sessão de visitante expirada.');
+    return;
+  }
+  // Bloquear telas restritas para visitante
+  var telasBloqueadas=['boletim','ponto','preferencias'];
+  if(CURRENT_USER&&CURRENT_USER.isVisitor&&telasBloqueadas.indexOf(name)>-1){
+    toast('Acesso restrito para visitantes','err');return;
+  }
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
   document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active')});
   var el=document.getElementById('screen-'+name);if(el)el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(function(b){if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+name+"'"))b.classList.add('active')});
   var titles={dashboard:'Dashboard',kanban:'Kanban',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda de Publicações'};
-  var acts={dashboard:'<button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
-    kanban:'<button class="btn btn-primary btn-sm" onclick="openNovaOS()">+ Nova OS</button>',
-    boletim:'',ponto:'<button class="btn btn-primary btn-sm" onclick="openNovoRegistro()">+ Adicionar dia</button>',
-    historico:'',preferencias:'',agenda:'<button class="btn btn-primary btn-sm" onclick="openNovaPublicacao()">+ Nova publicação</button>'};
+  var isVisitor=CURRENT_USER&&CURRENT_USER.isVisitor;
+  var acts={dashboard:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
+    kanban:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaOS()">+ Nova OS</button>',
+    boletim:'',ponto:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovoRegistro()">+ Adicionar dia</button>',
+    historico:'',preferencias:'',agenda:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaPublicacao()">+ Nova publicação</button>'};
   document.getElementById('topbar-title').textContent=titles[name]||name;
   document.getElementById('topbar-actions').innerHTML=acts[name]||'';
   document.getElementById('topbar-sub').textContent='';
@@ -1197,7 +1258,10 @@ function goScreen(name){
   if(name==='boletim'){setBolTab(BOL_TAB);setTimeout(bolCarregarAPIKey,50)}
   if(name==='ponto')renderPontoList();
   if(name==='historico')renderHist();
-  if(name==='preferencias'){renderPalette();renderProdutos();renderUsersPrefs()}
+  if(name==='preferencias'){renderPalette();renderProdutos();renderUsersPrefs();
+    var pf=document.getElementById('pref-visitor-pass');if(pf)pf.value=localStorage.getItem('vs_visitor_pass')||'';
+    renderVisitorLog();
+  }
   if(name==='agenda')renderAgenda();
 }
 
@@ -1334,6 +1398,18 @@ function statusPrev(k){return{afazer:null,andamento:'afazer',concluido:'andament
 
 function renderKanban(){
   renderAtribChips();
+  // Popular select "Atribuído a:"
+  var atribSel=document.getElementById('kanban-atrib-sel');
+  if(atribSel){
+    var nomesSel=typeof S_USERS!=='undefined'&&S_USERS.length
+      ?S_USERS.map(function(u){return u.displayName}).filter(Boolean).sort()
+      :[...new Set(S.oss.map(function(o){return(o.atribuicao||'').trim()}).filter(Boolean))].sort();
+    var curVal=S.filtroAtribuicao||'todos';
+    atribSel.innerHTML='<option value="todos">Todos</option>'+nomesSel.map(function(n){
+      return'<option value="'+n+'"'+(n===curVal?' selected':'')+'>'+n+'</option>';
+    }).join('');
+    atribSel.value=curVal;
+  }
   var sel=document.getElementById('kanban-versao-sel');
   sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+(v.ativa?'':' ✓')+'</option>'}).join('');
   if(S.versaoK)sel.value=S.versaoK;
@@ -1342,13 +1418,17 @@ function renderKanban(){
   var isEncerrada=versao&&!versao.ativa;
   var oss=S.oss.filter(function(o){return o.versaoId===vid});
   if(S.filtro!=='todos')oss=oss.filter(function(o){return(PLINHA[o.produto]||'')===S.filtro});
-  // Filtro de atribuição (primeiro+último nome)
+  // Filtro de atribuição por chips (primeiro+último nome)
   if(S.filtroAtrib&&S.filtroAtrib!=='todos'){
     oss=oss.filter(function(o){
       var a=(o.atribuicao||'').trim();if(!a)return false;
       var pts=a.split(' ');var nome=pts.length>=2?pts[0]+' '+pts[pts.length-1]:pts[0];
       return nome===S.filtroAtrib;
     });
+  }
+  // Filtro de atribuição por select (nome exato)
+  if(S.filtroAtribuicao&&S.filtroAtribuicao!=='todos'){
+    oss=oss.filter(function(o){return(o.atribuicao||'').trim()===S.filtroAtribuicao});
   }
   var cols=['afazer','andamento','concluido'];
   document.getElementById('kanban-board').innerHTML=cols.map(function(k){
@@ -1414,14 +1494,18 @@ async function loadUsuarios(){
   }catch(e){_USUARIOS_CACHE=[]}
   return _USUARIOS_CACHE;
 }
-function populateAtribList(){
-  var dl=document.getElementById('atrib-list');if(!dl)return;
-  var nomes=_USUARIOS_CACHE.length?_USUARIOS_CACHE:
-    [...new Set([
-      ...(CURRENT_USER?[(CURRENT_USER.user_metadata||{}).full_name||(CURRENT_USER.user_metadata||{}).name||''].filter(Boolean):[]),
-      ...S.oss.map(function(o){return(o.atribuicao||'').trim()}).filter(Boolean)
-    ])];
-  dl.innerHTML=nomes.map(function(n){return'<option value="'+n+'">'}).join('');
+function populateAtribSel(valorAtual){
+  var sel=document.getElementById('os-atribuicao');if(!sel)return;
+  var nomes=typeof S_USERS!=='undefined'&&S_USERS.length
+    ?S_USERS.map(function(u){return u.displayName}).filter(Boolean).sort()
+    :[...new Set([
+        ...(CURRENT_USER&&!CURRENT_USER.isVisitor?[(CURRENT_USER.user_metadata||{}).full_name||(CURRENT_USER.user_metadata||{}).name||''].filter(Boolean):[]),
+        ...S.oss.map(function(o){return(o.atribuicao||'').trim()}).filter(Boolean)
+      ])].sort();
+  sel.innerHTML='<option value="">— Sem atribuição —</option>'+nomes.map(function(n){
+    return'<option value="'+n+'"'+(n===valorAtual?' selected':'')+'>'+n+'</option>';
+  }).join('');
+  if(valorAtual)sel.value=valorAtual;
 }
 
 function openNovaOS(){
@@ -1430,10 +1514,9 @@ function openNovaOS(){
   document.getElementById('modal-os-error').style.display='none';
   ['os-num','os-titulo','os-obs','os-link'].forEach(function(id){document.getElementById(id).value=''});
   document.getElementById('os-status').value='afazer';
-  var primeiroNome='';
-  if(CURRENT_USER){var meta=CURRENT_USER.user_metadata||{};var nomeCompleto=meta.full_name||meta.name||CURRENT_USER.email||'';primeiroNome=nomeCompleto.split(' ')[0];}
-  document.getElementById('os-atribuicao').value=primeiroNome;
-  populateProdutoSel();populateVersaoSelOS();populateAtribList();
+  var nomeAtual='';
+  if(CURRENT_USER&&!CURRENT_USER.isVisitor){var meta=CURRENT_USER.user_metadata||{};nomeAtual=meta.full_name||meta.name||'';}
+  populateProdutoSel();populateVersaoSelOS();populateAtribSel(nomeAtual);
   document.getElementById('e-novidade').checked=true;document.getElementById('e-help').checked=false;
   document.getElementById('e-tutorial').checked=false;document.getElementById('e-evidencia').checked=true;
   openModal('modal-os');
@@ -1448,10 +1531,9 @@ function openEditOS(osId){
   document.getElementById('os-obs').value=os.obs||'';
   document.getElementById('os-link').value=os.link||'';
   document.getElementById('os-status').value=os.status;
-  document.getElementById('os-atribuicao').value=os.atribuicao||'';
   populateProdutoSel();document.getElementById('os-produto').value=os.produto;
   populateVersaoSelOS();document.getElementById('os-versao-sel').value=os.versaoId;
-  populateAtribList();
+  populateAtribSel(os.atribuicao||'');
   document.getElementById('e-novidade').checked=!!os.entregas.novidade.aplicavel;
   document.getElementById('e-help').checked=!!os.entregas.help.aplicavel;
   document.getElementById('e-tutorial').checked=!!os.entregas.tutorial.aplicavel;
@@ -1540,8 +1622,11 @@ function bolAtualizarOSSelect(){
   var vid=document.getElementById('bol-add-versao').value;
   var ossel=document.getElementById('bol-add-os-sel');
   var oss=S.oss.filter(function(o){return o.versaoId===vid&&o.produto===prod});
-  // Remover já adicionadas
-  var jaAdicionadas=BOL_OSS[BOL_TAB].map(function(o){return o.osId});
+  // Remover já adicionadas — verifica o destino do modal (e-mail ou inline)
+  var destino=document.getElementById('modal-bol-os').dataset.destino;
+  var jaAdicionadas=destino==='inl'
+    ?BOL_OSS_INL.map(function(o){return o.osId})
+    :BOL_OSS[BOL_TAB].map(function(o){return o.osId});
   oss=oss.filter(function(o){return jaAdicionadas.indexOf(o.id)===-1});
   if(!oss.length){ossel.innerHTML='<option value="">Nenhuma OS disponível para este produto/versão</option>';return}
   ossel.innerHTML='<option value="">— selecione —</option>'+oss.map(function(o){
@@ -3332,13 +3417,23 @@ function loginGoogle(){
   sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin+'/'}});
 }
 function confirmarLogout(){
+  if(CURRENT_USER&&CURRENT_USER.isVisitor){
+    if(!confirm('Encerrar sessão de visitante?'))return;
+    sessionStorage.removeItem('vs_visitor_session');
+    CURRENT_USER=null;
+    removerModoVisitante();
+    mostrarLogin();
+    return;
+  }
   if(!confirm('Sair da VersionSuite?'))return;
   sb.auth.signOut().then(function(){mostrarLogin()});
 }
-function mostrarLogin(){
+function mostrarLogin(msg){
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.querySelector('.app').style.display='none';
+  var msgEl=document.getElementById('login-msg');
+  if(msgEl){if(msg){msgEl.textContent=msg;msgEl.style.display='block'}else{msgEl.style.display='none'}}
 }
 function mostrarApp(){
   document.getElementById('loading-screen').style.display='none';
@@ -3349,12 +3444,84 @@ function setLoadingMsg(msg){
   var el=document.getElementById('loading-msg');if(el)el.textContent=msg;
 }
 function updateUserBadge(user){
+  if(user&&user.isVisitor){
+    document.getElementById('user-name').textContent='👁 '+user.nome;
+    var img=document.getElementById('user-avatar');if(img)img.style.display='none';
+    var vb=document.getElementById('visitor-topbar-badge');if(vb)vb.style.display='inline-block';
+    var el=document.getElementById('user-exit-label');if(el)el.textContent='Sair';
+    return;
+  }
+  var vb=document.getElementById('visitor-topbar-badge');if(vb)vb.style.display='none';
   var meta=user.user_metadata||{};
   var nome=meta.full_name||meta.name||user.email||'Usuário';
   var avatar=meta.avatar_url||meta.picture||'';
   document.getElementById('user-name').textContent=nome.split(' ')[0];
   var img=document.getElementById('user-avatar');
   if(avatar){img.src=avatar;img.style.display='block'}
+}
+
+// ── VISITANTE ─────────────────────────────────────────────────────────────────
+function abrirModalVisitante(){
+  document.getElementById('visitor-nome').value='';
+  document.getElementById('visitor-senha').value='';
+  document.getElementById('visitor-error').style.display='none';
+  openModal('modal-visitor');
+}
+function confirmarVisitante(){
+  var nome=document.getElementById('visitor-nome').value.trim();
+  var senha=document.getElementById('visitor-senha').value;
+  var errEl=document.getElementById('visitor-error');
+  if(!nome){errEl.textContent='Informe seu nome.';errEl.style.display='block';return}
+  var senhaCorreta=localStorage.getItem('vs_visitor_pass')||'visita2024';
+  if(senha!==senhaCorreta){errEl.textContent='Senha incorreta.';errEl.style.display='block';return}
+  var agora=Date.now();
+  CURRENT_USER={id:'visitor-'+agora,isVisitor:true,nome:nome,entradaEm:agora,expiraEm:agora+4*60*60*1000};
+  sessionStorage.setItem('vs_visitor_session',JSON.stringify(CURRENT_USER));
+  var log=JSON.parse(localStorage.getItem('vs_visitor_log')||'[]');
+  log.unshift({nome:nome,entradaEm:new Date().toISOString()});
+  if(log.length>50)log=log.slice(0,50);
+  localStorage.setItem('vs_visitor_log',JSON.stringify(log));
+  closeModal('modal-visitor');
+  applyVisitorMode();
+  updateUserBadge(CURRENT_USER);
+  mostrarApp();
+  renderDash();
+}
+function applyVisitorMode(){
+  ['nav-boletim','nav-ponto','nav-preferencias'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.style.display='none';
+  });
+  document.getElementById('topbar-actions').innerHTML='';
+}
+function removerModoVisitante(){
+  ['nav-boletim','nav-ponto','nav-preferencias'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.style.display='';
+  });
+}
+function salvarSenhaVisitante(){
+  var v=document.getElementById('pref-visitor-pass').value;
+  if(v)localStorage.setItem('vs_visitor_pass',v);
+  else localStorage.removeItem('vs_visitor_pass');
+}
+function renderVisitorLog(){
+  var el=document.getElementById('visitor-log-table');if(!el)return;
+  var log=JSON.parse(localStorage.getItem('vs_visitor_log')||'[]');
+  if(!log.length){el.textContent='Nenhum acesso registrado.';return}
+  el.innerHTML='<table style="width:100%;border-collapse:collapse">'+
+    '<thead><tr>'+
+      '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);color:var(--muted);font-weight:600">Nome</th>'+
+      '<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--border);color:var(--muted);font-weight:600">Entrada</th>'+
+    '</tr></thead><tbody>'+
+    log.map(function(e){
+      var dt=new Date(e.entradaEm).toLocaleString('pt-BR');
+      return'<tr><td style="padding:5px 8px;border-bottom:1px solid var(--border2)">'+e.nome+'</td>'+
+             '<td style="padding:5px 8px;border-bottom:1px solid var(--border2);color:var(--muted)">'+dt+'</td></tr>';
+    }).join('')+
+    '</tbody></table>';
+}
+function setFiltroAtribuicao(val){
+  S.filtroAtribuicao=val||'todos';
+  renderKanban();
 }
 
 // ── LOAD/SAVE (Supabase) ──────────────────────────────────────────────────────
@@ -3621,6 +3788,7 @@ function salvarOS(){
   var data={id:osId,num:num,titulo:document.getElementById('os-titulo').value.trim(),
     produto:document.getElementById('os-produto').value,status:document.getElementById('os-status').value,
     obs:document.getElementById('os-obs').value,link:document.getElementById('os-link').value.trim(),
+    atribuicao:document.getElementById('os-atribuicao').value.trim(),
     versaoId:vid,criadaEm:old?old.criadaEm:new Date().toISOString(),
     entregas:{novidade:mkE(document.getElementById('e-novidade').checked,old&&old.entregas.novidade),
       help:mkE(document.getElementById('e-help').checked,old&&old.entregas.help),
@@ -3822,7 +3990,22 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
   // Aplicar tema padrão antes de qualquer coisa
   applyPrefs();
 
-  // Verificar sessão
+  // Verificar sessão de visitante no sessionStorage
+  var vsRaw=sessionStorage.getItem('vs_visitor_session');
+  if(vsRaw){try{
+    var vsData=JSON.parse(vsRaw);
+    if(vsData&&vsData.isVisitor&&Date.now()<vsData.expiraEm){
+      CURRENT_USER=vsData;
+      _appIniciado=true;
+      applyVisitorMode();
+      updateUserBadge(CURRENT_USER);
+      mostrarApp();
+      renderDash();
+      return;
+    }else{sessionStorage.removeItem('vs_visitor_session');}
+  }catch(e){sessionStorage.removeItem('vs_visitor_session');}}
+
+  // Verificar sessão Supabase
   var {data:{session}}=await sb.auth.getSession();
 
   if(session&&session.user){
@@ -3881,7 +4064,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       _appIniciado=false;
       CURRENT_USER=null;
       _loadedAt=0;
-      S={versoes:[],oss:[],pontos:[],publicacoes:[],filtro:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
+      S={versoes:[],oss:[],pontos:[],publicacoes:[],filtro:'todos',filtroAtrib:'todos',filtroAtribuicao:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
         prefs:{accent:'#7c6ff7',accentRgb:'124,111,247',lightMode:false,produtos:PROD_SEG.slice()}};
       mostrarLogin();
     }
