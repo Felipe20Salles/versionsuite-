@@ -4179,15 +4179,22 @@ function renderRedmineConfig(){
 async function _redmineFetch(cfg,path,method,body){
   var fullUrl=cfg.url.replace(/\/+$/,'')+path;
   if(cfg.proxy){
-    var r=await fetch('http://localhost:3001',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-  url:fullUrl,
-  method:method||'GET',
-  body:body||null
+   var r = await fetch('http://localhost:3001', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    url: fullUrl,
+    method: method || 'GET',
+    body: body || null,
+    headers: {
+      'X-Redmine-API-Key': cfg.apiKey
+    }
+  })
 });
-    return r;
+
+return r;
   }
   var opts={method:method||'GET',headers:{'Content-Type':'application/json'}};
   if(body&&method!=='GET')opts.body=JSON.stringify(body);
