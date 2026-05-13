@@ -42,6 +42,10 @@ const server = http.createServer((req, res) => {
   ...(d.headers || {})
 }
       };
+      
+console.log('URL:', d.url);
+console.log('METHOD:', d.method);
+console.log('HEADERS:', opts.headers);
 
       const proxyReq = lib.request(opts, proxyRes => {
         let rb = '';
@@ -53,9 +57,18 @@ const server = http.createServer((req, res) => {
       });
 
       proxyReq.on('error', e => {
-        res.writeHead(502, { ...CORS, 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Erro ao conectar ao Redmine: ' + e.message }));
-      });
+  console.error('ERRO REDMINE:', e);
+
+  res.writeHead(502, {
+    ...CORS,
+    'Content-Type': 'application/json'
+  });
+
+  res.end(JSON.stringify({
+    error: e.message,
+    details: e
+  }));
+});
 
       if (d.body && d.method !== 'GET') {
         proxyReq.write(JSON.stringify(d.body));
