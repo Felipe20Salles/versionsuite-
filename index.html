@@ -671,6 +671,11 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div style="font-size:11px;color:var(--hint);margin-top:4px">ID numérico em Redmine → Administração → Enumerações → Atividades.</div>
           </div>
           <button class="btn btn-sm btn-ghost" onclick="testRedmineConexao()">🔌 Testar conexão</button>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="pref-redmine-proxy" onchange="saveRedmineConfigFromInputs()" style="width:15px;height:15px;accent-color:var(--accent)">
+            Usar proxy local (porta 3001)
+          </label>
+          <div style="font-size:11px;color:var(--hint);margin-top:4px;line-height:1.5">Necessário quando o Redmine está na VPN. Rode <code style="background:var(--card2);padding:1px 5px;border-radius:4px">node redmine-proxy.js</code> na pasta do projeto antes de usar.</div>
         </div>
         <div class="pref-section" id="pref-section-visitor">
           <div class="pref-section-title">Acesso de Visitantes</div>
@@ -4149,7 +4154,8 @@ function saveRedmineConfigFromInputs(){
   var url=(document.getElementById('pref-redmine-url').value||'').trim().replace(/\/+$/,'');
   var key=(document.getElementById('pref-redmine-key').value||'').trim();
   var actId=parseInt(document.getElementById('pref-redmine-activity').value)||null;
-  saveRedmineConfig({url:url,key:key,actId:actId});
+  var proxy=!!(document.getElementById('pref-redmine-proxy')||{}).checked;
+  saveRedmineConfig({url:url,key:key,actId:actId,proxy:proxy});
   _redmineUpdateButtons(!!(url&&key));
 }
 function _redmineUpdateButtons(hasCfg){
@@ -4163,21 +4169,37 @@ function renderRedmineConfig(){
   var u=document.getElementById('pref-redmine-url');
   var k=document.getElementById('pref-redmine-key');
   var a=document.getElementById('pref-redmine-activity');
+  var p=document.getElementById('pref-redmine-proxy');
   if(u)u.value=cfg.url||'';
   if(k)k.value=cfg.key||'';
   if(a)a.value=cfg.actId||'';
+  if(p)p.checked=!!(cfg.proxy);
   _redmineUpdateButtons(!!(cfg.url&&cfg.key));
+}
+async function _redmineFetch(cfg,path,method,body){
+  var fullUrl=cfg.url.replace(/\/+$/,'')+path;
+  if(cfg.proxy){
+    var r=await fetch('http://localhost:3001',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({url:fullUrl,method:method||'GET',body:body||null})
+    });
+    return r;
+  }
+  var opts={method:method||'GET',headers:{'Content-Type':'application/json'}};
+  if(body&&method!=='GET')opts.body=JSON.stringify(body);
+  return fetch(fullUrl,opts);
 }
 async function testRedmineConexao(){
   var cfg=getRedmineConfig();
   if(!cfg.url||!cfg.key){toast('Preencha URL e chave API primeiro','err');return}
   try{
-    var r=await fetch(cfg.url+'/users/current.json?key='+cfg.key);
+    var r=await _redmineFetch(cfg,'/users/current.json?key='+cfg.key,'GET');
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
     toast('Conectado como '+d.user.login+' ✓');
   }catch(e){
-    toast('Erro ao conectar: '+e.message+'. Verifique URL, chave e CORS.','err');
+    toast('Erro ao conectar: '+e.message+(cfg.proxy?' (proxy ativo)':', verifique URL, chave e CORS'),'err');
   }
 }
 
@@ -4189,7 +4211,7 @@ async function importarDoRedmine(){
   if(!versao){toast('Selecione uma versão no Kanban primeiro','err');return}
   toast('Buscando tarefas no Redmine...');
   try{
-    var r=await fetch(cfg.url+'/issues.json?key='+cfg.key+'&assigned_to_id=me&status_id=open&limit=100');
+    var r=await _redmineFetch(cfg,'/issues.json?key='+cfg.key+'&assigned_to_id=me&status_id=open&limit=100','GET');
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
     var issues=d.issues||[];
@@ -4250,17 +4272,13 @@ async function enviarAoRedmine(){
   for(var i=0;i<_exportRows.length;i++){
     var r=_exportRows[i];
     try{
-      var res=await fetch(cfg.url+'/time_entries.json?key='+cfg.key,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({time_entry:{
-          issue_id:parseInt(r.osNum)||r.osNum,
-          spent_on:r.data,
-          hours:r.horas,
-          activity_id:cfg.actId,
-          comments:r.tipo
-        }})
-      });
+      var res=await _redmineFetch(cfg,'/time_entries.json?key='+cfg.key,'POST',{time_entry:{
+        issue_id:parseInt(r.osNum)||r.osNum,
+        spent_on:r.data,
+        hours:r.horas,
+        activity_id:cfg.actId,
+        comments:r.tipo
+      }});
       if(!res.ok)throw new Error('HTTP '+res.status);
       sucesso++;
     }catch(e){erros++;}
