@@ -393,6 +393,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           </div>
           <button class="btn btn-sm btn-ghost" onclick="document.getElementById('xlsx-input').click()" style="margin-left:auto">📥 Importar planilha</button>
           <input type="file" id="xlsx-input" accept=".xlsx,.xls" style="display:none" onchange="importXLSX(this)">
+          <button class="btn btn-sm btn-ghost" id="btn-importar-redmine" style="display:none" onclick="importarDoRedmine()">🔴 Importar do Redmine</button>
         </div>
         <div class="kanban-wrap" id="kanban-board"></div>
       </div>
@@ -578,8 +579,9 @@ textarea.form-input{resize:vertical;min-height:70px}
               <button class="btn btn-sm btn-primary" onclick="renderExportarHoras()">Visualizar</button>
             </div>
             <div id="export-preview"></div>
-            <div id="export-download" style="display:none;margin-top:14px">
+            <div id="export-download" style="display:none;margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-sm" onclick="downloadRedmineCSV()">⬇ Baixar CSV (Redmine)</button>
+              <button class="btn btn-sm" id="btn-enviar-redmine" style="display:none" onclick="enviarAoRedmine()">📤 Enviar ao Redmine</button>
             </div>
           </div>
         </div>
@@ -649,6 +651,26 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Tipos usados ao exportar horas para o Redmine.</div>
           <div id="tipo-atividade-list" style="display:flex;flex-direction:column;gap:6px"></div>
           <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addTipoAtividade()">+ Adicionar tipo</button>
+        </div>
+        <div class="pref-section" id="pref-section-redmine">
+          <div class="pref-section-title">Integração Redmine</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Configure para importar tarefas no Kanban e enviar horas registradas.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin-bottom:10px">
+            <div class="form-group" style="margin:0">
+              <label class="form-label">URL do servidor</label>
+              <input class="form-input" id="pref-redmine-url" placeholder="http://192.168.0.1/redmine" oninput="saveRedmineConfigFromInputs()">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="form-label">Chave API</label>
+              <input class="form-input" id="pref-redmine-key" type="password" placeholder="sua-chave-api" oninput="saveRedmineConfigFromInputs()">
+            </div>
+          </div>
+          <div class="form-group" style="max-width:260px;margin-bottom:10px">
+            <label class="form-label">ID de atividade padrão</label>
+            <input class="form-input" id="pref-redmine-activity" type="number" placeholder="Ex: 9" oninput="saveRedmineConfigFromInputs()">
+            <div style="font-size:11px;color:var(--hint);margin-top:4px">ID numérico em Redmine → Administração → Enumerações → Atividades.</div>
+          </div>
+          <button class="btn btn-sm btn-ghost" onclick="testRedmineConexao()">🔌 Testar conexão</button>
         </div>
         <div class="pref-section" id="pref-section-visitor">
           <div class="pref-section-title">Acesso de Visitantes</div>
@@ -1332,7 +1354,7 @@ function goScreen(name){
   if(name==='boletim'){setBolTab(BOL_TAB);setTimeout(bolCarregarAPIKey,50)}
   if(name==='ponto')renderPontoList();
   if(name==='historico')renderHist();
-  if(name==='preferencias'){renderPalette();renderProdutos();renderUsersPrefs();renderTipoAtividades();
+  if(name==='preferencias'){renderPalette();renderProdutos();renderUsersPrefs();renderTipoAtividades();renderRedmineConfig();
     var pf=document.getElementById('pref-visitor-pass');if(pf)pf.value=localStorage.getItem('vs_visitor_pass')||'';
     renderVisitorLog();
   }
@@ -3696,6 +3718,7 @@ async function load(){
     if(!S.versaoK&&S.versoes.length)S.versaoK=S.versoes[0].id;
     _loadedAt=Date.now();
     await loadUsers();
+    _redmineUpdateButtons(!!(getRedmineConfig().url&&getRedmineConfig().key));
   }catch(e){console.error('Erro ao carregar:',e)}
 }
 
@@ -4115,6 +4138,135 @@ function downloadRedmineCSV(){
   var hoje=new Date().toISOString().slice(0,10).replace(/-/g,'');
   a.href=url;a.download='redmine_horas_'+hoje+'.csv';a.click();
   URL.revokeObjectURL(url);
+}
+
+// ── REDMINE CONFIG ────────────────────────────────────────────────────────────
+function getRedmineConfig(){
+  try{return JSON.parse(localStorage.getItem('vs_redmine_config'))||{}}catch(e){return{}}
+}
+function saveRedmineConfig(cfg){localStorage.setItem('vs_redmine_config',JSON.stringify(cfg))}
+function saveRedmineConfigFromInputs(){
+  var url=(document.getElementById('pref-redmine-url').value||'').trim().replace(/\/+$/,'');
+  var key=(document.getElementById('pref-redmine-key').value||'').trim();
+  var actId=parseInt(document.getElementById('pref-redmine-activity').value)||null;
+  saveRedmineConfig({url:url,key:key,actId:actId});
+  _redmineUpdateButtons(!!(url&&key));
+}
+function _redmineUpdateButtons(hasCfg){
+  var btnK=document.getElementById('btn-importar-redmine');
+  var btnE=document.getElementById('btn-enviar-redmine');
+  if(btnK)btnK.style.display=hasCfg?'':'none';
+  if(btnE)btnE.style.display=hasCfg?'':'none';
+}
+function renderRedmineConfig(){
+  var cfg=getRedmineConfig();
+  var u=document.getElementById('pref-redmine-url');
+  var k=document.getElementById('pref-redmine-key');
+  var a=document.getElementById('pref-redmine-activity');
+  if(u)u.value=cfg.url||'';
+  if(k)k.value=cfg.key||'';
+  if(a)a.value=cfg.actId||'';
+  _redmineUpdateButtons(!!(cfg.url&&cfg.key));
+}
+async function testRedmineConexao(){
+  var cfg=getRedmineConfig();
+  if(!cfg.url||!cfg.key){toast('Preencha URL e chave API primeiro','err');return}
+  try{
+    var r=await fetch(cfg.url+'/users/current.json?key='+cfg.key);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    toast('Conectado como '+d.user.login+' ✓');
+  }catch(e){
+    toast('Erro ao conectar: '+e.message+'. Verifique URL, chave e CORS.','err');
+  }
+}
+
+// ── IMPORTAR DO REDMINE (Kanban) ──────────────────────────────────────────────
+async function importarDoRedmine(){
+  var cfg=getRedmineConfig();
+  if(!cfg.url||!cfg.key){toast('Configure o Redmine nas Preferências','err');return}
+  var versao=S.versoes.find(function(v){return v.id===S.versaoK});
+  if(!versao){toast('Selecione uma versão no Kanban primeiro','err');return}
+  toast('Buscando tarefas no Redmine...');
+  try{
+    var r=await fetch(cfg.url+'/issues.json?key='+cfg.key+'&assigned_to_id=me&status_id=open&limit=100');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    var issues=d.issues||[];
+    if(!issues.length){toast('Nenhuma tarefa aberta atribuída a você','err');return}
+    var existingNums=S.oss.filter(function(o){return o.versaoId===S.versaoK}).map(function(o){return String(o.num)});
+    var novas=issues.filter(function(iss){return existingNums.indexOf(String(iss.id))===-1});
+    if(!novas.length){toast('Todas as tarefas já estão importadas nessa versão','err');return}
+    var ok=await modalConfirm(
+      'Importar do Redmine',
+      '<div style="font-size:13px;margin-bottom:10px"><strong>'+novas.length+'</strong> tarefa(s) disponível(is) para importar:</div>'+
+      '<div style="max-height:200px;overflow-y:auto;border:1px solid var(--border2);border-radius:var(--radius);padding:4px 0">'+
+      novas.map(function(iss){return'<div style="font-size:12px;padding:6px 10px;border-bottom:1px solid var(--border2)">'+
+        '<span style="color:var(--muted);font-family:var(--mono);margin-right:6px">#'+iss.id+'</span>'+
+        escHtml(iss.subject)+
+        (iss.project?'<span style="color:var(--hint);font-size:11px;margin-left:6px">'+escHtml(iss.project.name)+'</span>':'')+
+        '</div>'}).join('')+
+      '</div>',
+      'Importar tudo',
+      'btn-primary'
+    );
+    if(!ok)return;
+    var count=0;
+    for(var i=0;i<novas.length;i++){
+      var iss=novas[i];
+      var novaOS={
+        id:crypto.randomUUID(),versaoId:S.versaoK,
+        num:String(iss.id),titulo:iss.subject||'',
+        produto:iss.project?iss.project.name:'',
+        atribuicao:iss.assigned_to?iss.assigned_to.name:'',
+        obs:iss.description||'',status:'backlog',link:'',entregas:{},
+        createdBy:CURRENT_USER.id
+      };
+      await dbSalvarOS(novaOS);
+      S.oss.push(novaOS);
+      count++;
+    }
+    renderKanban();
+    toast(count+' OS(s) importada(s) do Redmine ✓');
+  }catch(e){
+    toast('Erro: '+e.message,'err');
+  }
+}
+
+// ── ENVIAR HORAS AO REDMINE ───────────────────────────────────────────────────
+async function enviarAoRedmine(){
+  var cfg=getRedmineConfig();
+  if(!cfg.url||!cfg.key){toast('Configure o Redmine nas Preferências','err');return}
+  if(!_exportRows.length){toast('Visualize o período primeiro','err');return}
+  if(!cfg.actId){toast('Configure o ID de atividade padrão nas Preferências','err');return}
+  var ok=await modalConfirm(
+    'Enviar horas ao Redmine',
+    '<strong>'+_exportRows.length+'</strong> lançamento(s) serão enviados ao Redmine. Confirma?',
+    'Enviar',
+    'btn-primary'
+  );
+  if(!ok)return;
+  var sucesso=0,erros=0;
+  for(var i=0;i<_exportRows.length;i++){
+    var r=_exportRows[i];
+    try{
+      var res=await fetch(cfg.url+'/time_entries.json?key='+cfg.key,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({time_entry:{
+          issue_id:parseInt(r.osNum)||r.osNum,
+          spent_on:r.data,
+          hours:r.horas,
+          activity_id:cfg.actId,
+          comments:r.tipo
+        }})
+      });
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      sucesso++;
+    }catch(e){erros++;}
+  }
+  if(erros)toast(sucesso+' enviado(s), '+erros+' erro(s)','err');
+  else toast(sucesso+' lançamento(s) enviado(s) ao Redmine ✓');
 }
 
 // ── MODAL CONFIRM (substitui confirm() nativo) ────────────────────────────────
