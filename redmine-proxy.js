@@ -37,7 +37,8 @@ const server = http.createServer((req, res) => {
         port: target.port || defaultPort,
         path: target.pathname + target.search,
         method: d.method || 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {'Content-Type': 'application/json',...(d.headers || {})
+}
       };
 
       const proxyReq = lib.request(opts, proxyRes => {
