@@ -4182,8 +4182,11 @@ async function _redmineFetch(cfg,path,method,body){
     var r=await fetch('http://localhost:3001',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({url:fullUrl,method:method||'GET',body:body||null})
-    });
+      body:JSON.stringify({
+  url:fullUrl,
+  method:method||'GET',
+  body:body||null
+})
     return r;
   }
   var opts={method:method||'GET',headers:{'Content-Type':'application/json'}};
