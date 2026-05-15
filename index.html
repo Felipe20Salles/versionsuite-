@@ -661,8 +661,8 @@ textarea.form-input{resize:vertical;min-height:70px}
               <input class="form-input" id="pref-redmine-url" placeholder="http://192.168.0.1/redmine" oninput="saveRedmineConfigFromInputs()">
             </div>
             <div class="form-group" style="margin:0">
-              <label class="form-label">Chave API</label>
-              <input class="form-input" id="pref-redmine-key" type="password" placeholder="sua-chave-api" oninput="saveRedmineConfigFromInputs()">
+              <label class="form-label">Chave API <span style="font-size:10px;color:var(--hint)">(opcional com proxy ativo)</span></label>
+              <input class="form-input" id="pref-redmine-key" type="password" placeholder="Necessária só sem proxy" oninput="saveRedmineConfigFromInputs()">
             </div>
           </div>
           <div class="form-group" style="max-width:260px;margin-bottom:10px">
@@ -4174,37 +4174,28 @@ function renderRedmineConfig(){
   if(k)k.value=cfg.key||'';
   if(a)a.value=cfg.actId||'';
   if(p)p.checked=!!(cfg.proxy);
-  _redmineUpdateButtons(!!(cfg.url&&cfg.key));
+  _redmineUpdateButtons(!!(cfg.url&&(cfg.key||cfg.proxy)));
 }
 async function _redmineFetch(cfg,path,method,body){
   var fullUrl=cfg.url.replace(/\/+$/,'')+path;
   if(cfg.proxy){
-   var r = await fetch('http://localhost:3001', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    url: fullUrl,
-    method: method || 'GET',
-    body: body || null,
-    headers: {
-      'X-Redmine-API-Key': cfg.apiKey
-    }
-  })
-});
-
-return r;
+    // Modo proxy: chave fica no servidor (REDMINE_KEY env var) — não enviamos ao browser
+    return fetch('http://localhost:3001',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({url:fullUrl,method:method||'GET',body:body||null})
+    });
   }
-  var opts={method:method||'GET',headers:{'Content-Type':'application/json'}};
+  // Modo direto: chave via header (nunca em query param)
+  var opts={method:method||'GET',headers:{'Content-Type':'application/json','X-Redmine-API-Key':cfg.key}};
   if(body&&method!=='GET')opts.body=JSON.stringify(body);
   return fetch(fullUrl,opts);
 }
 async function testRedmineConexao(){
   var cfg=getRedmineConfig();
-  if(!cfg.url||!cfg.key){toast('Preencha URL e chave API primeiro','err');return}
+  if(!cfg.url||(!cfg.key&&!cfg.proxy)){toast('Preencha URL e chave API (ou ative o proxy)','err');return}
   try{
-    var r=await _redmineFetch(cfg,'/users/current.json?key='+cfg.key,'GET');
+    var r=await _redmineFetch(cfg,'/users/current.json','GET');
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
     toast('Conectado como '+d.user.login+' ✓');
@@ -4216,12 +4207,12 @@ async function testRedmineConexao(){
 // ── IMPORTAR DO REDMINE (Kanban) ──────────────────────────────────────────────
 async function importarDoRedmine(){
   var cfg=getRedmineConfig();
-  if(!cfg.url||!cfg.key){toast('Configure o Redmine nas Preferências','err');return}
+  if(!cfg.url||(!cfg.key&&!cfg.proxy)){toast('Configure o Redmine nas Preferências','err');return}
   var versao=S.versoes.find(function(v){return v.id===S.versaoK});
   if(!versao){toast('Selecione uma versão no Kanban primeiro','err');return}
   toast('Buscando tarefas no Redmine...');
   try{
-    var r=await _redmineFetch(cfg,'/issues.json?key='+cfg.key+'&assigned_to_id=me&status_id=open&limit=100','GET');
+    var r=await _redmineFetch(cfg,'/issues.json?assigned_to_id=me&status_id=open&limit=100','GET');
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
     var issues=d.issues||[];
@@ -4268,7 +4259,7 @@ async function importarDoRedmine(){
 // ── ENVIAR HORAS AO REDMINE ───────────────────────────────────────────────────
 async function enviarAoRedmine(){
   var cfg=getRedmineConfig();
-  if(!cfg.url||!cfg.key){toast('Configure o Redmine nas Preferências','err');return}
+  if(!cfg.url||(!cfg.key&&!cfg.proxy)){toast('Configure o Redmine nas Preferências','err');return}
   if(!_exportRows.length){toast('Visualize o período primeiro','err');return}
   if(!cfg.actId){toast('Configure o ID de atividade padrão nas Preferências','err');return}
   var ok=await modalConfirm(
@@ -4282,7 +4273,7 @@ async function enviarAoRedmine(){
   for(var i=0;i<_exportRows.length;i++){
     var r=_exportRows[i];
     try{
-      var res=await _redmineFetch(cfg,'/time_entries.json?key='+cfg.key,'POST',{time_entry:{
+      var res=await _redmineFetch(cfg,'/time_entries.json','POST',{time_entry:{
         issue_id:parseInt(r.osNum)||r.osNum,
         spent_on:r.data,
         hours:r.horas,
@@ -4448,14 +4439,13 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
 <!-- Paralelo SDK -->
 <script>
 var __paralelo_config = {
-  apiUrl: 'https://lunacy-repurpose-flashcard.ngrok-free.dev',
+  apiUrl: 'https://paralelo-api-production.up.railway.app',
   sdkKey: 'b5e61607853319386147b0894baf59aa9a231640fd7f1116'
 }
 </script>
 <script>
 (function() {
   fetch(__paralelo_config.apiUrl + '/paralelo.js', {
-    headers: { 'ngrok-skip-browser-warning': 'true' }
   })
   .then(function(r) { return r.text() })
   .then(function(code) {
