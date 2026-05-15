@@ -4439,14 +4439,13 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
 <!-- Paralelo SDK -->
 <script>
 var __paralelo_config = {
-  apiUrl: 'https://lunacy-repurpose-flashcard.ngrok-free.dev',
+  apiUrl: 'https://paralelo-api-production.up.railway.app',
   sdkKey: 'b5e61607853319386147b0894baf59aa9a231640fd7f1116'
 }
 </script>
 <script>
 (function() {
   fetch(__paralelo_config.apiUrl + '/paralelo.js', {
-    headers: { 'ngrok-skip-browser-warning': 'true' }
   })
   .then(function(r) { return r.text() })
   .then(function(code) {
