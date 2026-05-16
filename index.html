@@ -365,15 +365,43 @@ textarea.form-input{resize:vertical;min-height:70px}
       <!-- DASHBOARD -->
       <div id="screen-dashboard" class="screen active">
         <div id="dash-banners"></div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-          <div style="font-size:12px;color:var(--muted)">Filtrar métricas por versão:</div>
-          <select class="form-input" id="dash-versao-filtro" style="width:auto;font-size:13px" onchange="renderDash()">
-            <option value="todas">Todas as versões</option>
-          </select>
+        <!-- Tabs -->
+        <div style="display:flex;border-bottom:1px solid var(--border);margin-bottom:20px">
+          <div id="dash-tab-btn-versao" onclick="setDashTab('versao')" style="padding:8px 18px;font-size:13px;cursor:pointer;border-bottom:2px solid var(--accent);color:var(--accent);margin-bottom:-1px;user-select:none">📊 Versão</div>
+          <div id="dash-tab-btn-ajuda" onclick="setDashTab('ajuda')" style="padding:8px 18px;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted);margin-bottom:-1px;user-select:none">🎓 Central de Ajuda</div>
         </div>
-        <div class="metrics-row" id="dash-metrics"></div>
-        <div class="section-head"><span class="section-title">Versões ativas</span></div>
-        <div class="grid-2" id="dash-versoes"></div>
+        <!-- Tab: Versão -->
+        <div id="dash-screen-versao">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+            <div style="font-size:12px;color:var(--muted)">Filtrar métricas por versão:</div>
+            <select class="form-input" id="dash-versao-filtro" style="width:auto;font-size:13px" onchange="renderDash()">
+              <option value="todas">Todas as versões</option>
+            </select>
+          </div>
+          <div class="metrics-row" id="dash-metrics"></div>
+          <div class="section-head"><span class="section-title">Versões ativas</span></div>
+          <div class="grid-2" id="dash-versoes"></div>
+        </div>
+        <!-- Tab: Central de Ajuda -->
+        <div id="dash-screen-ajuda" style="display:none">
+          <div id="ajuda-config-banner" style="display:none;background:var(--card2);border:1px solid var(--border2);border-left:3px solid var(--accent);border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;font-size:13px;color:var(--muted)">
+            ⚙️ Configure o Zendesk em <strong style="color:var(--text);cursor:pointer" onclick="goScreen('preferencias')">Preferências → Integração Zendesk</strong> para carregar os dados.
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">
+            <div class="filter-bar" style="margin:0">
+              <button class="filter-chip active" onclick="setAjudaPeriodo(this,30)">30 dias</button>
+              <button class="filter-chip" onclick="setAjudaPeriodo(this,7)">7 dias</button>
+              <button class="filter-chip" onclick="setAjudaPeriodo(this,90)">90 dias</button>
+            </div>
+            <select class="form-input" id="ajuda-cat-filtro" style="width:auto;font-size:13px" onchange="renderCentralAjuda()">
+              <option value="todas">Todas as categorias</option>
+            </select>
+            <button class="btn btn-sm btn-ghost" style="margin-left:auto" onclick="loadCentralAjuda()">↻ Atualizar</button>
+          </div>
+          <div class="metrics-row" id="ajuda-metrics" style="margin-bottom:20px"></div>
+          <div class="section-head"><span class="section-title">Artigos por visualizações</span></div>
+          <div id="ajuda-tabela" style="margin-top:12px"></div>
+        </div>
       </div>
 
       <!-- KANBAN -->
@@ -651,6 +679,30 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Tipos usados ao exportar horas para o Redmine.</div>
           <div id="tipo-atividade-list" style="display:flex;flex-direction:column;gap:6px"></div>
           <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addTipoAtividade()">+ Adicionar tipo</button>
+        </div>
+        <div class="pref-section" id="pref-section-zendesk">
+          <div class="pref-section-title">Integração Zendesk</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Configure para exibir dados da Central de Ajuda no Dashboard.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin-bottom:10px">
+            <div class="form-group" style="margin:0">
+              <label class="form-label">Subdomínio</label>
+              <input class="form-input" id="pref-zendesk-sub" placeholder="suaempresa.zendesk.com" oninput="saveZendeskConfigFromInputs()">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label class="form-label">E-mail do agente</label>
+              <input class="form-input" id="pref-zendesk-email" type="email" placeholder="voce@empresa.com" oninput="saveZendeskConfigFromInputs()">
+            </div>
+          </div>
+          <div class="form-group" style="max-width:520px;margin-bottom:10px">
+            <label class="form-label">Token de API <span style="font-size:10px;color:var(--hint)">(Perfil → API → Tokens)</span></label>
+            <input class="form-input" id="pref-zendesk-token" type="password" placeholder="seu-token-api" oninput="saveZendeskConfigFromInputs()">
+          </div>
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:13px">
+            <input type="checkbox" id="pref-zendesk-proxy" onchange="saveZendeskConfigFromInputs()" style="width:15px;height:15px;accent-color:var(--accent)">
+            Usar proxy local (porta 3002)
+          </label>
+          <div style="font-size:11px;color:var(--hint);margin-bottom:10px;line-height:1.5">Com proxy: <code style="background:var(--card2);padding:1px 5px;border-radius:4px">ZENDESK_EMAIL=... ZENDESK_TOKEN=... node zendesk-proxy.js</code></div>
+          <button class="btn btn-sm btn-ghost" onclick="testZendeskConexao()">🔌 Testar conexão</button>
         </div>
         <div class="pref-section" id="pref-section-redmine">
           <div class="pref-section-title">Integração Redmine</div>
@@ -1359,7 +1411,7 @@ function goScreen(name){
   if(name==='boletim'){setBolTab(BOL_TAB);setTimeout(bolCarregarAPIKey,50)}
   if(name==='ponto')renderPontoList();
   if(name==='historico')renderHist();
-  if(name==='preferencias'){renderPalette();renderProdutos();renderUsersPrefs();renderTipoAtividades();renderRedmineConfig();
+  if(name==='preferencias'){renderPalette();renderProdutos();renderUsersPrefs();renderTipoAtividades();renderRedmineConfig();renderZendeskConfig();
     var pf=document.getElementById('pref-visitor-pass');if(pf)pf.value=localStorage.getItem('vs_visitor_pass')||'';
     renderVisitorLog();
   }
@@ -4202,6 +4254,197 @@ async function testRedmineConexao(){
   }catch(e){
     toast('Erro ao conectar: '+e.message+(cfg.proxy?' (proxy ativo)':', verifique URL, chave e CORS'),'err');
   }
+}
+
+// ── ZENDESK ───────────────────────────────────────────────────────────────────
+function getZendeskConfig(){
+  var raw=localStorage.getItem('vs_zendesk_config');
+  try{var c=JSON.parse(raw||'{}');return{sub:c.sub||'',email:c.email||'',token:c.token||'',proxy:!!c.proxy};}catch(e){return{sub:'',email:'',token:'',proxy:false};}
+}
+function saveZendeskConfig(cfg){
+  localStorage.setItem('vs_zendesk_config',JSON.stringify(cfg));
+}
+function saveZendeskConfigFromInputs(){
+  var sub=(document.getElementById('pref-zendesk-sub')||{}).value||'';
+  var email=(document.getElementById('pref-zendesk-email')||{}).value||'';
+  var token=(document.getElementById('pref-zendesk-token')||{}).value||'';
+  var proxy=!!(document.getElementById('pref-zendesk-proxy')||{}).checked;
+  saveZendeskConfig({sub:sub.replace(/\/+$/,'').replace(/^https?:\/\//,''),email:email,token:token,proxy:proxy});
+}
+function renderZendeskConfig(){
+  var cfg=getZendeskConfig();
+  var s=document.getElementById('pref-zendesk-sub');if(s)s.value=cfg.sub;
+  var e=document.getElementById('pref-zendesk-email');if(e)e.value=cfg.email;
+  var t=document.getElementById('pref-zendesk-token');if(t)t.value=cfg.token;
+  var p=document.getElementById('pref-zendesk-proxy');if(p)p.checked=cfg.proxy;
+}
+async function _zendeskFetch(cfg,path,method,body){
+  if(cfg.proxy){
+    return fetch('http://localhost:3002',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({url:'https://'+cfg.sub+path,method:method||'GET',body:body||null})
+    });
+  }
+  var b64=btoa(cfg.email+'/token:'+cfg.token);
+  var opts={method:method||'GET',headers:{'Content-Type':'application/json','Authorization':'Basic '+b64}};
+  if(body&&method!=='GET')opts.body=JSON.stringify(body);
+  return fetch('https://'+cfg.sub+path,opts);
+}
+async function testZendeskConexao(){
+  var cfg=getZendeskConfig();
+  if(!cfg.sub||(!cfg.token&&!cfg.proxy)){toast('Preencha o subdomínio e o token (ou ative o proxy)','err');return}
+  try{
+    var r=await _zendeskFetch(cfg,'/api/v2/users/me.json','GET');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    toast('Conectado como '+d.user.name+' ✓');
+  }catch(e){
+    toast('Erro ao conectar: '+e.message+(cfg.proxy?' (proxy ativo)':', verifique subdomínio, e-mail e token'),'err');
+  }
+}
+
+var _ajudaPeriodo=30;
+var _ajudaDados={categories:[],articles:[],views:{}};
+
+function setDashTab(tab){
+  var vs=document.getElementById('dash-screen-versao');
+  var aj=document.getElementById('dash-screen-ajuda');
+  var bv=document.getElementById('dash-tab-btn-versao');
+  var ba=document.getElementById('dash-tab-btn-ajuda');
+  if(!vs||!aj||!bv||!ba)return;
+  var isAjuda=(tab==='ajuda');
+  vs.style.display=isAjuda?'none':'';
+  aj.style.display=isAjuda?'':'none';
+  bv.style.borderBottomColor=isAjuda?'transparent':'var(--accent)';
+  bv.style.color=isAjuda?'var(--muted)':'var(--accent)';
+  ba.style.borderBottomColor=isAjuda?'var(--accent)':'transparent';
+  ba.style.color=isAjuda?'var(--accent)':'var(--muted)';
+  if(isAjuda&&!_ajudaDados.articles.length)loadCentralAjuda();
+}
+
+function setAjudaPeriodo(btn,days){
+  _ajudaPeriodo=days;
+  document.querySelectorAll('#dash-screen-ajuda .filter-chip').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');
+  loadCentralAjuda();
+}
+
+async function loadCentralAjuda(){
+  var cfg=getZendeskConfig();
+  var banner=document.getElementById('ajuda-config-banner');
+  var tabela=document.getElementById('ajuda-tabela');
+  var metrics=document.getElementById('ajuda-metrics');
+  if(!cfg.sub||(!cfg.token&&!cfg.proxy)){
+    if(banner)banner.style.display='';
+    if(tabela)tabela.innerHTML='';
+    if(metrics)metrics.innerHTML='';
+    return;
+  }
+  if(banner)banner.style.display='none';
+  if(tabela)tabela.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0">Carregando...</div>';
+  if(metrics)metrics.innerHTML='';
+  try{
+    var rc=await _zendeskFetch(cfg,'/api/v2/help_center/pt-br/categories.json','GET');
+    if(!rc.ok)throw new Error('Categorias: HTTP '+rc.status);
+    var dc=await rc.json();
+    _ajudaDados.categories=dc.categories||[];
+
+    var sel=document.getElementById('ajuda-cat-filtro');
+    if(sel){
+      var catAtual=sel.value;
+      sel.innerHTML='<option value="todas">Todas as categorias</option>'+
+        _ajudaDados.categories.map(function(c){return'<option value="'+c.id+'">'+escHtml(c.name)+'</option>'}).join('');
+      if(catAtual&&catAtual!=='todas')sel.value=catAtual;
+    }
+
+    var arts=[];var page=1;
+    while(true){
+      var ra=await _zendeskFetch(cfg,'/api/v2/help_center/pt-br/articles.json?per_page=100&page='+page,'GET');
+      if(!ra.ok)break;
+      var da=await ra.json();
+      arts=arts.concat(da.articles||[]);
+      if(!da.next_page||arts.length>=200)break;
+      page++;
+    }
+    _ajudaDados.articles=arts;
+
+    var endDate=new Date();var startDate=new Date();
+    startDate.setDate(endDate.getDate()-_ajudaPeriodo);
+    var fmt=function(d){return d.toISOString().slice(0,10)};
+    var rv=await _zendeskFetch(cfg,'/api/v2/explore/export','POST',{
+      type:'help_center',
+      attributes:{date_range:{from:fmt(startDate),to:fmt(endDate)},metrics:['article_views'],groupby:['article_id']}
+    });
+    if(rv.ok){
+      var dv=await rv.json();
+      _ajudaDados.views={};
+      var rows=dv.rows||dv.data||[];
+      rows.forEach(function(row){
+        if(Array.isArray(row))_ajudaDados.views[String(row[0])]=row[1]||0;
+        else if(row.article_id)_ajudaDados.views[String(row.article_id)]=row.article_views||row.views||0;
+      });
+    }else{
+      _ajudaDados.views={};
+      arts.forEach(function(a){_ajudaDados.views[String(a.id)]=a.vote_sum||0});
+    }
+
+    renderCentralAjuda();
+  }catch(e){
+    if(tabela)tabela.innerHTML='<div style="color:var(--err,#e44);font-size:13px;padding:20px 0">Erro ao carregar: '+escHtml(e.message)+'</div>';
+  }
+}
+
+function renderCentralAjuda(){
+  var catFiltro=(document.getElementById('ajuda-cat-filtro')||{}).value||'todas';
+  var arts=_ajudaDados.articles;
+  if(catFiltro!=='todas')arts=arts.filter(function(a){return String(a.category_id)===String(catFiltro)});
+  arts=arts.map(function(a){return Object.assign({},a,{_views:_ajudaDados.views[String(a.id)]||0})});
+  arts.sort(function(a,b){return b._views-a._views});
+
+  var totalViews=arts.reduce(function(s,a){return s+a._views},0);
+  var metrics=document.getElementById('ajuda-metrics');
+  if(metrics){
+    metrics.innerHTML=[
+      {label:'Total de artigos',val:arts.length,icon:'📄'},
+      {label:'Visualizações no período',val:totalViews,icon:'👁'},
+      {label:'Artigo mais visto',val:arts[0]?arts[0]._views:0,icon:'🏆'},
+      {label:'Categorias',val:_ajudaDados.categories.length,icon:'📂'}
+    ].map(function(m){
+      return'<div class="metric-card"><div class="metric-icon">'+m.icon+'</div><div class="metric-val">'+m.val+'</div><div class="metric-label">'+escHtml(m.label)+'</div></div>';
+    }).join('');
+  }
+
+  var tabela=document.getElementById('ajuda-tabela');
+  if(!tabela)return;
+  if(!arts.length){tabela.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0">Nenhum artigo encontrado.</div>';return;}
+
+  var catMap={};
+  _ajudaDados.categories.forEach(function(c){catMap[c.id]=c.name});
+
+  tabela.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px">'+
+    '<thead><tr>'+
+    '<th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--muted);font-weight:500">#</th>'+
+    '<th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--muted);font-weight:500">Artigo</th>'+
+    '<th style="text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--muted);font-weight:500">Categoria</th>'+
+    '<th style="text-align:right;padding:8px 10px;border-bottom:1px solid var(--border);color:var(--muted);font-weight:500">Visualizações</th>'+
+    '</tr></thead><tbody>'+
+    arts.slice(0,50).map(function(a,i){
+      var pct=totalViews>0?Math.round(a._views/totalViews*100):0;
+      return'<tr style="border-bottom:1px solid var(--border2)">'+
+        '<td style="padding:8px 10px;color:var(--muted);font-variant-numeric:tabular-nums">'+(i+1)+'</td>'+
+        '<td style="padding:8px 10px;max-width:360px">'+
+          '<div style="font-weight:500;margin-bottom:2px">'+
+            '<a href="'+escHtml(a.html_url||'')+'" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none" onmouseover="this.style.textDecoration=\'underline\'" onmouseout="this.style.textDecoration=\'none\'">'+escHtml(a.title)+'</a>'+
+          '</div>'+
+          '<div style="height:3px;background:var(--border);border-radius:2px;margin-top:4px;max-width:200px"><div style="height:100%;background:var(--accent);border-radius:2px;width:'+pct+'%"></div></div>'+
+        '</td>'+
+        '<td style="padding:8px 10px;color:var(--muted);font-size:12px">'+escHtml(catMap[a.category_id]||'-')+'</td>'+
+        '<td style="padding:8px 10px;text-align:right;font-variant-numeric:tabular-nums;font-weight:500">'+a._views+'<span style="color:var(--muted);font-size:11px;margin-left:4px">('+pct+'%)</span></td>'+
+      '</tr>';
+    }).join('')+
+    '</tbody></table>'+
+    (arts.length>50?'<div style="font-size:11px;color:var(--muted);margin-top:8px;text-align:right">Mostrando 50 de '+arts.length+' artigos</div>':'');
 }
 
 // ── IMPORTAR DO REDMINE (Kanban) ──────────────────────────────────────────────
