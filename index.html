@@ -1512,7 +1512,8 @@ function renderKanban(){
       var prevBtn=prevK&&!isEncerrada?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+prevK+'\')">← '+statusLabel(prevK)+'</button>':'';
       var nextBtn=nextK?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+nextK+'\')">'+(nextK==='concluido'?'✓ ':'')+statusLabel(nextK)+' →</button>':'';
       var clf=getOSClassificacao(os);
-      var canEd=canEditOS(os);
+      var canEd=can('os_editar');
+      var canDel=can('os_deletar_propria')&&os.createdBy===CURRENT_USER.id;
       return'<div class="os-card'+(isIncompleta?' os-incompleta':'')+'">'+
         '<div class="os-card-body">'+
           '<div class="os-num">OS '+os.num+
@@ -1533,7 +1534,7 @@ function renderKanban(){
         '<div class="os-card-actions">'+
           '<div class="os-action-row">'+
             (canEd?'<button class="os-action-btn edit" onclick="event.stopPropagation();openEditOS(\''+os.id+'\')">✏ Editar</button>':'')+
-            (canEd?'<button class="os-action-btn del" onclick="event.stopPropagation();deleteOS(\''+os.id+'\')">✕ Deletar</button>':'')+
+            (canDel?'<button class="os-action-btn del" onclick="event.stopPropagation();deleteOS(\''+os.id+'\')">✕ Deletar</button>':'')+
             '<button class="os-action-btn aprop" onclick="event.stopPropagation();goAprop(\''+os.id+'\')">⏱ Apropriar</button>'+
           '</div>'+
           (prevBtn||nextBtn?'<div class="os-action-row">'+prevBtn+nextBtn+'</div>':'')+
@@ -3970,7 +3971,7 @@ function salvarOS(){
 
 function deleteOS(osId){
   var os=S.oss.find(function(o){return o.id===osId});
-  if(!canEditOS(os)){toast('Sem permissão para deletar esta OS','err');return}
+  if(!can('os_deletar_propria')||os.createdBy!==CURRENT_USER.id){toast('Sem permissão para deletar esta OS','err');return}
   if(!confirm('Remover esta OS?'))return;
   dbDeletarOS(osId).then(function(){
     S.oss=S.oss.filter(function(o){return o.id!==osId});
