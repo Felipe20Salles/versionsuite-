@@ -3501,7 +3501,7 @@ function renderAgenda(){
         var isStart=p.inicio===dStr,isEnd=p.fim===dStr;
         var cls=isStart&&isEnd?'':isStart?'pill-start':isEnd?'pill-end':'pill-mid';
         var showLabel=isStart||(col===0);
-        return'<div class="agenda-pub-pill '+cls+'" style="background:'+cor+'" onclick="openEditPub(\''+p.id+'\')" title="'+p.titulo+'">'+
+        return'<div class="agenda-pub-pill '+cls+'" style="background:'+cor+'"'+(can('agenda_editar')?' onclick="openEditPub(\''+p.id+'\')"':'')+' title="'+p.titulo+'">'+
           (showLabel?p.titulo:'')+'</div>';
       }).join('');
       if(pubsDia.length>MAX_PILLS)pills+='<div style="font-size:9px;color:var(--hint);padding:1px 4px">+'+(pubsDia.length-MAX_PILLS)+' mais</div>';
