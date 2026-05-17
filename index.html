@@ -4471,8 +4471,9 @@ function renderZendeskConfig(){
     badge.style.background='var(--card2)';badge.style.color='var(--hint)';
   }
 }
-async function _zendeskFetch(path,method,body){
+async function _zendeskFetch(path,method,body,extra){
   var url='/.netlify/functions/zendesk?type='+encodeURIComponent(path);
+  if(extra){var qs=Object.keys(extra).map(function(k){return k+'='+encodeURIComponent(extra[k])}).join('&');url+='&'+qs;}
   var opts={method:method||'GET',headers:{'Content-Type':'application/json'}};
   if(body&&method!=='GET')opts.body=JSON.stringify(body);
   return fetch(url,opts);
@@ -4541,7 +4542,7 @@ async function loadCentralAjuda(){
     }
     var arts=[];var page=1;
     while(true){
-      var ra=await fetch('/.netlify/functions/zendesk?type=articles&per_page=100&page='+page);
+      var ra=await _zendeskFetch('articles','GET',null,{per_page:100,page:page});
       if(!ra.ok)break;
       var da=await ra.json();
       if(da.error)break;
