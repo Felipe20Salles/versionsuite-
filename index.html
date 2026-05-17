@@ -1040,6 +1040,11 @@ function canMenu(menu){
   if(!CURRENT_USER||CURRENT_USER.isVisitor||!CURRENT_ROLE)return false;
   return !!(CURRENT_ROLE.permissoes&&CURRENT_ROLE.permissoes.menus&&CURRENT_ROLE.permissoes.menus[menu]);
 }
+function parsePrefs(raw){
+  if(!raw)return{};
+  if(typeof raw==='string'){try{return JSON.parse(raw);}catch(e){return{};}}
+  return raw;
+}
 function applyMenuPermissions(){
   var navBoletim=document.getElementById('nav-boletim');
   var navPonto=document.getElementById('nav-ponto');
@@ -1061,7 +1066,7 @@ async function loadUsers(){
     var {data:profiles}=await sb.from('profiles').select('id,nome,prefs');
     if(!profiles)return;
     S_USERS=profiles.map(function(p){
-      var prefs=p.prefs||{};
+      var prefs=parsePrefs(p.prefs);
       return{
         id:p.id,
         email:prefs.email||'',
@@ -1096,7 +1101,7 @@ async function loadUsers(){
 async function saveUserRole(userId,newRole){
   var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
   var {data:prof}=await sb.from('profiles').select('prefs').eq('id',userId).single();
-  var prefs=Object.assign({},(prof&&prof.prefs)||{});
+  var prefs=Object.assign({},parsePrefs(prof?prof.prefs:null));
   prefs.role=newRole;
   var {error}=await sb.from('profiles').update({prefs:prefs}).eq('id',userId);
   if(error){toast('Erro ao salvar role','err');return;}
@@ -1335,7 +1340,7 @@ async function upsertCurrentUserProfile(){
   var email=CURRENT_USER.email||'';
   // Busca profile existente
   var {data:existing}=await sb.from('profiles').select('prefs').eq('id',CURRENT_USER.id).maybeSingle();
-  var existPrefs=existing?existing.prefs||{}:{};
+  var existPrefs=parsePrefs(existing?existing.prefs:null);
   // Só sobrescreve displayName/avatar/email; preserva role e colorIdx
   var newPrefs=Object.assign({},existPrefs,{displayName:displayName,avatar:avatar,email:email});
   if(!newPrefs.role)newPrefs.role='visualizador';
@@ -3893,11 +3898,9 @@ async function load(){
       var metaNome=(CURRENT_USER.user_metadata&&(CURRENT_USER.user_metadata.full_name||CURRENT_USER.user_metadata.name))||CURRENT_USER.email||'';
       if(metaNome)sb.from('profiles').update({nome:metaNome}).eq('id',uid).then(function(){});
     }
-    if(prof&&prof.prefs){
-      var pr=prof.prefs;
-      if(pr.accent){S.prefs.accent=pr.accent;S.prefs.accentRgb=pr.accentRgb||S.prefs.accentRgb}
-      if(pr.lightMode!==undefined)S.prefs.lightMode=pr.lightMode;
-    }
+    var parsedPrefs=parsePrefs(prof?prof.prefs:null);
+    if(parsedPrefs.accent){S.prefs.accent=parsedPrefs.accent;S.prefs.accentRgb=parsedPrefs.accentRgb||S.prefs.accentRgb}
+    if(parsedPrefs.lightMode!==undefined)S.prefs.lightMode=parsedPrefs.lightMode;
 
     // Carregar todos os roles disponíveis
     var {data:rolesData}=await sb.from('roles').select('*');
@@ -3906,7 +3909,7 @@ async function load(){
     S_ROLES.forEach(function(r){ROLE_LABELS[r.nome]=r.label||r.nome;});
 
     // Carregar role do usuário atual
-    var roleNome=(prof&&prof.prefs&&prof.prefs.role)||'visualizador';
+    var roleNome=parsedPrefs.role||'visualizador';
     CURRENT_ROLE=S_ROLES.find(function(r){return r.nome===roleNome})||null;
     applyMenuPermissions();
 
