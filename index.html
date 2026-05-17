@@ -1003,7 +1003,7 @@ async function loadUsers(){
         email:prefs.email||'',
         displayName:p.nome||prefs.displayName||prefs.email||'Usuário',
         avatar:prefs.avatar||'',
-        role:prefs.role||'membro',
+        role:prefs.role||'visualizador',
         colorIdx:prefs.colorIdx!==undefined?prefs.colorIdx:null
       };
     });
@@ -1143,7 +1143,7 @@ async function upsertCurrentUserProfile(){
   var existPrefs=existing?existing.prefs||{}:{};
   // Só sobrescreve displayName/avatar/email; preserva role e colorIdx
   var newPrefs=Object.assign({},existPrefs,{displayName:displayName,avatar:avatar,email:email});
-  if(!newPrefs.role)newPrefs.role='membro';
+  if(!newPrefs.role)newPrefs.role='visualizador';
   if(newPrefs.colorIdx===undefined)newPrefs.colorIdx=null; // será atribuído em loadUsers
   await sb.from('profiles').upsert({id:CURRENT_USER.id,prefs:newPrefs},{onConflict:'id'});
 }
@@ -3825,7 +3825,7 @@ async function dbSalvarPrefs(){
   var meta=CURRENT_USER.user_metadata||{};
   await sb.from('profiles').update({prefs:{
     accent:S.prefs.accent,accentRgb:S.prefs.accentRgb,lightMode:S.prefs.lightMode,
-    role:me?me.role:'membro',
+    role:me?me.role:'visualizador',
     displayName:me?me.displayName:(meta.full_name||meta.name||''),
     avatar:me?me.avatar:(meta.avatar_url||meta.picture||''),
     email:CURRENT_USER.email||'',
