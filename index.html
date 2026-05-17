@@ -1068,15 +1068,15 @@ function canEditVersao(v){
 // Carrega todos os profiles do Supabase para popular lista de usuários
 async function loadUsers(){
   try{
-    var {data:profiles}=await sb.from('profiles').select('id,nome,prefs,role');
+    var {data:profiles}=await sb.from('profiles').select('id,nome,email,avatar_url,prefs,role');
     if(!profiles)return;
     S_USERS=profiles.map(function(p){
       var prefs=parsePrefs(p.prefs);
       return{
         id:p.id,
-        email:prefs.email||'',
-        displayName:p.nome||prefs.displayName||prefs.email||'Usuário',
-        avatar:prefs.avatar||'',
+        email:p.email||prefs.email||'',
+        displayName:p.nome||prefs.displayName||prefs.email||p.email||'Usuário',
+        avatar:p.avatar_url||prefs.avatar||'',
         role:p.role||prefs.role||'visualizador',
         colorIdx:prefs.colorIdx!==undefined?prefs.colorIdx:null
       };
