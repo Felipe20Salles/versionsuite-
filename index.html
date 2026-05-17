@@ -1349,12 +1349,23 @@ function goScreen(name){
   document.querySelectorAll('.nav-item').forEach(function(b){if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+name+"'"))b.classList.add('active')});
   var titles={dashboard:'Dashboard',kanban:'Kanban',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda de Publicações'};
   var isVisitor=CURRENT_USER&&CURRENT_USER.isVisitor;
-  var acts={dashboard:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
-    kanban:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaOS()">+ Nova OS</button>',
-    boletim:'',ponto:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovoRegistro()">+ Adicionar dia</button>',
-    historico:'',preferencias:'',agenda:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaPublicacao()">+ Nova publicação</button>'};
+  var acts={
+    dashboard:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
+    kanban:(!isVisitor&&can('os_criar'))?'<button class="btn btn-primary btn-sm" onclick="openNovaOS()">+ Nova OS</button>':'',
+    boletim:'',
+    ponto:(!isVisitor&&canMenu('ponto'))?'<button class="btn btn-primary btn-sm" onclick="openNovoRegistro()">+ Adicionar dia</button>':'',
+    historico:'',preferencias:'',
+    agenda:(!isVisitor&&can('agenda_editar'))?'<button class="btn btn-primary btn-sm" onclick="openNovaPublicacao()">+ Nova publicação</button>':''
+  };
   document.getElementById('topbar-title').textContent=titles[name]||name;
   document.getElementById('topbar-actions').innerHTML=acts[name]||'';
+  // Sidebar: aplicar permissões de menu
+  var navBoletim=document.getElementById('nav-boletim');
+  var navPonto=document.getElementById('nav-ponto');
+  var navPrefs=document.getElementById('nav-preferencias');
+  if(navBoletim)navBoletim.style.display=(!isVisitor&&canMenu('boletim'))?'':'none';
+  if(navPonto)navPonto.style.display=(!isVisitor&&canMenu('ponto'))?'':'none';
+  if(navPrefs)navPrefs.style.display=(!isVisitor&&canMenu('preferencias'))?'':'none';
   document.getElementById('topbar-sub').textContent='';
   if(name==='dashboard')renderDash();
   if(name==='kanban')renderKanban();
