@@ -281,6 +281,15 @@ textarea.form-input{resize:vertical;min-height:70px}
   <div style="font-size:13px;color:var(--muted)" id="loading-msg">Verificando sessão...</div>
 </div>
 
+<div id="pending-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:450;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:40px;text-align:center">
+  <div style="font-family:var(--mono);font-size:20px;font-weight:500;margin-bottom:4px">Version<span style="color:var(--accent)">Suite</span></div>
+  <div style="font-size:32px">⏳</div>
+  <div style="font-size:18px;font-weight:600;color:var(--fg)">Acesso aguardando aprovação</div>
+  <div style="font-size:14px;color:var(--muted);max-width:380px;line-height:1.6">Sua conta foi criada com sucesso, mas ainda precisa ser liberada por um administrador. Aguarde o contato da equipe.</div>
+  <div id="pending-user-email" style="font-size:12px;color:var(--hint);font-family:var(--mono);margin-top:4px"></div>
+  <button class="btn btn-ghost btn-sm" onclick="signOut()" style="margin-top:12px">Sair</button>
+</div>
+
 <div class="app">
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -1146,17 +1155,21 @@ function renderUsersPrefs(){
       '<div class="user-avatar-initials" style="background:'+cor.hex+'">'+initials+'</div>';
 
     var roleHtml='';
-    var roleNaoConfigurado=!u.role||u.role==='membro'||!S_ROLES.find(function(r){return r.nome===u.role});
+    var isNovo=!u.role;
+    var roleNaoConfigurado=!isNovo&&(u.role==='membro'||!S_ROLES.find(function(r){return r.nome===u.role}));
     if(can('preferencias_admin')&&!isMe){
       roleHtml='<select onchange="saveUserRole(\''+u.id+'\',this.value)" style="border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:11px;padding:3px 6px;border-radius:4px;cursor:pointer">'+
+        (isNovo?'<option value="" disabled selected>— Atribuir perfil —</option>':'')+
         S_ROLES.map(function(r){
           return'<option value="'+r.nome+'"'+(u.role===r.nome?' selected':'')+'>'+escHtml(r.label||r.nome)+'</option>';
         }).join('')+
       '</select>'+
+      (isNovo?'<span style="font-size:10px;background:rgba(59,130,246,.15);color:#3b82f6;padding:2px 8px;border-radius:10px;margin-left:6px;border:1px solid rgba(59,130,246,.3)">Novo acesso</span>':'')+
       (roleNaoConfigurado?'<span style="font-size:10px;background:var(--amber-dim);color:var(--amber-text);padding:2px 8px;border-radius:10px;margin-left:6px">Não configurado</span>':'');
     }else{
-      var roleLabel=ROLE_LABELS[u.role]||u.role||'—';
+      var roleLabel=isNovo?'Aguardando':ROLE_LABELS[u.role]||u.role||'—';
       var roleColor=u.role==='admin'?'background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)':
+        isNovo?'background:rgba(59,130,246,.15);color:#3b82f6;border:1px solid rgba(59,130,246,.3)':
         roleNaoConfigurado?'background:var(--amber-dim);color:var(--amber-text);border:1px solid var(--amber-text)':
         'background:rgba(124,111,247,.15);color:#7c6ff7;border:1px solid rgba(124,111,247,.3)';
       roleHtml='<span style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;'+roleColor+'">'+escHtml(roleLabel)+(roleNaoConfigurado?' ⚠':'')+'</span>';
@@ -1349,7 +1362,6 @@ async function upsertCurrentUserProfile(){
   var existPrefs=parsePrefs(existing?existing.prefs:null);
   // Só sobrescreve displayName/avatar/email; preserva role e colorIdx
   var newPrefs=Object.assign({},existPrefs,{displayName:displayName,avatar:avatar,email:email});
-  if(!newPrefs.role)newPrefs.role='visualizador';
   if(newPrefs.colorIdx===undefined)newPrefs.colorIdx=null; // será atribuído em loadUsers
   await sb.from('profiles').upsert({id:CURRENT_USER.id,prefs:newPrefs},{onConflict:'id'});
 }
@@ -3781,6 +3793,7 @@ function confirmarLogout(){
 function mostrarLogin(msg){
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('login-screen').style.display='flex';
+  document.getElementById('pending-screen').style.display='none';
   document.querySelector('.app').style.display='none';
   var msgEl=document.getElementById('login-msg');
   if(msgEl){if(msg){msgEl.textContent=msg;msgEl.style.display='block'}else{msgEl.style.display='none'}}
@@ -3788,7 +3801,16 @@ function mostrarLogin(msg){
 function mostrarApp(){
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('login-screen').style.display='none';
+  document.getElementById('pending-screen').style.display='none';
   document.querySelector('.app').style.display='flex';
+}
+function mostrarPendente(){
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('pending-screen').style.display='flex';
+  document.querySelector('.app').style.display='none';
+  var el=document.getElementById('pending-user-email');
+  if(el&&CURRENT_USER)el.textContent=CURRENT_USER.email||'';
 }
 function setLoadingMsg(msg){
   var el=document.getElementById('loading-msg');if(el)el.textContent=msg;
@@ -3915,11 +3937,10 @@ async function load(){
     // Popular ROLE_LABELS dinamicamente com roles da tabela
     S_ROLES.forEach(function(r){ROLE_LABELS[r.nome]=r.label||r.nome;});
 
-    // Carregar role do usuário atual (prioriza coluna direta, fallback para prefs)
-    var roleNome=(prof&&prof.role)||parsedPrefs.role||'visualizador';
+    // Role vem exclusivamente da coluna direta; null = aguardando aprovação
+    var roleNome=(prof&&prof.role)||null;
     CURRENT_ROLE_NAME=roleNome;
-    CURRENT_ROLE=S_ROLES.find(function(r){return r.nome===roleNome})||null;
-    console.log('[VS] role:',roleNome,'CURRENT_ROLE:',(CURRENT_ROLE?'ok ('+CURRENT_ROLE.nome+')':'null - tabela roles vazia ou RLS bloqueando'),'S_ROLES:',S_ROLES.length,'rows');
+    CURRENT_ROLE=roleNome?S_ROLES.find(function(r){return r.nome===roleNome})||null:null;
     applyMenuPermissions();
 
     // Versões
@@ -4808,6 +4829,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     await upsertCurrentUserProfile();
     await load();
     applyPrefs();
+    if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
     mostrarApp();
     renderDash();
     // ── Paralelo ──────────────────────────────────────────
@@ -4839,6 +4861,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       await upsertCurrentUserProfile();
       await load();
       applyPrefs();
+      if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
       mostrarApp();
       renderDash();
       // ── Paralelo ────────────────────────────────────────
