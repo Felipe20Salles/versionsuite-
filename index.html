@@ -1241,23 +1241,23 @@ async function renderRolesPrefs(){
   }
 
   sec.innerHTML=
-    '<div class="pref-section-title">Roles e Permissões</div>'+
+    '<div class="pref-section-title">Perfis de Acesso</div>'+
     S_ROLES.map(mkRoleCard).join('')+
-    '<button class="btn btn-sm btn-ghost" onclick="rolesNovoModal()" style="margin-top:4px">+ Novo role</button>'+
+    '<button class="btn btn-sm btn-ghost" onclick="rolesNovoModal()" style="margin-top:4px">+ Novo perfil de acesso</button>'+
     '<div id="modal-novo-role" class="modal-overlay">'+
       '<div class="modal">'+
-        '<div class="modal-title">Novo Role</div>'+
-        '<div class="form-group"><label class="form-label">Nome (slug)</label><input id="new-role-nome" class="form-input" placeholder="ex: dev"></div>'+
-        '<div class="form-group"><label class="form-label">Label</label><input id="new-role-label" class="form-input" placeholder="ex: Desenvolvedor"></div>'+
-        '<div class="form-group"><label class="form-label">Herdar permissões de</label>'+
+        '<div class="modal-title">Novo Perfil de Acesso</div>'+
+        '<div class="form-group"><label class="form-label">Nome de exibição</label><input id="new-role-label" class="form-input" placeholder="ex: Desenvolvedor"></div>'+
+        '<div class="form-group"><label class="form-label">Identificador interno</label><input id="new-role-nome" class="form-input" placeholder="ex: dev" style="font-family:var(--mono);font-size:13px"><div style="font-size:11px;color:var(--hint);margin-top:3px">Somente letras minúsculas e hífens. Não pode ser alterado depois.</div></div>'+
+        '<div class="form-group"><label class="form-label">Copiar permissões de</label>'+
           '<select id="new-role-herdar" class="form-input">'+
-            '<option value="">Nenhum (vazio)</option>'+
+            '<option value="">Começar sem permissões</option>'+
             S_ROLES.map(function(r){return'<option value="'+r.id+'">'+escHtml(r.label||r.nome)+'</option>'}).join('')+
           '</select>'+
         '</div>'+
         '<div class="modal-footer">'+
           '<button class="btn" onclick="closeModal(\'modal-novo-role\')">Cancelar</button>'+
-          '<button class="btn btn-primary" onclick="rolesCriar()">Criar</button>'+
+          '<button class="btn btn-primary" onclick="rolesCriar()">Criar perfil</button>'+
         '</div>'+
       '</div>'+
     '</div>';
@@ -1285,7 +1285,7 @@ async function rolesSalvar(roleId){
   var r=S_ROLES.find(function(x){return x.id===roleId});
   if(!r)return;
   var {error}=await sb.from('roles').update({permissoes:r.permissoes}).eq('id',roleId);
-  if(error){toast('Erro ao salvar role','err');return;}
+  if(error){toast('Erro ao salvar permissões','err');return;}
   if(CURRENT_ROLE&&CURRENT_ROLE.id===roleId)CURRENT_ROLE=r;
   toast('Permissões salvas!');
 }
@@ -1296,17 +1296,18 @@ async function rolesCriar(){
   var nome=document.getElementById('new-role-nome').value.trim().toLowerCase().replace(/\s+/g,'-');
   var label=document.getElementById('new-role-label').value.trim();
   var herdaId=document.getElementById('new-role-herdar').value;
-  if(!nome||!label){toast('Preencha nome e label','err');return;}
+  if(!label){toast('Informe o nome de exibição','err');return;}
+  if(!nome){toast('Informe o identificador interno','err');return;}
   var permissoes={acoes:{},menus:{}};
   if(herdaId){
     var base=S_ROLES.find(function(r){return r.id===herdaId});
     if(base&&base.permissoes)permissoes=JSON.parse(JSON.stringify(base.permissoes));
   }
   var {error}=await sb.from('roles').insert({nome:nome,label:label,permissoes:permissoes});
-  if(error){toast('Erro ao criar role','err');return;}
+  if(error){toast('Erro ao criar perfil de acesso','err');return;}
   closeModal('modal-novo-role');
   await renderRolesPrefs();
-  toast('Role "'+label+'" criado!');
+  toast('Perfil "'+label+'" criado!');
 }
 
 function editarNomeUsuario(userId){
