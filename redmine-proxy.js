@@ -24,7 +24,7 @@ if (!REDMINE_KEY) {
 }
 
 const CORS = {
-  'Access-Control-Allow-Origin': 'null, http://localhost, https://versionsuite.netlify.app',
+  'Access-Control-Allow-Origin': 'null, http://localhost, http://localhost:8080, https://versionsuite.netlify.app',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type'
 };
@@ -49,16 +49,30 @@ const server = http.createServer((req, res) => {
   req.on('end', () => {
     try {
       const d = JSON.parse(body);
-      if (!d.url) throw new Error('Campo "url" obrigatório');
+
+      // Suporta dois modos: {url: fullUrl} (legado) ou {path: '/issues.json'} (novo)
+      let fullUrl;
+      if (d.url) {
+        fullUrl = d.url;
+      } else if (d.path) {
+        if (!ALLOWED_HOST) {
+          res.writeHead(400, { ...CORS, 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Configure REDMINE_URL no ambiente para usar o modo "path".' }));
+          return;
+        }
+        fullUrl = ALLOWED_HOST.replace(/\/+$/, '') + d.path;
+      } else {
+        throw new Error('Forneça "url" ou "path" no body da requisição');
+      }
 
       // Valida host de destino quando REDMINE_URL está definido
-      if (ALLOWED_HOST && !d.url.toLowerCase().startsWith(ALLOWED_HOST)) {
+      if (ALLOWED_HOST && !fullUrl.toLowerCase().startsWith(ALLOWED_HOST)) {
         res.writeHead(403, { ...CORS, 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'URL de destino não permitida.' }));
         return;
       }
 
-      const target = new URL(d.url);
+      const target = new URL(fullUrl);
       const isHttps = target.protocol === 'https:';
       const agent = isHttps ? new https.Agent({ rejectUnauthorized: false }) : undefined;
       const lib = isHttps ? https : http;
@@ -79,7 +93,7 @@ const server = http.createServer((req, res) => {
         agent
       };
 
-      console.log(`→ ${opts.method} ${d.url}`);
+      console.log(`→ ${opts.method} ${fullUrl}`);
 
       const proxyReq = lib.request(opts, proxyRes => {
         let rb = '';
