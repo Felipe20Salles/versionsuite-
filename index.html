@@ -1063,7 +1063,7 @@ function canEditVersao(v){
 // Carrega todos os profiles do Supabase para popular lista de usuários
 async function loadUsers(){
   try{
-    var {data:profiles}=await sb.from('profiles').select('id,nome,prefs');
+    var {data:profiles}=await sb.from('profiles').select('id,nome,prefs,role');
     if(!profiles)return;
     S_USERS=profiles.map(function(p){
       var prefs=parsePrefs(p.prefs);
@@ -1072,7 +1072,7 @@ async function loadUsers(){
         email:prefs.email||'',
         displayName:p.nome||prefs.displayName||prefs.email||'Usuário',
         avatar:prefs.avatar||'',
-        role:prefs.role||'visualizador',
+        role:p.role||prefs.role||'visualizador',
         colorIdx:prefs.colorIdx!==undefined?prefs.colorIdx:null
       };
     });
@@ -1103,7 +1103,7 @@ async function saveUserRole(userId,newRole){
   var {data:prof}=await sb.from('profiles').select('prefs').eq('id',userId).single();
   var prefs=Object.assign({},parsePrefs(prof?prof.prefs:null));
   prefs.role=newRole;
-  var {error}=await sb.from('profiles').update({prefs:prefs}).eq('id',userId);
+  var {error}=await sb.from('profiles').update({prefs:prefs,role:newRole}).eq('id',userId);
   if(error){toast('Erro ao salvar role','err');return;}
   u.role=newRole;
   renderUsersPrefs();
@@ -3889,7 +3889,7 @@ async function load(){
     }
 
     // Preferências do usuário + nome personalizado
-    var {data:prof}=await sb.from('profiles').select('nome, prefs').eq('id',uid).single();
+    var {data:prof}=await sb.from('profiles').select('nome, prefs, role').eq('id',uid).single();
     if(prof&&prof.nome){
       CURRENT_USER._displayName=prof.nome;
       document.getElementById('user-name').textContent=prof.nome.split(' ')[0];
@@ -3908,8 +3908,8 @@ async function load(){
     // Popular ROLE_LABELS dinamicamente com roles da tabela
     S_ROLES.forEach(function(r){ROLE_LABELS[r.nome]=r.label||r.nome;});
 
-    // Carregar role do usuário atual
-    var roleNome=parsedPrefs.role||'visualizador';
+    // Carregar role do usuário atual (prioriza coluna direta, fallback para prefs)
+    var roleNome=(prof&&prof.role)||parsedPrefs.role||'visualizador';
     CURRENT_ROLE=S_ROLES.find(function(r){return r.nome===roleNome})||null;
     applyMenuPermissions();
 
