@@ -694,27 +694,17 @@ textarea.form-input{resize:vertical;min-height:70px}
         </div>
         <div class="pref-section" id="pref-section-zendesk">
           <div class="pref-section-title">Integração Zendesk</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Configure para exibir dados da Central de Ajuda no Dashboard.</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin-bottom:10px">
-            <div class="form-group" style="margin:0">
-              <label class="form-label">Subdomínio</label>
-              <input class="form-input" id="pref-zendesk-sub" placeholder="suaempresa.zendesk.com" oninput="saveZendeskConfigFromInputs()">
-            </div>
-            <div class="form-group" style="margin:0">
-              <label class="form-label">E-mail do agente</label>
-              <input class="form-input" id="pref-zendesk-email" type="email" placeholder="voce@empresa.com" oninput="saveZendeskConfigFromInputs()">
-            </div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Exibe dados da Central de Ajuda no Dashboard. Credenciais configuradas via variáveis de ambiente do Netlify.</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+            <span id="zendesk-status-badge" style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--card2);color:var(--hint)">— não testado</span>
+            <button class="btn btn-sm btn-ghost" onclick="testZendeskConexao()">🔌 Testar conexão</button>
           </div>
-          <div class="form-group" style="max-width:520px;margin-bottom:10px">
-            <label class="form-label">Token de API <span style="font-size:10px;color:var(--hint)">(Perfil → API → Tokens)</span></label>
-            <input class="form-input" id="pref-zendesk-token" type="password" placeholder="seu-token-api" oninput="saveZendeskConfigFromInputs()">
+          <div style="font-size:11px;color:var(--hint);line-height:1.5">
+            Configure no painel do Netlify → Site settings → Environment variables:<br>
+            <code style="background:var(--card2);padding:1px 5px;border-radius:4px">ZENDESK_SUBDOMAIN</code>
+            <code style="background:var(--card2);padding:1px 5px;border-radius:4px">ZENDESK_EMAIL</code>
+            <code style="background:var(--card2);padding:1px 5px;border-radius:4px">ZENDESK_TOKEN</code>
           </div>
-          <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:13px">
-            <input type="checkbox" id="pref-zendesk-proxy" onchange="saveZendeskConfigFromInputs()" style="width:15px;height:15px;accent-color:var(--accent)">
-            Usar proxy local (porta 3002)
-          </label>
-          <div style="font-size:11px;color:var(--hint);margin-bottom:10px;line-height:1.5">Com proxy: <code style="background:var(--card2);padding:1px 5px;border-radius:4px">ZENDESK_EMAIL=... ZENDESK_TOKEN=... node zendesk-proxy.js</code></div>
-          <button class="btn btn-sm btn-ghost" onclick="testZendeskConexao()">🔌 Testar conexão</button>
         </div>
         <div class="pref-section" id="pref-section-redmine">
           <div class="pref-section-title">Integração Redmine</div>
@@ -4462,50 +4452,44 @@ async function testRedmineConexao(){
 }
 
 // ── ZENDESK ───────────────────────────────────────────────────────────────────
-function getZendeskConfig(){
-  var raw=localStorage.getItem('vs_zendesk_config');
-  try{var c=JSON.parse(raw||'{}');return{sub:c.sub||'',email:c.email||'',token:c.token||'',proxy:!!c.proxy};}catch(e){return{sub:'',email:'',token:'',proxy:false};}
+function getZendeskStatus(){
+  try{return JSON.parse(localStorage.getItem('vs_zendesk_status'))||{}}catch(e){return{}}
 }
-function saveZendeskConfig(cfg){
-  localStorage.setItem('vs_zendesk_config',JSON.stringify(cfg));
-}
-function saveZendeskConfigFromInputs(){
-  var sub=(document.getElementById('pref-zendesk-sub')||{}).value||'';
-  var email=(document.getElementById('pref-zendesk-email')||{}).value||'';
-  var token=(document.getElementById('pref-zendesk-token')||{}).value||'';
-  var proxy=!!(document.getElementById('pref-zendesk-proxy')||{}).checked;
-  saveZendeskConfig({sub:sub.replace(/\/+$/,'').replace(/^https?:\/\//,''),email:email,token:token,proxy:proxy});
-}
+function saveZendeskStatus(s){localStorage.setItem('vs_zendesk_status',JSON.stringify(s))}
 function renderZendeskConfig(){
-  var cfg=getZendeskConfig();
-  var s=document.getElementById('pref-zendesk-sub');if(s)s.value=cfg.sub;
-  var e=document.getElementById('pref-zendesk-email');if(e)e.value=cfg.email;
-  var t=document.getElementById('pref-zendesk-token');if(t)t.value=cfg.token;
-  var p=document.getElementById('pref-zendesk-proxy');if(p)p.checked=cfg.proxy;
-}
-async function _zendeskFetch(cfg,path,method,body){
-  if(cfg.proxy){
-    return fetch('http://localhost:3002',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({url:'https://'+cfg.sub+path,method:method||'GET',body:body||null})
-    });
+  var s=getZendeskStatus();
+  var badge=document.getElementById('zendesk-status-badge');
+  if(!badge)return;
+  if(s.ok===true){
+    badge.textContent='conectado ✓';
+    badge.style.background='rgba(62,207,142,.15)';badge.style.color='var(--green-text)';
+  }else if(s.ok===false){
+    badge.textContent='desconectado ✗';
+    badge.style.background='rgba(239,68,68,.12)';badge.style.color='#ef4444';
+  }else{
+    badge.textContent='— não testado';
+    badge.style.background='var(--card2)';badge.style.color='var(--hint)';
   }
-  var b64=btoa(cfg.email+'/token:'+cfg.token);
-  var opts={method:method||'GET',headers:{'Content-Type':'application/json','Authorization':'Basic '+b64}};
+}
+async function _zendeskFetch(path,method,body){
+  var url='/.netlify/functions/zendesk?type='+encodeURIComponent(path);
+  var opts={method:method||'GET',headers:{'Content-Type':'application/json'}};
   if(body&&method!=='GET')opts.body=JSON.stringify(body);
-  return fetch('https://'+cfg.sub+path,opts);
+  return fetch(url,opts);
 }
 async function testZendeskConexao(){
-  var cfg=getZendeskConfig();
-  if(!cfg.sub||(!cfg.token&&!cfg.proxy)){toast('Preencha o subdomínio e o token (ou ative o proxy)','err');return}
   try{
-    var r=await _zendeskFetch(cfg,'/api/v2/users/me.json','GET');
+    var r=await _zendeskFetch('me','GET');
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
-    toast('Conectado como '+d.user.name+' ✓');
+    if(d.error)throw new Error(d.error);
+    saveZendeskStatus({ok:true});
+    renderZendeskConfig();
+    toast('Zendesk: conectado como '+(d.user&&d.user.name||'OK')+' ✓');
   }catch(e){
-    toast('Erro ao conectar: '+e.message+(cfg.proxy?' (proxy ativo)':', verifique subdomínio, e-mail e token'),'err');
+    saveZendeskStatus({ok:false});
+    renderZendeskConfig();
+    toast('Zendesk: '+e.message,'err');
   }
 }
 
@@ -4536,25 +4520,18 @@ function setAjudaPeriodo(btn,days){
 }
 
 async function loadCentralAjuda(){
-  var cfg=getZendeskConfig();
   var banner=document.getElementById('ajuda-config-banner');
   var tabela=document.getElementById('ajuda-tabela');
   var metrics=document.getElementById('ajuda-metrics');
-  if(!cfg.sub||(!cfg.token&&!cfg.proxy)){
-    if(banner)banner.style.display='';
-    if(tabela)tabela.innerHTML='';
-    if(metrics)metrics.innerHTML='';
-    return;
-  }
   if(banner)banner.style.display='none';
   if(tabela)tabela.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0">Carregando...</div>';
   if(metrics)metrics.innerHTML='';
   try{
-    var rc=await _zendeskFetch(cfg,'/api/v2/help_center/pt-br/categories.json','GET');
+    var rc=await _zendeskFetch('categories','GET');
     if(!rc.ok)throw new Error('Categorias: HTTP '+rc.status);
     var dc=await rc.json();
+    if(dc.error)throw new Error(dc.error);
     _ajudaDados.categories=dc.categories||[];
-
     var sel=document.getElementById('ajuda-cat-filtro');
     if(sel){
       var catAtual=sel.value;
@@ -4562,22 +4539,21 @@ async function loadCentralAjuda(){
         _ajudaDados.categories.map(function(c){return'<option value="'+c.id+'">'+escHtml(c.name)+'</option>'}).join('');
       if(catAtual&&catAtual!=='todas')sel.value=catAtual;
     }
-
     var arts=[];var page=1;
     while(true){
-      var ra=await _zendeskFetch(cfg,'/api/v2/help_center/pt-br/articles.json?per_page=100&page='+page,'GET');
+      var ra=await fetch('/.netlify/functions/zendesk?type=articles&per_page=100&page='+page);
       if(!ra.ok)break;
       var da=await ra.json();
+      if(da.error)break;
       arts=arts.concat(da.articles||[]);
       if(!da.next_page||arts.length>=200)break;
       page++;
     }
     _ajudaDados.articles=arts;
-
     var endDate=new Date();var startDate=new Date();
     startDate.setDate(endDate.getDate()-_ajudaPeriodo);
     var fmt=function(d){return d.toISOString().slice(0,10)};
-    var rv=await _zendeskFetch(cfg,'/api/v2/explore/export','POST',{
+    var rv=await _zendeskFetch('explore','POST',{
       type:'help_center',
       attributes:{date_range:{from:fmt(startDate),to:fmt(endDate)},metrics:['article_views'],groupby:['article_id']}
     });
@@ -4593,10 +4569,9 @@ async function loadCentralAjuda(){
       _ajudaDados.views={};
       arts.forEach(function(a){_ajudaDados.views[String(a.id)]=a.vote_sum||0});
     }
-
     renderCentralAjuda();
   }catch(e){
-    if(tabela)tabela.innerHTML='<div style="color:var(--err,#e44);font-size:13px;padding:20px 0">Erro ao carregar: '+escHtml(e.message)+'</div>';
+    if(tabela)tabela.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0">Erro ao carregar: '+escHtml(e.message)+'</div>';
   }
 }
 
