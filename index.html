@@ -653,106 +653,121 @@ textarea.form-input{resize:vertical;min-height:70px}
 
       <!-- PREFERENCIAS -->
       <div id="screen-preferencias" class="screen">
-        <!-- ROLES E PERMISSÕES (visível apenas para admin) -->
-        <div class="pref-section" id="pref-section-roles" style="display:none"></div>
 
-        <!-- USUÁRIOS DA PLATAFORMA -->
-        <div class="pref-section" id="pref-section-users">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-            <div class="pref-section-title" style="margin-bottom:0">Usuários da plataforma</div>
-            <span id="pref-role-badge" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(124,111,247,.15);color:#7c6ff7;border:1px solid rgba(124,111,247,.3)">—</span>
-          </div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">
-            Gerencie quem pode acessar a VersionSuite e seus níveis de permissão. Somente <strong>Admins</strong> podem alterar roles.
-          </div>
-          <div id="users-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
-          <div id="users-list-hint" style="font-size:11px;color:var(--hint)">Usuários aparecem automaticamente após o primeiro login com Google.</div>
+        <!-- Nav de abas -->
+        <div style="display:flex;gap:0;margin-bottom:24px;border-bottom:1px solid var(--border)">
+          <button id="pref-tab-btn-pessoal"
+            style="padding:8px 18px;font-size:13px;cursor:pointer;background:none;border:none;border-bottom:2px solid var(--accent);color:var(--accent);font-weight:500"
+            onclick="goPrefsTab('pessoal')">Pessoal</button>
+          <button id="pref-tab-btn-plataforma"
+            style="padding:8px 18px;font-size:13px;cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted)"
+            onclick="goPrefsTab('plataforma')">Plataforma</button>
+          <button id="pref-tab-btn-admin"
+            style="padding:8px 18px;font-size:13px;cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);display:none"
+            onclick="goPrefsTab('admin')">Admin</button>
         </div>
 
-        <div class="pref-section">
-          <div class="pref-section-title">Aparência</div>
-          <div class="theme-toggle" onclick="toggleTheme()">
-            <div style="flex:1"><div style="font-size:13px;font-weight:500">Modo claro</div><div style="font-size:12px;color:var(--muted)">Alterna entre dark e light mode</div></div>
-            <div class="toggle-switch" id="theme-toggle-sw"><div class="toggle-knob"></div></div>
-          </div>
-        </div>
-        <div class="pref-section">
-          <div class="pref-section-title">Cor de destaque</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Aplicada em botões, cards ativos, barras e badges.</div>
-          <div class="color-palette" id="color-palette"></div>
-        </div>
-        <div class="pref-section">
-          <div class="pref-section-title">Produtos cadastrados</div>
-          <div id="produtos-list" style="display:flex;flex-direction:column;gap:6px"></div>
-          <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addProduto()">+ Adicionar produto</button>
-        </div>
-        <div class="pref-section">
-          <div class="pref-section-title">Tipo de Atividade</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Tipos usados ao exportar horas para o Redmine.</div>
-          <div id="tipo-atividade-list" style="display:flex;flex-direction:column;gap:6px"></div>
-          <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addTipoAtividade()">+ Adicionar tipo</button>
-        </div>
-        <div class="pref-section" id="pref-section-zendesk">
-          <div class="pref-section-title">Integração Zendesk</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Configure para exibir dados da Central de Ajuda no Dashboard.</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin-bottom:10px">
-            <div class="form-group" style="margin:0">
-              <label class="form-label">Subdomínio</label>
-              <input class="form-input" id="pref-zendesk-sub" placeholder="suaempresa.zendesk.com" oninput="saveZendeskConfigFromInputs()">
-            </div>
-            <div class="form-group" style="margin:0">
-              <label class="form-label">E-mail do agente</label>
-              <input class="form-input" id="pref-zendesk-email" type="email" placeholder="voce@empresa.com" oninput="saveZendeskConfigFromInputs()">
+        <!-- Painel: Pessoal -->
+        <div id="pref-tab-pessoal">
+          <div class="pref-section">
+            <div class="pref-section-title">Aparência</div>
+            <div class="theme-toggle" onclick="toggleTheme()">
+              <div style="flex:1"><div style="font-size:13px;font-weight:500">Modo claro</div><div style="font-size:12px;color:var(--muted)">Alterna entre dark e light mode</div></div>
+              <div class="toggle-switch" id="theme-toggle-sw"><div class="toggle-knob"></div></div>
             </div>
           </div>
-          <div class="form-group" style="max-width:520px;margin-bottom:10px">
-            <label class="form-label">Token de API <span style="font-size:10px;color:var(--hint)">(Perfil → API → Tokens)</span></label>
-            <input class="form-input" id="pref-zendesk-token" type="password" placeholder="seu-token-api" oninput="saveZendeskConfigFromInputs()">
+          <div class="pref-section">
+            <div class="pref-section-title">Cor de destaque</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Aplicada em botões, cards ativos, barras e badges.</div>
+            <div class="color-palette" id="color-palette"></div>
           </div>
-          <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:13px">
-            <input type="checkbox" id="pref-zendesk-proxy" onchange="saveZendeskConfigFromInputs()" style="width:15px;height:15px;accent-color:var(--accent)">
-            Usar proxy local (porta 3002)
-          </label>
-          <div style="font-size:11px;color:var(--hint);margin-bottom:10px;line-height:1.5">Com proxy: <code style="background:var(--card2);padding:1px 5px;border-radius:4px">ZENDESK_EMAIL=... ZENDESK_TOKEN=... node zendesk-proxy.js</code></div>
-          <button class="btn btn-sm btn-ghost" onclick="testZendeskConexao()">🔌 Testar conexão</button>
         </div>
-        <div class="pref-section" id="pref-section-redmine">
-          <div class="pref-section-title">Integração Redmine</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Configure para importar tarefas no Kanban e enviar horas registradas.</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin-bottom:10px">
-            <div class="form-group" style="margin:0">
-              <label class="form-label">URL do servidor</label>
-              <input class="form-input" id="pref-redmine-url" placeholder="http://192.168.0.1/redmine" oninput="saveRedmineConfigFromInputs()">
+
+        <!-- Painel: Plataforma -->
+        <div id="pref-tab-plataforma" style="display:none">
+          <div class="pref-section">
+            <div class="pref-section-title">Produtos cadastrados</div>
+            <div id="produtos-list" style="display:flex;flex-direction:column;gap:6px"></div>
+            <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addProduto()">+ Adicionar produto</button>
+          </div>
+          <div class="pref-section">
+            <div class="pref-section-title">Tipo de Atividade</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Tipos usados ao exportar horas para o Redmine.</div>
+            <div id="tipo-atividade-list" style="display:flex;flex-direction:column;gap:6px"></div>
+            <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addTipoAtividade()">+ Adicionar tipo</button>
+          </div>
+          <div class="pref-section" id="pref-section-visitor">
+            <div class="pref-section-title">Acesso de Visitantes</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Senha solicitada ao visitante no login. Se vazia, usa o padrão <code style="background:var(--card2);padding:1px 5px;border-radius:4px">visita2024</code>.</div>
+            <div class="form-group" style="max-width:280px">
+              <label class="form-label">Senha de acesso para visitantes</label>
+              <input type="password" class="form-input" id="pref-visitor-pass" placeholder="visita2024" oninput="salvarSenhaVisitante()">
             </div>
-            <div class="form-group" style="margin:0">
-              <label class="form-label">Chave API <span style="font-size:10px;color:var(--hint)">(opcional com proxy ativo)</span></label>
-              <input class="form-input" id="pref-redmine-key" type="password" placeholder="Necessária só sem proxy" oninput="saveRedmineConfigFromInputs()">
+            <div style="margin-top:20px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:10px">Acessos recentes</div>
+              <div id="visitor-log-table" style="font-size:12px;color:var(--muted)">Nenhum acesso registrado.</div>
             </div>
           </div>
-          <div class="form-group" style="max-width:260px;margin-bottom:10px">
-            <label class="form-label">ID de atividade padrão</label>
-            <input class="form-input" id="pref-redmine-activity" type="number" placeholder="Ex: 9" oninput="saveRedmineConfigFromInputs()">
-            <div style="font-size:11px;color:var(--hint);margin-top:4px">ID numérico em Redmine → Administração → Enumerações → Atividades.</div>
-          </div>
-          <button class="btn btn-sm btn-ghost" onclick="testRedmineConexao()">🔌 Testar conexão</button>
-          <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer;font-size:13px">
-            <input type="checkbox" id="pref-redmine-proxy" onchange="saveRedmineConfigFromInputs()" style="width:15px;height:15px;accent-color:var(--accent)">
-            Usar proxy local (porta 3001)
-          </label>
-          <div style="font-size:11px;color:var(--hint);margin-top:4px;line-height:1.5">Necessário quando o Redmine está na VPN. Rode <code style="background:var(--card2);padding:1px 5px;border-radius:4px">node redmine-proxy.js</code> na pasta do projeto antes de usar.</div>
         </div>
-        <div class="pref-section" id="pref-section-visitor">
-          <div class="pref-section-title">Acesso de Visitantes</div>
-          <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Senha solicitada ao visitante no login. Se vazia, usa o padrão <code style="background:var(--card2);padding:1px 5px;border-radius:4px">visita2024</code>.</div>
-          <div class="form-group" style="max-width:280px">
-            <label class="form-label">Senha de acesso para visitantes</label>
-            <input type="password" class="form-input" id="pref-visitor-pass" placeholder="visita2024" oninput="salvarSenhaVisitante()">
+
+        <!-- Painel: Admin -->
+        <div id="pref-tab-admin" style="display:none">
+          <!-- ROLES E PERMISSÕES (visível apenas para admin) -->
+          <div class="pref-section" id="pref-section-roles" style="display:none"></div>
+
+          <!-- USUÁRIOS DA PLATAFORMA -->
+          <div class="pref-section" id="pref-section-users">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div class="pref-section-title" style="margin-bottom:0">Usuários da plataforma</div>
+              <span id="pref-role-badge" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(124,111,247,.15);color:#7c6ff7;border:1px solid rgba(124,111,247,.3)">—</span>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">
+              Gerencie quem pode acessar a VersionSuite e seus níveis de permissão. Somente <strong>Admins</strong> podem alterar roles.
+            </div>
+            <div id="users-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
+            <div id="users-list-hint" style="font-size:11px;color:var(--hint)">Usuários aparecem automaticamente após o primeiro login com Google.</div>
           </div>
-          <div style="margin-top:20px">
-            <div style="font-size:13px;font-weight:600;margin-bottom:10px">Acessos recentes</div>
-            <div id="visitor-log-table" style="font-size:12px;color:var(--muted)">Nenhum acesso registrado.</div>
+
+          <div class="pref-section" id="pref-section-redmine">
+  <div class="pref-section-title">Integração Redmine</div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Configure para importar tarefas no Kanban e enviar horas registradas. Requer o proxy local rodando.</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin-bottom:10px">
+    <div class="form-group" style="margin:0">
+      <label class="form-label">URL do proxy</label>
+      <input class="form-input" id="pref-redmine-proxyurl" placeholder="http://localhost:3001" oninput="saveRedmineConfigFromInputs()">
+    </div>
+    <div class="form-group" style="margin:0">
+      <label class="form-label">ID de atividade padrão</label>
+      <input class="form-input" id="pref-redmine-activity" type="number" placeholder="Ex: 9" oninput="saveRedmineConfigFromInputs()">
+      <div style="font-size:11px;color:var(--hint);margin-top:4px">Redmine → Administração → Enumerações → Atividades.</div>
+    </div>
+  </div>
+  <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:13px">
+    <input type="checkbox" id="pref-redmine-proxy" onchange="saveRedmineConfigFromInputs()" style="width:15px;height:15px;accent-color:var(--accent)">
+    Proxy ativo
+  </label>
+  <button class="btn btn-sm btn-ghost" onclick="testRedmineConexao()">🔌 Testar conexão</button>
+  <div style="font-size:11px;color:var(--hint);margin-top:10px;line-height:1.6">
+    Para iniciar o proxy: copie <code style="background:var(--card2);padding:1px 5px;border-radius:4px">redmine.env.example</code> para <code style="background:var(--card2);padding:1px 5px;border-radius:4px">.env</code>, preencha as variáveis e rode <code style="background:var(--card2);padding:1px 5px;border-radius:4px">node redmine-proxy.js</code>.
+  </div>
+</div>
+
+          <div class="pref-section" id="pref-section-zendesk">
+            <div class="pref-section-title">Integração Zendesk</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Exibe dados da Central de Ajuda no Dashboard. Credenciais configuradas via variáveis de ambiente do Netlify.</div>
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+              <span id="zendesk-status-badge" style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--card2);color:var(--hint)">— não testado</span>
+              <button class="btn btn-sm btn-ghost" onclick="testZendeskConexao()">🔌 Testar conexão</button>
+            </div>
+            <div style="font-size:11px;color:var(--hint);line-height:1.5">
+              Configure no painel do Netlify → Site settings → Environment variables:<br>
+              <code style="background:var(--card2);padding:1px 5px;border-radius:4px">ZENDESK_SUBDOMAIN</code>
+              <code style="background:var(--card2);padding:1px 5px;border-radius:4px">ZENDESK_EMAIL</code>
+              <code style="background:var(--card2);padding:1px 5px;border-radius:4px">ZENDESK_TOKEN</code>
+            </div>
           </div>
         </div>
+
       </div>
 
     </div>
@@ -1546,6 +1561,21 @@ function populateProdutoSel(){
   var psel=document.getElementById('pub-produto');if(psel)psel.innerHTML='<option value="Todos">Todos os produtos</option>'+S.prefs.produtos.map(function(p){return'<option value="'+p+'">'+p+'</option>'}).join('');
 }
 
+// ── PREFS TABS ───────────────────────────────────────────────────────────────
+var _prefTab='pessoal';
+function goPrefsTab(nome){
+  _prefTab=nome;
+  ['pessoal','plataforma','admin'].forEach(function(t){
+    var panel=document.getElementById('pref-tab-'+t);
+    var btn=document.getElementById('pref-tab-btn-'+t);
+    if(panel)panel.style.display=(t===nome)?'':'none';
+    if(btn){
+      btn.style.borderBottomColor=(t===nome)?'var(--accent)':'transparent';
+      btn.style.color=(t===nome)?'var(--accent)':'var(--muted)';
+    }
+  });
+}
+
 // ── NAV ──────────────────────────────────────────────────────────────────────
 function goScreen(name){
   // Verificar expiração de sessão visitante
@@ -1585,7 +1615,12 @@ function goScreen(name){
   if(name==='boletim'){setBolTab(BOL_TAB);setTimeout(bolCarregarAPIKey,50)}
   if(name==='ponto')renderPontoList();
   if(name==='historico')renderHist();
-  if(name==='preferencias'){renderPalette();renderProdutos();renderRolesPrefs();renderUsersPrefs();renderTipoAtividades();renderRedmineConfig();renderZendeskConfig();
+  if(name==='preferencias'){
+    var adminTabBtn=document.getElementById('pref-tab-btn-admin');
+    if(adminTabBtn)adminTabBtn.style.display=isAdmin()?'':'none';
+    goPrefsTab('pessoal');
+    renderPalette();renderProdutos();renderTipoAtividades();
+    renderRedmineConfig();renderZendeskConfig();renderRolesPrefs();renderUsersPrefs();
     var pf=document.getElementById('pref-visitor-pass');if(pf)pf.value=localStorage.getItem('vs_visitor_pass')||'';
     renderVisitorLog();
   }
@@ -3980,7 +4015,7 @@ async function load(){
     if(!S.versaoK&&S.versoes.length)S.versaoK=S.versoes[0].id;
     _loadedAt=Date.now();
     await loadUsers();
-    _redmineUpdateButtons(!!(getRedmineConfig().url&&getRedmineConfig().key));
+    _redmineUpdateButtons(!!(getRedmineConfig().proxyUrl&&getRedmineConfig().proxy));
   }catch(e){console.error('Erro ao carregar:',e)}
 }
 
@@ -4408,12 +4443,11 @@ function getRedmineConfig(){
 }
 function saveRedmineConfig(cfg){localStorage.setItem('vs_redmine_config',JSON.stringify(cfg))}
 function saveRedmineConfigFromInputs(){
-  var url=(document.getElementById('pref-redmine-url').value||'').trim().replace(/\/+$/,'');
-  var key=(document.getElementById('pref-redmine-key').value||'').trim();
-  var actId=parseInt(document.getElementById('pref-redmine-activity').value)||null;
-  var proxy=!!(document.getElementById('pref-redmine-proxy')||{}).checked;
-  saveRedmineConfig({url:url,key:key,actId:actId,proxy:proxy});
-  _redmineUpdateButtons(!!(url&&key));
+  var proxyUrl=(document.getElementById('pref-redmine-proxyurl')||{value:''}).value.trim().replace(/\/+$/,'');
+  var actId=parseInt((document.getElementById('pref-redmine-activity')||{value:''}).value)||null;
+  var proxy=!!((document.getElementById('pref-redmine-proxy')||{}).checked);
+  saveRedmineConfig({proxyUrl:proxyUrl,actId:actId,proxy:proxy});
+  _redmineUpdateButtons(!!(proxyUrl&&proxy));
 }
 function _redmineUpdateButtons(hasCfg){
   var btnK=document.getElementById('btn-importar-redmine');
@@ -4423,89 +4457,75 @@ function _redmineUpdateButtons(hasCfg){
 }
 function renderRedmineConfig(){
   var cfg=getRedmineConfig();
-  var u=document.getElementById('pref-redmine-url');
-  var k=document.getElementById('pref-redmine-key');
+  var u=document.getElementById('pref-redmine-proxyurl');
   var a=document.getElementById('pref-redmine-activity');
   var p=document.getElementById('pref-redmine-proxy');
-  if(u)u.value=cfg.url||'';
-  if(k)k.value=cfg.key||'';
+  if(u)u.value=cfg.proxyUrl||'http://localhost:3001';
   if(a)a.value=cfg.actId||'';
   if(p)p.checked=!!(cfg.proxy);
-  _redmineUpdateButtons(!!(cfg.url&&(cfg.key||cfg.proxy)));
+  _redmineUpdateButtons(!!(cfg.proxyUrl&&cfg.proxy));
 }
 async function _redmineFetch(cfg,path,method,body){
-  var fullUrl=cfg.url.replace(/\/+$/,'')+path;
-  if(cfg.proxy){
-    // Modo proxy: chave fica no servidor (REDMINE_KEY env var) — não enviamos ao browser
-    return fetch('http://localhost:3001',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({url:fullUrl,method:method||'GET',body:body||null})
-    });
-  }
-  // Modo direto: chave via header (nunca em query param)
-  var opts={method:method||'GET',headers:{'Content-Type':'application/json','X-Redmine-API-Key':cfg.key}};
-  if(body&&method!=='GET')opts.body=JSON.stringify(body);
-  return fetch(fullUrl,opts);
+  var proxyUrl=(cfg.proxyUrl||'http://localhost:3001').replace(/\/+$/,'');
+  return fetch(proxyUrl,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({path:path,method:method||'GET',body:body||null})
+  });
 }
 async function testRedmineConexao(){
   var cfg=getRedmineConfig();
-  if(!cfg.url||(!cfg.key&&!cfg.proxy)){toast('Preencha URL e chave API (ou ative o proxy)','err');return}
+  if(!cfg.proxyUrl||!cfg.proxy){toast('Ative o proxy e informe a URL','err');return}
   try{
     var r=await _redmineFetch(cfg,'/users/current.json','GET');
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
     toast('Conectado como '+d.user.login+' ✓');
   }catch(e){
-    toast('Erro ao conectar: '+e.message+(cfg.proxy?' (proxy ativo)':', verifique URL, chave e CORS'),'err');
+    toast('Erro ao conectar: '+e.message+' (verifique se o proxy está rodando)','err');
   }
 }
 
 // ── ZENDESK ───────────────────────────────────────────────────────────────────
-function getZendeskConfig(){
-  var raw=localStorage.getItem('vs_zendesk_config');
-  try{var c=JSON.parse(raw||'{}');return{sub:c.sub||'',email:c.email||'',token:c.token||'',proxy:!!c.proxy};}catch(e){return{sub:'',email:'',token:'',proxy:false};}
+function getZendeskStatus(){
+  try{return JSON.parse(localStorage.getItem('vs_zendesk_status'))||{}}catch(e){return{}}
 }
-function saveZendeskConfig(cfg){
-  localStorage.setItem('vs_zendesk_config',JSON.stringify(cfg));
-}
-function saveZendeskConfigFromInputs(){
-  var sub=(document.getElementById('pref-zendesk-sub')||{}).value||'';
-  var email=(document.getElementById('pref-zendesk-email')||{}).value||'';
-  var token=(document.getElementById('pref-zendesk-token')||{}).value||'';
-  var proxy=!!(document.getElementById('pref-zendesk-proxy')||{}).checked;
-  saveZendeskConfig({sub:sub.replace(/\/+$/,'').replace(/^https?:\/\//,''),email:email,token:token,proxy:proxy});
-}
+function saveZendeskStatus(s){localStorage.setItem('vs_zendesk_status',JSON.stringify(s))}
 function renderZendeskConfig(){
-  var cfg=getZendeskConfig();
-  var s=document.getElementById('pref-zendesk-sub');if(s)s.value=cfg.sub;
-  var e=document.getElementById('pref-zendesk-email');if(e)e.value=cfg.email;
-  var t=document.getElementById('pref-zendesk-token');if(t)t.value=cfg.token;
-  var p=document.getElementById('pref-zendesk-proxy');if(p)p.checked=cfg.proxy;
-}
-async function _zendeskFetch(cfg,path,method,body){
-  if(cfg.proxy){
-    return fetch('http://localhost:3002',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({url:'https://'+cfg.sub+path,method:method||'GET',body:body||null})
-    });
+  var s=getZendeskStatus();
+  var badge=document.getElementById('zendesk-status-badge');
+  if(!badge)return;
+  if(s.ok===true){
+    badge.textContent='conectado ✓';
+    badge.style.background='rgba(62,207,142,.15)';badge.style.color='var(--green-text)';
+  }else if(s.ok===false){
+    badge.textContent='desconectado ✗';
+    badge.style.background='rgba(239,68,68,.12)';badge.style.color='#ef4444';
+  }else{
+    badge.textContent='— não testado';
+    badge.style.background='var(--card2)';badge.style.color='var(--hint)';
   }
-  var b64=btoa(cfg.email+'/token:'+cfg.token);
-  var opts={method:method||'GET',headers:{'Content-Type':'application/json','Authorization':'Basic '+b64}};
+}
+async function _zendeskFetch(path,method,body,extra){
+  var url='/.netlify/functions/zendesk?type='+encodeURIComponent(path);
+  if(extra){var qs=Object.keys(extra).map(function(k){return k+'='+encodeURIComponent(extra[k])}).join('&');url+='&'+qs;}
+  var opts={method:method||'GET',headers:{'Content-Type':'application/json'}};
   if(body&&method!=='GET')opts.body=JSON.stringify(body);
-  return fetch('https://'+cfg.sub+path,opts);
+  return fetch(url,opts);
 }
 async function testZendeskConexao(){
-  var cfg=getZendeskConfig();
-  if(!cfg.sub||(!cfg.token&&!cfg.proxy)){toast('Preencha o subdomínio e o token (ou ative o proxy)','err');return}
   try{
-    var r=await _zendeskFetch(cfg,'/api/v2/users/me.json','GET');
+    var r=await _zendeskFetch('me','GET');
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
-    toast('Conectado como '+d.user.name+' ✓');
+    if(d.error)throw new Error(d.error);
+    saveZendeskStatus({ok:true});
+    renderZendeskConfig();
+    toast('Zendesk: conectado como '+(d.user&&d.user.name||'OK')+' ✓');
   }catch(e){
-    toast('Erro ao conectar: '+e.message+(cfg.proxy?' (proxy ativo)':', verifique subdomínio, e-mail e token'),'err');
+    saveZendeskStatus({ok:false});
+    renderZendeskConfig();
+    toast('Zendesk: '+e.message,'err');
   }
 }
 
@@ -4536,25 +4556,18 @@ function setAjudaPeriodo(btn,days){
 }
 
 async function loadCentralAjuda(){
-  var cfg=getZendeskConfig();
   var banner=document.getElementById('ajuda-config-banner');
   var tabela=document.getElementById('ajuda-tabela');
   var metrics=document.getElementById('ajuda-metrics');
-  if(!cfg.sub||(!cfg.token&&!cfg.proxy)){
-    if(banner)banner.style.display='';
-    if(tabela)tabela.innerHTML='';
-    if(metrics)metrics.innerHTML='';
-    return;
-  }
   if(banner)banner.style.display='none';
   if(tabela)tabela.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0">Carregando...</div>';
   if(metrics)metrics.innerHTML='';
   try{
-    var rc=await _zendeskFetch(cfg,'/api/v2/help_center/pt-br/categories.json','GET');
+    var rc=await _zendeskFetch('categories','GET');
     if(!rc.ok)throw new Error('Categorias: HTTP '+rc.status);
     var dc=await rc.json();
+    if(dc.error)throw new Error(dc.error);
     _ajudaDados.categories=dc.categories||[];
-
     var sel=document.getElementById('ajuda-cat-filtro');
     if(sel){
       var catAtual=sel.value;
@@ -4562,22 +4575,21 @@ async function loadCentralAjuda(){
         _ajudaDados.categories.map(function(c){return'<option value="'+c.id+'">'+escHtml(c.name)+'</option>'}).join('');
       if(catAtual&&catAtual!=='todas')sel.value=catAtual;
     }
-
     var arts=[];var page=1;
     while(true){
-      var ra=await _zendeskFetch(cfg,'/api/v2/help_center/pt-br/articles.json?per_page=100&page='+page,'GET');
+      var ra=await _zendeskFetch('articles','GET',null,{per_page:100,page:page});
       if(!ra.ok)break;
       var da=await ra.json();
+      if(da.error)break;
       arts=arts.concat(da.articles||[]);
       if(!da.next_page||arts.length>=200)break;
       page++;
     }
     _ajudaDados.articles=arts;
-
     var endDate=new Date();var startDate=new Date();
     startDate.setDate(endDate.getDate()-_ajudaPeriodo);
     var fmt=function(d){return d.toISOString().slice(0,10)};
-    var rv=await _zendeskFetch(cfg,'/api/v2/explore/export','POST',{
+    var rv=await _zendeskFetch('explore','POST',{
       type:'help_center',
       attributes:{date_range:{from:fmt(startDate),to:fmt(endDate)},metrics:['article_views'],groupby:['article_id']}
     });
@@ -4593,10 +4605,9 @@ async function loadCentralAjuda(){
       _ajudaDados.views={};
       arts.forEach(function(a){_ajudaDados.views[String(a.id)]=a.vote_sum||0});
     }
-
     renderCentralAjuda();
   }catch(e){
-    if(tabela)tabela.innerHTML='<div style="color:var(--err,#e44);font-size:13px;padding:20px 0">Erro ao carregar: '+escHtml(e.message)+'</div>';
+    if(tabela)tabela.innerHTML='<div style="color:var(--muted);font-size:13px;padding:20px 0">Erro ao carregar: '+escHtml(e.message)+'</div>';
   }
 }
 
@@ -4655,7 +4666,7 @@ function renderCentralAjuda(){
 // ── IMPORTAR DO REDMINE (Kanban) ──────────────────────────────────────────────
 async function importarDoRedmine(){
   var cfg=getRedmineConfig();
-  if(!cfg.url||(!cfg.key&&!cfg.proxy)){toast('Configure o Redmine nas Preferências','err');return}
+  if(!cfg.proxyUrl||!cfg.proxy){toast('Configure o Redmine nas Preferências','err');return}
   var versao=S.versoes.find(function(v){return v.id===S.versaoK});
   if(!versao){toast('Selecione uma versão no Kanban primeiro','err');return}
   toast('Buscando tarefas no Redmine...');
@@ -4707,7 +4718,7 @@ async function importarDoRedmine(){
 // ── ENVIAR HORAS AO REDMINE ───────────────────────────────────────────────────
 async function enviarAoRedmine(){
   var cfg=getRedmineConfig();
-  if(!cfg.url||(!cfg.key&&!cfg.proxy)){toast('Configure o Redmine nas Preferências','err');return}
+  if(!cfg.proxyUrl||!cfg.proxy){toast('Configure o Redmine nas Preferências','err');return}
   if(!_exportRows.length){toast('Visualize o período primeiro','err');return}
   if(!cfg.actId){toast('Configure o ID de atividade padrão nas Preferências','err');return}
   var ok=await modalConfirm(
