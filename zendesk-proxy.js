@@ -1,27 +1,30 @@
 /**
- * Proxy local para integração com Redmine (contorna CORS)
+ * Proxy local para integração com Zendesk (contorna CORS)
  *
- * Uso básico:
- *   REDMINE_KEY=sua-chave-api node redmine-proxy.js
+ * Uso:
+ *   ZENDESK_EMAIL=voce@empresa.com ZENDESK_TOKEN=seu-token node zendesk-proxy.js
  *
- * Com restrição de host:
- *   REDMINE_URL=http://10.0.0.50/redmine REDMINE_KEY=sua-chave-api node redmine-proxy.js
+ * Com subdomínio fixo (restrição extra de host):
+ *   ZENDESK_SUBDOMAIN=suaempresa.zendesk.com ZENDESK_EMAIL=... ZENDESK_TOKEN=... node zendesk-proxy.js
  *
- * A chave API nunca sai do servidor — o browser não precisa conhecê-la.
+ * As credenciais nunca saem do servidor — o browser não as conhece.
  */
 
 const http  = require('http');
 const https = require('https');
 
-const PORT        = process.env.PORT || 3001;
-const REDMINE_KEY = process.env.REDMINE_KEY || '';
-const ALLOWED_HOST = (process.env.REDMINE_URL || '').replace(/\/+$/, '').toLowerCase();
+const PORT              = process.env.PORT || 3002;
+const ZENDESK_EMAIL     = process.env.ZENDESK_EMAIL || '';
+const ZENDESK_TOKEN     = process.env.ZENDESK_TOKEN || '';
+const ZENDESK_SUBDOMAIN = (process.env.ZENDESK_SUBDOMAIN || '').replace(/\/+$/, '').toLowerCase();
 
-if (!REDMINE_KEY) {
-  console.warn('⚠️  REDMINE_KEY não definida. Defina via variável de ambiente:');
-  console.warn('   REDMINE_KEY=sua-chave node redmine-proxy.js');
+if (!ZENDESK_EMAIL || !ZENDESK_TOKEN) {
+  console.warn('⚠️  ZENDESK_EMAIL e/ou ZENDESK_TOKEN não definidos. Defina via variáveis de ambiente:');
+  console.warn('   ZENDESK_EMAIL=voce@empresa.com ZENDESK_TOKEN=seu-token node zendesk-proxy.js');
   console.warn('');
 }
+
+const BASIC_AUTH = 'Basic ' + Buffer.from(ZENDESK_EMAIL + '/token:' + ZENDESK_TOKEN).toString('base64');
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -51,8 +54,8 @@ const server = http.createServer((req, res) => {
       const d = JSON.parse(body);
       if (!d.url) throw new Error('Campo "url" obrigatório');
 
-      // Valida host de destino quando REDMINE_URL está definido
-      if (ALLOWED_HOST && !d.url.toLowerCase().startsWith(ALLOWED_HOST)) {
+      // Valida host de destino quando ZENDESK_SUBDOMAIN está definido
+      if (ZENDESK_SUBDOMAIN && !d.url.toLowerCase().includes(ZENDESK_SUBDOMAIN)) {
         res.writeHead(403, { ...CORS, 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'URL de destino não permitida.' }));
         return;
@@ -63,11 +66,10 @@ const server = http.createServer((req, res) => {
       const agent = isHttps ? new https.Agent({ rejectUnauthorized: false }) : undefined;
       const lib = isHttps ? https : http;
 
-      // A chave vem do servidor (env var), nunca do browser
-      // Qualquer X-Redmine-API-Key enviado pelo browser é descartado e substituído
+      // Credenciais vêm do servidor (env vars), nunca do browser
       const safeHeaders = {
         'Content-Type': 'application/json',
-        'X-Redmine-API-Key': REDMINE_KEY
+        'Authorization': BASIC_AUTH
       };
 
       const opts = {
@@ -92,7 +94,7 @@ const server = http.createServer((req, res) => {
       });
 
       proxyReq.on('error', e => {
-        console.error('ERRO REDMINE:', e.message);
+        console.error('ERRO ZENDESK:', e.message);
         res.writeHead(502, { ...CORS, 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: e.message }));
       });
@@ -111,9 +113,10 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, '127.0.0.1', () => {
   console.log('');
-  console.log('✅ Proxy Redmine rodando em http://localhost:' + PORT);
-  if (ALLOWED_HOST) console.log('   Redmine autorizado: ' + ALLOWED_HOST);
-  console.log('   Chave API: ' + (REDMINE_KEY ? '✓ configurada via REDMINE_KEY' : '✗ não configurada'));
+  console.log('✅ Proxy Zendesk rodando em http://localhost:' + PORT);
+  if (ZENDESK_SUBDOMAIN) console.log('   Zendesk autorizado: ' + ZENDESK_SUBDOMAIN);
+  console.log('   E-mail: ' + (ZENDESK_EMAIL ? '✓ configurado' : '✗ não configurado'));
+  console.log('   Token:  ' + (ZENDESK_TOKEN ? '✓ configurado' : '✗ não configurado'));
   console.log('   Deixe esta janela aberta enquanto usar o VersionSuite.');
   console.log('   Pressione Ctrl+C para parar.');
   console.log('');
