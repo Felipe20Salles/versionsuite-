@@ -961,32 +961,34 @@ var CORES=[
   {name:'Teal',hex:'#14b8a6',rgb:'20,184,166'},{name:'Roxo',hex:'#a855f7',rgb:'168,85,247'}
 ];
 // ── SISTEMA DE USUÁRIOS / ROLES ───────────────────────────────────────────────
-// Roles: 'admin' | 'membro' | 'visualizador'
-// Armazenado em profiles.prefs.role + profiles.prefs.displayName + profiles.prefs.color
-// Admin pode alterar roles de outros. Membro/Visualizador só vê.
+// Roles carregados do Supabase (tabela 'roles'). Default: 'visualizador'.
+// S_ROLES: [ { id, nome, label, permissoes: { acoes:{}, menus:{} } } ]
+// CURRENT_ROLE: row do role do usuário logado (ou null se não encontrado).
 
 var S_USERS=[];  // lista de { id, email, displayName, avatar, role, colorIdx }
+var S_ROLES=[];  // lista de todos os roles carregados do Supabase
 
-var ROLE_LABELS={admin:'Admin',membro:'Membro',visualizador:'Visualizador'};
-var ROLE_PRIORITY={admin:0,membro:1,visualizador:2};
+var ROLE_LABELS={admin:'Admin',visualizador:'Visualizador'};
+var ROLE_PRIORITY={admin:0,visualizador:99};
 
 function currentUserRole(){
   var u=S_USERS.find(function(x){return x.id===CURRENT_USER.id});
-  return u?u.role:'membro';
+  return u?u.role:'visualizador';
 }
-function isAdmin(){return currentUserRole()==='admin';}
-function isVisualizador(){return currentUserRole()==='visualizador';}
-function canEditOS(os){
-  var role=currentUserRole();
-  if(role==='admin')return true;
-  if(role==='visualizador')return false;
-  return !!(os&&CURRENT_USER&&os.createdBy===CURRENT_USER.id);
+function isAdmin(){return !!(CURRENT_ROLE&&CURRENT_ROLE.nome==='admin');}
+function isVisualizador(){return !CURRENT_ROLE||CURRENT_ROLE.nome==='visualizador';}
+function can(acao){
+  if(!CURRENT_USER||CURRENT_USER.isVisitor||!CURRENT_ROLE)return false;
+  return !!(CURRENT_ROLE.permissoes&&CURRENT_ROLE.permissoes.acoes&&CURRENT_ROLE.permissoes.acoes[acao]);
 }
+function canMenu(menu){
+  if(!CURRENT_USER||CURRENT_USER.isVisitor||!CURRENT_ROLE)return false;
+  return !!(CURRENT_ROLE.permissoes&&CURRENT_ROLE.permissoes.menus&&CURRENT_ROLE.permissoes.menus[menu]);
+}
+function canEditOS(os){return can('os_editar');}
 function canEditVersao(v){
-  var role=currentUserRole();
-  if(role==='admin')return true;
-  if(role==='visualizador')return false;
-  return !!(v&&CURRENT_USER&&v.createdBy===CURRENT_USER.id);
+  if(!CURRENT_ROLE)return false;
+  return isAdmin()||(can('os_editar')&&!!(v&&CURRENT_USER&&v.createdBy===CURRENT_USER.id));
 }
 
 // Carrega todos os profiles do Supabase para popular lista de usuários
@@ -3537,6 +3539,7 @@ var SUPA_URL='https://lexgxlurnqbdytzzxkmv.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxleGd4bHVybnFiZHl0enp4a212Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTE4OTgsImV4cCI6MjA5MzAyNzg5OH0.ku_7RG38RJqG44ZsfX82HoGfsKArl9aQ7ogAZRz9CGY';
 var sb=supabase.createClient(SUPA_URL,SUPA_KEY);
 var CURRENT_USER=null;
+var CURRENT_ROLE=null;
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function loginGoogle(){
