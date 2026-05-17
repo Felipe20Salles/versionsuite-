@@ -1040,6 +1040,15 @@ function canMenu(menu){
   if(!CURRENT_USER||CURRENT_USER.isVisitor||!CURRENT_ROLE)return false;
   return !!(CURRENT_ROLE.permissoes&&CURRENT_ROLE.permissoes.menus&&CURRENT_ROLE.permissoes.menus[menu]);
 }
+function applyMenuPermissions(){
+  var navBoletim=document.getElementById('nav-boletim');
+  var navPonto=document.getElementById('nav-ponto');
+  var navPrefs=document.getElementById('nav-preferencias');
+  var isVisitor=CURRENT_USER&&CURRENT_USER.isVisitor;
+  if(navBoletim)navBoletim.style.display=(!isVisitor&&canMenu('boletim'))?'':'none';
+  if(navPonto)navPonto.style.display=(!isVisitor&&canMenu('ponto'))?'':'none';
+  if(navPrefs)navPrefs.style.display=(!isVisitor&&(isAdmin()||canMenu('preferencias')))?'':'none';
+}
 function canEditOS(os){return can('os_editar');}
 function canEditVersao(v){
   if(!CURRENT_ROLE)return false;
@@ -1546,12 +1555,7 @@ function goScreen(name){
   document.getElementById('topbar-title').textContent=titles[name]||name;
   document.getElementById('topbar-actions').innerHTML=acts[name]||'';
   // Sidebar: aplicar permissões de menu
-  var navBoletim=document.getElementById('nav-boletim');
-  var navPonto=document.getElementById('nav-ponto');
-  var navPrefs=document.getElementById('nav-preferencias');
-  if(navBoletim)navBoletim.style.display=(!isVisitor&&canMenu('boletim'))?'':'none';
-  if(navPonto)navPonto.style.display=(!isVisitor&&canMenu('ponto'))?'':'none';
-  if(navPrefs)navPrefs.style.display=(!isVisitor&&canMenu('preferencias'))?'':'none';
+  applyMenuPermissions();
   document.getElementById('topbar-sub').textContent='';
   if(name==='dashboard')renderDash();
   if(name==='kanban')renderKanban();
@@ -3904,6 +3908,7 @@ async function load(){
     // Carregar role do usuário atual
     var roleNome=(prof&&prof.prefs&&prof.prefs.role)||'visualizador';
     CURRENT_ROLE=S_ROLES.find(function(r){return r.nome===roleNome})||null;
+    applyMenuPermissions();
 
     // Versões
     setLoadingMsg('Carregando OSs...');
