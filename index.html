@@ -3689,6 +3689,16 @@ async function load(){
       if(pr.lightMode!==undefined)S.prefs.lightMode=pr.lightMode;
     }
 
+    // Carregar todos os roles disponíveis
+    var {data:rolesData}=await sb.from('roles').select('*');
+    S_ROLES=rolesData||[];
+    // Popular ROLE_LABELS dinamicamente com roles da tabela
+    S_ROLES.forEach(function(r){ROLE_LABELS[r.nome]=r.label||r.nome;});
+
+    // Carregar role do usuário atual
+    var roleNome=(prof&&prof.prefs&&prof.prefs.role)||'visualizador';
+    CURRENT_ROLE=S_ROLES.find(function(r){return r.nome===roleNome})||null;
+
     // Versões
     setLoadingMsg('Carregando OSs...');
     var {data:versoes}=await sb.from('versoes').select('*').order('created_at',{ascending:false});
