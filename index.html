@@ -1174,7 +1174,7 @@ function renderUsersPrefs(){
     var roleNaoConfigurado=!isNovo&&(u.role==='membro'||!S_ROLES.find(function(r){return r.nome===u.role}));
     if(can('preferencias_admin')&&!isMe){
       roleHtml='<select onchange="saveUserRole(\''+u.id+'\',this.value)" style="border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:11px;padding:3px 6px;border-radius:4px;cursor:pointer">'+
-        (isNovo?'<option value="" disabled selected>— Atribuir perfil —</option>':'')+
+        (isNovo||roleNaoConfigurado?'<option value="" disabled selected>— Atribuir perfil —</option>':'')+
         S_ROLES.map(function(r){
           return'<option value="'+r.nome+'"'+(u.role===r.nome?' selected':'')+'>'+escHtml(r.label||r.nome)+'</option>';
         }).join('')+
