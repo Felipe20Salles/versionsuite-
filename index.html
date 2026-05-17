@@ -1107,6 +1107,132 @@ function renderUsersPrefs(){
   }).join('');
 }
 
+async function renderRolesPrefs(){
+  var sec=document.getElementById('pref-section-roles');
+  if(!sec)return;
+  if(!can('preferencias_admin')){sec.style.display='none';return;}
+  sec.style.display='';
+
+  var PERM_LABELS={
+    'menus.boletim':'Boletim','menus.ponto':'Ponto','menus.preferencias':'Preferências',
+    'acoes.os_criar':'Criar OS','acoes.os_editar':'Editar OS','acoes.os_deletar_propria':'Deletar próprias OSs',
+    'acoes.boletim_editar':'Editar Boletim','acoes.agenda_editar':'Editar Agenda','acoes.preferencias_admin':'Administrar Preferências'
+  };
+
+  var {data:rolesData}=await sb.from('roles').select('*');
+  S_ROLES=rolesData||[];
+  S_ROLES.forEach(function(r){ROLE_LABELS[r.nome]=r.label||r.nome;});
+
+  function mkCheckbox(roleId,key,checked){
+    return'<label class="form-check" style="margin-bottom:4px">'+
+      '<input type="checkbox" '+(checked?'checked':'')+' onchange="rolesPermToggle(\''+roleId+'\',\''+key+'\',this.checked)" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer">'+
+      '<span class="form-check-label">'+PERM_LABELS[key]+'</span>'+
+    '</label>';
+  }
+
+  function mkRoleCard(r){
+    var p=r.permissoes||{acoes:{},menus:{}};
+    var userCount=S_USERS.filter(function(u){return u.role===r.nome}).length;
+    return'<div class="card" style="margin-bottom:10px" id="roles-card-'+r.id+'">'+
+      '<div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="rolesToggleCard(\''+r.id+'\')">'+
+        '<span style="flex:1;font-size:13px;font-weight:500">'+escHtml(r.label||r.nome)+'</span>'+
+        '<span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:10px;background:var(--card2);color:var(--hint)">'+userCount+' usuário(s)</span>'+
+        '<span id="roles-card-arrow-'+r.id+'" style="color:var(--hint);font-size:12px;transition:transform .2s">▼</span>'+
+      '</div>'+
+      '<div id="roles-card-body-'+r.id+'" style="display:none;padding-top:12px;border-top:1px solid var(--border);margin-top:12px">'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
+          '<div>'+
+            '<div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Menus</div>'+
+            mkCheckbox(r.id,'menus.boletim',!!(p.menus&&p.menus.boletim))+
+            mkCheckbox(r.id,'menus.ponto',!!(p.menus&&p.menus.ponto))+
+            mkCheckbox(r.id,'menus.preferencias',!!(p.menus&&p.menus.preferencias))+
+          '</div>'+
+          '<div>'+
+            '<div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Ações</div>'+
+            mkCheckbox(r.id,'acoes.os_criar',!!(p.acoes&&p.acoes.os_criar))+
+            mkCheckbox(r.id,'acoes.os_editar',!!(p.acoes&&p.acoes.os_editar))+
+            mkCheckbox(r.id,'acoes.os_deletar_propria',!!(p.acoes&&p.acoes.os_deletar_propria))+
+            mkCheckbox(r.id,'acoes.boletim_editar',!!(p.acoes&&p.acoes.boletim_editar))+
+            mkCheckbox(r.id,'acoes.agenda_editar',!!(p.acoes&&p.acoes.agenda_editar))+
+            mkCheckbox(r.id,'acoes.preferencias_admin',!!(p.acoes&&p.acoes.preferencias_admin))+
+          '</div>'+
+        '</div>'+
+        '<div style="display:flex;justify-content:flex-end">'+
+          '<button class="btn btn-primary btn-sm" onclick="rolesSalvar(\''+r.id+'\')">Salvar</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }
+
+  sec.innerHTML=
+    '<div class="pref-section-title">Roles e Permissões</div>'+
+    S_ROLES.map(mkRoleCard).join('')+
+    '<button class="btn btn-sm btn-ghost" onclick="rolesNovoModal()" style="margin-top:4px">+ Novo role</button>'+
+    '<div id="modal-novo-role" class="modal-overlay">'+
+      '<div class="modal">'+
+        '<div class="modal-title">Novo Role</div>'+
+        '<div class="form-group"><label class="form-label">Nome (slug)</label><input id="new-role-nome" class="form-input" placeholder="ex: dev"></div>'+
+        '<div class="form-group"><label class="form-label">Label</label><input id="new-role-label" class="form-input" placeholder="ex: Desenvolvedor"></div>'+
+        '<div class="form-group"><label class="form-label">Herdar permissões de</label>'+
+          '<select id="new-role-herdar" class="form-input">'+
+            '<option value="">Nenhum (vazio)</option>'+
+            S_ROLES.map(function(r){return'<option value="'+r.id+'">'+escHtml(r.label||r.nome)+'</option>'}).join('')+
+          '</select>'+
+        '</div>'+
+        '<div class="modal-footer">'+
+          '<button class="btn" onclick="closeModal(\'modal-novo-role\')">Cancelar</button>'+
+          '<button class="btn btn-primary" onclick="rolesCriar()">Criar</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+}
+
+function rolesToggleCard(id){
+  var body=document.getElementById('roles-card-body-'+id);
+  var arrow=document.getElementById('roles-card-arrow-'+id);
+  if(!body)return;
+  var open=body.style.display==='block';
+  body.style.display=open?'none':'block';
+  if(arrow)arrow.style.transform=open?'':'rotate(180deg)';
+}
+
+function rolesPermToggle(roleId,key,val){
+  var r=S_ROLES.find(function(x){return x.id===roleId});
+  if(!r)return;
+  if(!r.permissoes)r.permissoes={acoes:{},menus:{}};
+  var parts=key.split('.');
+  if(!r.permissoes[parts[0]])r.permissoes[parts[0]]={};
+  r.permissoes[parts[0]][parts[1]]=val;
+}
+
+async function rolesSalvar(roleId){
+  var r=S_ROLES.find(function(x){return x.id===roleId});
+  if(!r)return;
+  var {error}=await sb.from('roles').update({permissoes:r.permissoes}).eq('id',roleId);
+  if(error){toast('Erro ao salvar role','err');return;}
+  if(CURRENT_ROLE&&CURRENT_ROLE.id===roleId)CURRENT_ROLE=r;
+  toast('Permissões salvas!');
+}
+
+function rolesNovoModal(){openModal('modal-novo-role');}
+
+async function rolesCriar(){
+  var nome=document.getElementById('new-role-nome').value.trim().toLowerCase().replace(/\s+/g,'-');
+  var label=document.getElementById('new-role-label').value.trim();
+  var herdaId=document.getElementById('new-role-herdar').value;
+  if(!nome||!label){toast('Preencha nome e label','err');return;}
+  var permissoes={acoes:{},menus:{}};
+  if(herdaId){
+    var base=S_ROLES.find(function(r){return r.id===herdaId});
+    if(base&&base.permissoes)permissoes=JSON.parse(JSON.stringify(base.permissoes));
+  }
+  var {error}=await sb.from('roles').insert({nome:nome,label:label,permissoes:permissoes});
+  if(error){toast('Erro ao criar role','err');return;}
+  closeModal('modal-novo-role');
+  await renderRolesPrefs();
+  toast('Role "'+label+'" criado!');
+}
+
 function editarNomeUsuario(userId){
   var container=document.getElementById('user-name-pref-'+userId);if(!container)return;
   var span=container.querySelector('span');
@@ -1375,7 +1501,7 @@ function goScreen(name){
   if(name==='boletim'){setBolTab(BOL_TAB);setTimeout(bolCarregarAPIKey,50)}
   if(name==='ponto')renderPontoList();
   if(name==='historico')renderHist();
-  if(name==='preferencias'){renderPalette();renderProdutos();renderUsersPrefs();renderTipoAtividades();renderRedmineConfig();
+  if(name==='preferencias'){renderPalette();renderProdutos();renderRolesPrefs();renderUsersPrefs();renderTipoAtividades();renderRedmineConfig();
     var pf=document.getElementById('pref-visitor-pass');if(pf)pf.value=localStorage.getItem('vs_visitor_pass')||'';
     renderVisitorLog();
   }
