@@ -4666,16 +4666,19 @@ function renderCentralAjuda(){
 // ── IMPORTAR DO REDMINE (Kanban) ──────────────────────────────────────────────
 async function importarDoRedmine(){
   var cfg=getRedmineConfig();
-  if(!cfg.proxyUrl||!cfg.proxy){toast('Configure o Redmine nas Preferências','err');return}
+  if(!cfg.proxyUrl||!cfg.proxy){toast('Ative o proxy Redmine nas Preferências','err');return}
   var versao=S.versoes.find(function(v){return v.id===S.versaoK});
   if(!versao){toast('Selecione uma versão no Kanban primeiro','err');return}
   toast('Buscando tarefas no Redmine...');
   try{
-    var r=await _redmineFetch(cfg,'/issues.json?assigned_to_id=me&status_id=open&limit=100','GET');
+    var r=await _redmineFetch(cfg,'/issues.json?assigned_to_id=me&status_id=open&limit=100&include=children','GET');
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
-    var issues=d.issues||[];
-    if(!issues.length){toast('Nenhuma tarefa aberta atribuída a você','err');return}
+    var TIPOS_FILHOS=['Correção','Melhoria','Suporte','Demandas Internas'];
+    var issues=(d.issues||[]).filter(function(iss){
+      return TIPOS_FILHOS.indexOf(iss.tracker&&iss.tracker.name||'')>-1&&iss.parent;
+    });
+    if(!issues.length){toast('Nenhuma tarefa do tipo filho atribuída a você','err');return}
     var existingNums=S.oss.filter(function(o){return o.versaoId===S.versaoK}).map(function(o){return String(o.num)});
     var novas=issues.filter(function(iss){return existingNums.indexOf(String(iss.id))===-1});
     if(!novas.length){toast('Todas as tarefas já estão importadas nessa versão','err');return}
@@ -4683,14 +4686,16 @@ async function importarDoRedmine(){
       'Importar do Redmine',
       '<div style="font-size:13px;margin-bottom:10px"><strong>'+novas.length+'</strong> tarefa(s) disponível(is) para importar:</div>'+
       '<div style="max-height:200px;overflow-y:auto;border:1px solid var(--border2);border-radius:var(--radius);padding:4px 0">'+
-      novas.map(function(iss){return'<div style="font-size:12px;padding:6px 10px;border-bottom:1px solid var(--border2)">'+
-        '<span style="color:var(--muted);font-family:var(--mono);margin-right:6px">#'+iss.id+'</span>'+
-        escHtml(iss.subject)+
-        (iss.project?'<span style="color:var(--hint);font-size:11px;margin-left:6px">'+escHtml(iss.project.name)+'</span>':'')+
-        '</div>'}).join('')+
+      novas.map(function(iss){
+        return'<div style="font-size:12px;padding:6px 10px;border-bottom:1px solid var(--border2)">'+
+          (iss.tracker?'<span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:rgba(59,130,246,.12);color:#3b82f6;margin-right:6px">'+escHtml(iss.tracker.name)+'</span>':'')+
+          '<span style="color:var(--muted);font-family:var(--mono);margin-right:6px">#'+iss.id+'</span>'+
+          escHtml(iss.subject)+
+          (iss.parent?'<span style="color:var(--hint);font-size:11px;margin-left:6px">(Pai: #'+iss.parent.id+')</span>':'')+
+        '</div>';
+      }).join('')+
       '</div>',
-      'Importar tudo',
-      'btn-primary'
+      'Importar tudo','btn-primary'
     );
     if(!ok)return;
     var count=0;
@@ -4701,17 +4706,19 @@ async function importarDoRedmine(){
         num:String(iss.id),titulo:iss.subject||'',
         produto:iss.project?iss.project.name:'',
         atribuicao:iss.assigned_to?iss.assigned_to.name:'',
-        obs:iss.description||'',status:'backlog',link:'',entregas:{},
-        createdBy:CURRENT_USER.id
+        obs:iss.description||'',status:'afazer',link:'',entregas:{},
+        createdBy:CURRENT_USER.id,
+        tipoRedmine:iss.tracker?iss.tracker.name:'',
+        paiRedmine:iss.parent?String(iss.parent.id):''
       };
       await dbSalvarOS(novaOS);
       S.oss.push(novaOS);
       count++;
     }
     renderKanban();
-    toast(count+' OS(s) importada(s) do Redmine ✓');
+    toast(count+' card(s) importado(s) do Redmine ✓');
   }catch(e){
-    toast('Erro: '+e.message,'err');
+    toast('Erro ao conectar ao Redmine: '+e.message,'err');
   }
 }
 
