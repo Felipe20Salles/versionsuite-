@@ -1818,7 +1818,16 @@ function renderKanban(){
   }).join('');
 }
 
-function moveOS(osId,newStatus){var os=S.oss.find(function(o){return o.id===osId});if(!os)return;os.status=newStatus;save();renderKanban();renderDash();toast('Movido: '+statusLabel(newStatus))}
+function moveOS(osId,newStatus){
+  var os=S.oss.find(function(o){return o.id===osId});
+  if(!os)return;
+  os.status=newStatus;
+  save();
+  renderKanban();
+  renderDash();
+  toast('Movido: '+statusLabel(newStatus));
+  sincronizarStatusRedmine(os,newStatus);
+}
 function deleteOS(osId){if(!confirm('Remover esta OS?'))return;S.oss=S.oss.filter(function(o){return o.id!==osId});S.pontos.forEach(function(p){p.apropriacoes=(p.apropriacoes||[]).filter(function(a){return a.osId!==osId})});save();renderKanban();renderDash();toast('OS removida')}
 function goAprop(osId){S._focusApropOS=osId;goScreen('ponto');setTimeout(function(){setPontoTabById('tab-aprop')},60)}
 
@@ -4551,6 +4560,21 @@ async function loadRedmineStatuses(){
     toast('Status carregados ✓');
   }catch(e){
     toast('Erro ao carregar status: '+e.message,'err');
+  }
+}
+async function sincronizarStatusRedmine(os,novoStatus){
+  var cfg=getRedmineConfig();
+  if(!cfg.proxy||!cfg.proxyUrl)return;
+  if(!os.num||isNaN(parseInt(os.num,10)))return;
+  var map=getRedmineStatusMap();
+  var statusId=map[novoStatus];
+  if(!statusId)return;
+  try{
+    var r=await _redmineFetch(cfg,'/issues/'+os.num+'.json','PUT',{issue:{status_id:statusId}});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    toast('Redmine atualizado ✓');
+  }catch(e){
+    toast('Falha ao atualizar Redmine ✗','err');
   }
 }
 
