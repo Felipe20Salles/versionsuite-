@@ -249,6 +249,20 @@ textarea.form-input{resize:vertical;min-height:70px}
 .pref-flow-label{font-size:13px;font-weight:500}
 .pref-flow-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .pref-time-input{width:70px;padding:5px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text);text-align:center}
+
+/* ── SINO ── */
+@keyframes bell-ring{0%{transform:rotate(0)}10%{transform:rotate(15deg)}20%{transform:rotate(-12deg)}30%{transform:rotate(10deg)}40%{transform:rotate(-8deg)}50%{transform:rotate(5deg)}70%{transform:rotate(-2deg)}100%{transform:rotate(0)}}
+.bell-wrap{position:relative;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background .15s}
+.bell-wrap:hover{background:var(--card2)}
+.bell-icon{font-size:16px;display:inline-block;color:var(--muted);transform-origin:top center}
+.bell-icon.ringing{animation:bell-ring .9s ease infinite}
+.bell-badge{position:absolute;top:2px;right:2px;min-width:14px;height:14px;padding:0 3px;background:#f59e0b;border-radius:7px;border:1.5px solid var(--bg);font-size:9px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;line-height:1}
+.bell-dropdown{position:absolute;top:calc(100% + 8px);right:0;width:320px;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:500;overflow:hidden;font-family:var(--font)}
+.bell-dd-header{padding:10px 14px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.bell-dd-item{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;line-height:1.5;color:var(--text)}
+.bell-dd-item:last-child{border-bottom:none}
+.bell-dd-time{font-size:10px;color:var(--hint);margin-top:2px}
+.bell-dd-empty{padding:20px 14px;font-size:12px;color:var(--hint);text-align:center}
 </style>
 </head>
 <body>
@@ -366,6 +380,19 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div><div class="topbar-title" id="topbar-title">Dashboard</div><div class="topbar-sub" id="topbar-sub"></div></div>
       <div style="display:flex;align-items:center;gap:12px">
         <div class="topbar-actions" id="topbar-actions"></div>
+        <div style="position:relative" id="bell-container">
+          <div class="bell-wrap" onclick="toggleBellDropdown()">
+            <span class="bell-icon" id="bell-icon">🔔</span>
+            <div id="bell-badge" style="display:none" class="bell-badge">0</div>
+          </div>
+          <div class="bell-dropdown" id="bell-dropdown" style="display:none">
+            <div class="bell-dd-header">
+              <span>Notificações</span>
+              <span style="cursor:pointer;font-size:10px;color:var(--accent)" onclick="markAllAlertsRead()">Marcar todas lidas</span>
+            </div>
+            <div id="bell-dd-body"></div>
+          </div>
+        </div>
         <div id="user-badge" style="display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--card2);border-radius:20px;border:1px solid var(--border);cursor:pointer" onclick="confirmarLogout()">
           <img id="user-avatar" style="width:22px;height:22px;border-radius:50%;display:none">
           <span id="user-name" style="font-size:12px;color:var(--muted)">...</span>
@@ -4599,6 +4626,64 @@ function loadSchedulePrefs(){
   if(el('pref-wip-limit'))el('pref-wip-limit').value=s.wipLimit||3;
 }
 
+// ── ALERTAS / SINO (vs_alerts_YYYY-MM-DD) ────────────────────────────────────
+var _alertsKey=function(){return'vs_alerts_'+new Date().toISOString().slice(0,10)};
+function getAlerts(){try{return JSON.parse(localStorage.getItem(_alertsKey()))||[]}catch(e){return[]}}
+function saveAlerts(arr){localStorage.setItem(_alertsKey(),JSON.stringify(arr))}
+
+function toggleBellDropdown(){
+  var dd=document.getElementById('bell-dropdown');
+  if(dd.style.display==='none'){
+    dd.style.display='block';
+    renderBellDropdown();
+    markAllAlertsRead();
+  }else{
+    dd.style.display='none';
+  }
+}
+
+function renderBellDropdown(){
+  var alerts=getAlerts();
+  var body=document.getElementById('bell-dd-body');
+  if(!body)return;
+  if(alerts.length===0){body.innerHTML='<div class="bell-dd-empty">Nenhuma notificação hoje.</div>';return}
+  body.innerHTML=alerts.slice().reverse().map(function(a){
+    return'<div class="bell-dd-item"><div>'+a.message+'</div><div class="bell-dd-time">'+a.firedAt.slice(11,16)+'</div></div>';
+  }).join('');
+}
+
+function markAllAlertsRead(){
+  var alerts=getAlerts();
+  var now=new Date().toISOString();
+  alerts=alerts.map(function(a){return Object.assign({},a,{readAt:a.readAt||now})});
+  saveAlerts(alerts);
+  updateBellUI();
+}
+
+function updateBellUI(){
+  var alerts=getAlerts();
+  var unread=alerts.filter(function(a){return!a.readAt}).length;
+  var icon=document.getElementById('bell-icon');
+  var badge=document.getElementById('bell-badge');
+  if(!icon||!badge)return;
+  if(unread>0){
+    icon.classList.add('ringing');
+    badge.style.display='flex';
+    badge.textContent=unread>9?'9+':unread;
+  }else{
+    icon.classList.remove('ringing');
+    badge.style.display='none';
+  }
+}
+
+function fireAlert(type,message){
+  var alerts=getAlerts();
+  if(alerts.some(function(a){return a.type===type}))return; // already fired today
+  alerts.push({type:type,message:message,firedAt:new Date().toISOString(),readAt:null});
+  saveAlerts(alerts);
+  updateBellUI();
+}
+
 function renderTipoAtividades(){
   var arr=getTipoAtividades();
   var el=document.getElementById('tipo-atividade-list');if(!el)return;
@@ -5338,6 +5423,14 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     }
   });
 })();
+
+document.addEventListener('click',function(e){
+  var bc=document.getElementById('bell-container');
+  if(bc&&!bc.contains(e.target)){
+    var dd=document.getElementById('bell-dropdown');
+    if(dd)dd.style.display='none';
+  }
+});
 </script>
 <!-- Paralelo SDK -->
 <script>
