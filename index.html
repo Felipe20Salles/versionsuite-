@@ -750,6 +750,19 @@ textarea.form-input{resize:vertical;min-height:70px}
   <div style="font-size:11px;color:var(--hint);margin-top:10px;line-height:1.6">
     Para iniciar o proxy: copie <code style="background:var(--card2);padding:1px 5px;border-radius:4px">redmine.env.example</code> para <code style="background:var(--card2);padding:1px 5px;border-radius:4px">.env</code>, preencha as variáveis e rode <code style="background:var(--card2);padding:1px 5px;border-radius:4px">node redmine-proxy.js</code>.
   </div>
+  <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+    <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px">Mapeamento de Status</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">Ao mover um card no Kanban, o status da issue no Redmine é atualizado automaticamente.</div>
+    <button class="btn btn-sm btn-ghost" onclick="loadRedmineStatuses()" style="margin-bottom:12px">🔄 Carregar status disponíveis</button>
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;max-width:400px">
+      <label style="font-size:12px;color:var(--muted)">A fazer →</label>
+      <select id="pref-redmine-status-afazer" class="form-input" style="font-size:12px;padding:4px 8px" onchange="saveRedmineStatusMapFromInputs()"><option value="">— selecione —</option></select>
+      <label style="font-size:12px;color:var(--muted)">Em andamento →</label>
+      <select id="pref-redmine-status-andamento" class="form-input" style="font-size:12px;padding:4px 8px" onchange="saveRedmineStatusMapFromInputs()"><option value="">— selecione —</option></select>
+      <label style="font-size:12px;color:var(--muted)">Concluído →</label>
+      <select id="pref-redmine-status-concluido" class="form-input" style="font-size:12px;padding:4px 8px" onchange="saveRedmineStatusMapFromInputs()"><option value="">— selecione —</option></select>
+    </div>
+  </div>
 </div>
 
           <div class="pref-section" id="pref-section-zendesk">
@@ -4478,6 +4491,11 @@ function renderRedmineConfig(){
   if(a)a.value=cfg.actId||'';
   if(p)p.checked=!!(cfg.proxy);
   _redmineUpdateButtons(!!(cfg.proxyUrl&&cfg.proxy));
+  var map=getRedmineStatusMap();
+  ['afazer','andamento','concluido'].forEach(function(k){
+    var sel=document.getElementById('pref-redmine-status-'+k);
+    if(sel&&map[k])sel.value=String(map[k]);
+  });
 }
 async function _redmineFetch(cfg,path,method,body){
   var proxyUrl=(cfg.proxyUrl||'http://localhost:3001').replace(/\/+$/,'');
@@ -4497,6 +4515,42 @@ async function testRedmineConexao(){
     toast('Conectado como '+d.user.login+' ✓');
   }catch(e){
     toast('Erro ao conectar: '+e.message+' (verifique se o proxy está rodando)','err');
+  }
+}
+function getRedmineStatusMap(){
+  try{return JSON.parse(localStorage.getItem('vs_redmine_status_map'))||{}}catch(e){return{}}
+}
+function saveRedmineStatusMap(map){localStorage.setItem('vs_redmine_status_map',JSON.stringify(map))}
+function saveRedmineStatusMapFromInputs(){
+  var map={};
+  var sa=document.getElementById('pref-redmine-status-afazer');
+  var san=document.getElementById('pref-redmine-status-andamento');
+  var sc=document.getElementById('pref-redmine-status-concluido');
+  if(sa&&sa.value)map.afazer=parseInt(sa.value);
+  if(san&&san.value)map.andamento=parseInt(san.value);
+  if(sc&&sc.value)map.concluido=parseInt(sc.value);
+  saveRedmineStatusMap(map);
+}
+async function loadRedmineStatuses(){
+  var cfg=getRedmineConfig();
+  if(!cfg.proxyUrl||!cfg.proxy){toast('Ative o proxy Redmine primeiro','err');return}
+  try{
+    var r=await _redmineFetch(cfg,'/issue_statuses.json','GET');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    var statuses=d.issue_statuses||[];
+    var map=getRedmineStatusMap();
+    var opts='<option value="">— selecione —</option>'+
+      statuses.map(function(s){return'<option value="'+s.id+'">'+escHtml(s.name)+'</option>'}).join('');
+    ['afazer','andamento','concluido'].forEach(function(k){
+      var sel=document.getElementById('pref-redmine-status-'+k);
+      if(!sel)return;
+      sel.innerHTML=opts;
+      if(map[k])sel.value=String(map[k]);
+    });
+    toast('Status carregados ✓');
+  }catch(e){
+    toast('Erro ao carregar status: '+e.message,'err');
   }
 }
 
