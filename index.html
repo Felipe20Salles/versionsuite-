@@ -1723,6 +1723,17 @@ function statusLabel(k){return{afazer:'A fazer',andamento:'Em andamento',conclui
 function statusNext(k){return{afazer:'andamento',andamento:'concluido',concluido:null}[k]}
 function statusPrev(k){return{afazer:null,andamento:'afazer',concluido:'andamento'}[k]}
 
+function badgeTipoRedmine(tipo){
+  var cores={
+    'Melhoria':'background:rgba(59,130,246,.15);color:#3b82f6',
+    'Correção':'background:rgba(239,68,68,.12);color:#ef4444',
+    'Suporte':'background:rgba(245,158,11,.15);color:#f59e0b',
+    'Demandas Internas':'background:rgba(124,111,247,.15);color:#7c6ff7'
+  };
+  var style=cores[tipo]||'background:var(--card2);color:var(--hint)';
+  return'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;'+style+'">'+escHtml(tipo)+'</span>';
+}
+
 function renderKanban(){
   // Popular select "Atribuído a:"
   var atribSel=document.getElementById('kanban-atrib-sel');
@@ -1764,7 +1775,7 @@ function renderKanban(){
       var canDel=can('os_deletar_propria')&&os.createdBy===CURRENT_USER.id;
       return'<div class="os-card'+(isIncompleta?' os-incompleta':'')+'">'+
         '<div class="os-card-body">'+
-          '<div class="os-num">OS '+os.num+
+          '<div class="os-num">Card '+os.num+
             ' <span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.08);color:'+clf.color+'" title="'+clf.title+'">'+clf.label+'</span>'+
             (os.link?' <a href="'+os.link+'" target="_blank" style="color:var(--accent);text-decoration:none;font-size:10px" onclick="event.stopPropagation()">↗</a>':'')+
           '</div>'+
@@ -1772,6 +1783,7 @@ function renderKanban(){
           '<div style="display:flex;align-items:center;justify-content:space-between">'+
             '<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'+
               '<span class="badge '+(linha==='Gestão de Talentos'?'tag-gt':'tag-pag')+'">'+os.produto+'</span>'+
+              (os.tipoRedmine?badgeTipoRedmine(os.tipoRedmine):'')+
               (os.atribuicao?badgeAtribuicao(os.atribuicao):'')+
             '</div>'+
             (h>0?'<span class="os-horas-label">'+h.toFixed(1)+'h</span>':'')+
@@ -1788,7 +1800,7 @@ function renderKanban(){
           (prevBtn||nextBtn?'<div class="os-action-row">'+prevBtn+nextBtn+'</div>':'')+
         '</div>'+
       '</div>';
-    }).join(''):'<div class="empty-col">Nenhuma OS</div>';
+    }).join(''):'<div class="empty-col">Nenhum card</div>';
     return'<div><div class="kanban-col-header"><span class="kanban-col-title">'+statusLabel(k)+'</span><span class="kanban-col-count">'+items.length+'</span></div><div class="kanban-col-body">'+cards+'</div></div>';
   }).join('');
 }
