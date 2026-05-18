@@ -4106,6 +4106,7 @@ function confirmarLogout(){
     return;
   }
   if(!confirm('Sair da VersionSuite?'))return;
+  closeFocusSession(getFocusState());clearInterval(_focusInterval);_focusInterval=null;
   sb.auth.signOut().then(function(){mostrarLogin()});
 }
 function mostrarLogin(msg){
@@ -4934,6 +4935,7 @@ function updateFocusUI(){
 
 function toggleFocoDropdown(){
   var dd=document.getElementById('foco-dropdown');
+  if(!dd)return;
   if(dd.style.display==='none'){dd.style.display='block';renderFocoDropdown();}
   else{dd.style.display='none';}
 }
