@@ -4534,10 +4534,38 @@ function deleteOS(osId){
 
 function moveOS(osId,newStatus){
   var os=S.oss.find(function(o){return o.id===osId});if(!os)return;
+  if(newStatus==='andamento'){
+    var s=getSchedule();
+    var wipLimit=s.wipLimit||3;
+    var emAndamento=S.oss.filter(function(o){return o.status==='andamento'&&o.id!==osId});
+    if(emAndamento.length>=wipLimit){showWipModal(osId,newStatus,emAndamento,wipLimit);return;}
+  }
+  _doMoveOS(osId,newStatus);
+}
+
+function _doMoveOS(osId,newStatus){
+  var os=S.oss.find(function(o){return o.id===osId});if(!os)return;
   dbMoverOS(osId,newStatus).then(function(){
     os.status=newStatus;renderKanban();renderDash();toast('Movido: '+statusLabel(newStatus));
     sincronizarStatusRedmine(os,newStatus);
   }).catch(function(e){toast('Erro: '+e.message,'err')});
+}
+
+function showWipModal(osId,newStatus,emAndamento,wipLimit){
+  var msg=document.getElementById('wip-message');
+  var list=document.getElementById('wip-list');
+  var forceBtn=document.getElementById('wip-force-btn');
+  if(msg)msg.innerHTML='Você já tem <strong style="color:var(--red-text)">'+emAndamento.length+' OSs em andamento</strong>. Conclua uma antes de iniciar outra — ou force o movimento se for urgente.';
+  if(list)list.innerHTML=emAndamento.map(function(o){
+    var porte=osPorteFromHours(o.estimatedHours||0);
+    return'<div style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:9px 12px">'
+      +'<span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px">'+porte.label+'</span>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#'+escHtml(String(o.num))+' · '+escHtml(o.titulo)+'</div></div>'
+      +'<button onclick="closeModal(\'modal-wip\');_doMoveOS(\''+o.id+'\',\'concluido\')" style="font-size:11px;padding:4px 10px;background:rgba(16,185,129,.1);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:5px;cursor:pointer">Concluir</button>'
+      +'</div>';
+  }).join('');
+  if(forceBtn)forceBtn.onclick=function(){closeModal('modal-wip');_doMoveOS(osId,newStatus)};
+  openModal('modal-wip');
 }
 
 function toggleE(osId,key){
@@ -5916,6 +5944,24 @@ var __paralelo_config = {
         <button class="btn" onclick="closeModal('modal-dayplan')">Depois</button>
         <button class="btn btn-primary" onclick="confirmDayPlan()">Começar o dia →</button>
       </div>
+    </div>
+  </div>
+</div>
+<!-- MODAL WIP LIMIT -->
+<div class="modal-overlay" id="modal-wip" style="z-index:450">
+  <div class="modal" style="max-width:440px">
+    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px">
+      <span style="font-size:24px">⚠️</span>
+      <div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:4px">Limite WIP atingido</div>
+        <div id="wip-message" style="font-size:12px;color:var(--muted);line-height:1.5"></div>
+      </div>
+    </div>
+    <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Em andamento agora</div>
+    <div id="wip-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn" onclick="closeModal('modal-wip')">Cancelar</button>
+      <button class="btn" style="color:var(--red-text);border-color:rgba(239,68,68,.3)" id="wip-force-btn">Forçar mesmo assim</button>
     </div>
   </div>
 </div>
