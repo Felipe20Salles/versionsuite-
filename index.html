@@ -281,6 +281,31 @@ textarea.form-input{resize:vertical;min-height:70px}
 .dayplan-os-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .dayplan-h-input{width:60px;padding:4px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text);text-align:center}
 .dayplan-total{font-size:22px;font-weight:700;font-family:var(--mono);padding:0 16px}
+/* ── FOCO / TIMER ── */
+@keyframes dot-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+.foco-pill{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:5px 12px 5px 10px;cursor:pointer;transition:border-color .15s;max-width:280px;min-width:160px;position:relative}
+.foco-pill:hover{border-color:var(--accent)}
+.foco-pill.foco-active{border-color:#10b981}
+.foco-pill.foco-paused{border-color:#f59e0b}
+.foco-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.foco-dot.active{background:#10b981;animation:dot-pulse 1.4s ease infinite}
+.foco-dot.paused{background:#f59e0b}
+.foco-dot.idle{background:var(--border2)}
+.foco-info{flex:1;min-width:0}
+.foco-os-label{font-size:11px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foco-timer-label{font-size:11px;font-family:var(--mono);color:#10b981;font-weight:600}
+.foco-timer-label.paused{color:#f59e0b}
+.foco-empty-label{font-size:12px;color:var(--hint);white-space:nowrap}
+/* dropdown de foco */
+.foco-dropdown{position:absolute;top:calc(100% + 8px);left:0;min-width:300px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:500;overflow:hidden}
+.foco-dd-section{padding:8px 12px;font-size:10px;font-weight:600;color:var(--hint);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border)}
+.foco-dd-row{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;transition:background .1s}
+.foco-dd-row:hover{background:var(--card2)}
+.foco-dd-row.current-row{background:rgba(16,185,129,.06);border-left:2px solid #10b981}
+.foco-dd-actions{display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--border)}
+.foco-dd-btn{flex:1;font-size:11px;padding:6px;border-radius:6px;cursor:pointer;font-weight:500;border:1px solid var(--border2);background:none;color:var(--muted);font-family:var(--font)}
+.foco-dd-btn:hover{background:var(--card2)}
+.foco-dd-btn.success{color:#10b981;border-color:rgba(16,185,129,.3)}
 </style>
 </head>
 <body>
@@ -398,6 +423,16 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div><div class="topbar-title" id="topbar-title">Dashboard</div><div class="topbar-sub" id="topbar-sub"></div></div>
       <div style="display:flex;align-items:center;gap:12px">
         <div class="topbar-actions" id="topbar-actions"></div>
+        <div style="position:relative;flex:1;max-width:300px" id="foco-container">
+          <div class="foco-pill" id="foco-pill" onclick="toggleFocoDropdown()">
+            <div class="foco-dot idle" id="foco-dot"></div>
+            <div class="foco-info">
+              <div id="foco-label"><span class="foco-empty-label">▶ Nenhuma OS em foco</span></div>
+            </div>
+            <span style="font-size:10px;color:var(--hint)">▾</span>
+          </div>
+          <div class="foco-dropdown" id="foco-dropdown" style="display:none"></div>
+        </div>
         <div style="position:relative" id="bell-container">
           <div class="bell-wrap" onclick="toggleBellDropdown()">
             <span class="bell-icon" id="bell-icon">🔔</span>
@@ -1676,6 +1711,7 @@ var S={versoes:[],oss:[],pontos:[],pontosEquipe:[],publicacoes:[],filtro:'todos'
 var _agendaMes=new Date().getMonth(),_agendaAno=new Date().getFullYear(),_agendaFiltro='todos';
 var _dashEquipe={periodoOffset:0,equipeId:'todas',pessoaId:'todas'};
 var _editingPub=null,_editingVersao=null,_xlsxData=null,_apropState={};
+var _focusInterval=null;
 
 function uid(){
   return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){
@@ -4788,6 +4824,170 @@ function recalcVelocityFactor(){
   localStorage.setItem('vs_velocity_factor',factor);
 }
 
+// ── FOCO / TIMER ─────────────────────────────────────────────────────────────
+function getFocusState(){try{return JSON.parse(localStorage.getItem('vs_focus_state'))||null}catch(e){return null}}
+function saveFocusState(st){
+  if(st)localStorage.setItem('vs_focus_state',JSON.stringify(st));
+  else localStorage.removeItem('vs_focus_state');
+}
+function getTodayLog(){var k='vs_time_log_'+new Date().toISOString().slice(0,10);try{return JSON.parse(localStorage.getItem(k))||[]}catch(e){return[]}}
+function saveTodayLog(log){localStorage.setItem('vs_time_log_'+new Date().toISOString().slice(0,10),JSON.stringify(log))}
+
+function focusAccumulatedToday(osId){
+  var log=getTodayLog();
+  return log.filter(function(s){return s.osId===osId}).reduce(function(acc,s){return acc+(s.duration||0)},0);
+}
+
+function startFocus(osId){
+  var st=getFocusState();
+  if(st&&st.osId===osId&&!st.pausedAt)return;
+  if(st&&!st.pausedAt)closeFocusSession(st);
+  var now=Date.now();
+  var accumulated=focusAccumulatedToday(osId);
+  var newSt={osId:osId,startedAt:now,pausedAt:null,accumulated:accumulated};
+  saveFocusState(newSt);
+  updateFocusUI();
+  closeFocoDropdown();
+}
+
+function pauseFocus(){
+  var st=getFocusState();if(!st||st.pausedAt)return;
+  closeFocusSession(st);
+  var accumulated=focusAccumulatedToday(st.osId);
+  var paused={osId:st.osId,startedAt:null,pausedAt:Date.now(),accumulated:accumulated};
+  saveFocusState(paused);
+  updateFocusUI();
+  closeFocoDropdown();
+}
+
+function resumeFocus(){
+  var st=getFocusState();if(!st||!st.pausedAt)return;
+  var now=Date.now();
+  var newSt={osId:st.osId,startedAt:now,pausedAt:null,accumulated:st.accumulated};
+  saveFocusState(newSt);
+  updateFocusUI();
+}
+
+function closeFocusSession(st){
+  if(!st||!st.startedAt)return;
+  var dur=Math.floor((Date.now()-st.startedAt)/1000);
+  if(dur<10)return;
+  var log=getTodayLog();
+  log.push({osId:st.osId,start:st.startedAt,end:Date.now(),duration:dur});
+  saveTodayLog(log);
+}
+
+function concludeOS(osId){
+  var st=getFocusState();
+  if(st&&st.osId===osId&&!st.pausedAt)closeFocusSession(st);
+  saveFocusState(null);
+  moveOS(osId,'concluido');
+  updateFocusUI();
+  closeFocoDropdown();
+}
+
+function formatFocusTime(seconds){
+  var h=Math.floor(seconds/3600);
+  var m=Math.floor((seconds%3600)/60);
+  return h>0?(h+'h'+m.toString().padStart(2,'0')+'m'):(m+'m');
+}
+
+function updateFocusUI(){
+  var st=getFocusState();
+  var pill=document.getElementById('foco-pill');
+  var dot=document.getElementById('foco-dot');
+  var label=document.getElementById('foco-label');
+  if(!pill||!dot||!label)return;
+
+  if(!st){
+    pill.className='foco-pill';
+    dot.className='foco-dot idle';
+    label.innerHTML='<span class="foco-empty-label">▶ Nenhuma OS em foco</span>';
+    clearInterval(_focusInterval);_focusInterval=null;
+    return;
+  }
+  var os=S.oss.find(function(o){return o.id===st.osId});
+  var osTitle=os?('#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)):'OS desconhecida';
+
+  if(st.pausedAt){
+    pill.className='foco-pill foco-paused';
+    dot.className='foco-dot paused';
+    var acc=focusAccumulatedToday(st.osId);
+    label.innerHTML='<div class="foco-os-label">'+osTitle+'</div>'
+      +'<div class="foco-timer-label paused">pausado · '+formatFocusTime(acc)+'</div>';
+    clearInterval(_focusInterval);_focusInterval=null;
+  }else{
+    pill.className='foco-pill foco-active';
+    dot.className='foco-dot active';
+    clearInterval(_focusInterval);
+    _focusInterval=setInterval(function(){
+      var elapsed=Math.floor((Date.now()-st.startedAt)/1000);
+      var acc=st.accumulated+elapsed;
+      var timerEl=label.querySelector('.foco-timer-label');
+      if(timerEl)timerEl.textContent=formatFocusTime(acc)+' nesta sessão';
+    },1000);
+    var initAcc=st.accumulated;
+    label.innerHTML='<div class="foco-os-label">'+osTitle+'</div>'
+      +'<div class="foco-timer-label">'+formatFocusTime(initAcc)+'</div>';
+  }
+}
+
+function toggleFocoDropdown(){
+  var dd=document.getElementById('foco-dropdown');
+  if(dd.style.display==='none'){dd.style.display='block';renderFocoDropdown();}
+  else{dd.style.display='none';}
+}
+function closeFocoDropdown(){var dd=document.getElementById('foco-dropdown');if(dd)dd.style.display='none';}
+
+function renderFocoDropdown(){
+  var st=getFocusState();
+  var planKey=getDayKey();
+  var plan=null;try{plan=JSON.parse(localStorage.getItem(planKey))}catch(e){}
+  var planOsIds=(plan&&plan.entries)?plan.entries.map(function(e){return e.osId}):[];
+  var planOss=S.oss.filter(function(o){return planOsIds.indexOf(o.id)>-1});
+
+  var html='';
+  if(st){
+    var curOs=S.oss.find(function(o){return o.id===st.osId});
+    var acc=focusAccumulatedToday(st.osId);
+    html+='<div class="foco-dd-section">Foco atual</div>';
+    html+='<div class="foco-dd-row current-row">'
+      +'<div class="foco-dot '+(st.pausedAt?'paused':'active')+'"></div>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(curOs?'#'+escHtml(String(curOs.num))+' · '+escHtml(curOs.titulo):'—')+'</div>'
+      +'<div style="font-size:10px;color:var(--muted)">'+formatFocusTime(acc)+' hoje</div></div></div>';
+    var others=planOss.filter(function(o){return o.id!==st.osId});
+    if(others.length){
+      html+='<div class="foco-dd-section">Trocar para</div>';
+      others.forEach(function(os){
+        var porte=osPorteFromHours(os.estimatedHours||0);
+        html+='<div class="foco-dd-row" onclick="startFocus(\''+os.id+'\')">'
+          +'<div style="width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0"></div>'
+          +'<span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px">'+porte.label+'</span>'
+          +'<div style="flex:1;min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)+'</div>'
+          +'<span style="font-size:11px;font-family:var(--mono);color:var(--muted)">'+formatFocusTime(focusAccumulatedToday(os.id))+'</span></div>';
+      });
+    }
+    html+='<div class="foco-dd-actions">'
+      +(st.pausedAt
+        ?'<button class="foco-dd-btn success" onclick="resumeFocus()">▶ Retomar</button>'
+        :'<button class="foco-dd-btn" onclick="pauseFocus()">⏸ Pausar</button>')
+      +'<button class="foco-dd-btn success" onclick="concludeOS(\''+st.osId+'\')">✓ Concluir OS</button></div>';
+  }else{
+    if(planOss.length){
+      html+='<div class="foco-dd-section">OSs do plano de hoje</div>';
+      planOss.forEach(function(os){
+        var porte=osPorteFromHours(os.estimatedHours||0);
+        html+='<div class="foco-dd-row" onclick="startFocus(\''+os.id+'\')">'
+          +'<span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px">'+porte.label+'</span>'
+          +'<div style="flex:1;min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)+'</div></div>';
+      });
+    }else{
+      html+='<div style="padding:16px 12px;font-size:12px;color:var(--hint)">Nenhuma OS no plano de hoje. Crie um planejamento primeiro.</div>';
+    }
+  }
+  document.getElementById('foco-dropdown').innerHTML=html;
+}
+
 function setPesoValue(h){
   var n=parseFloat(h)||2;
   var sliderEl=document.getElementById('os-horas-slider');
@@ -5574,6 +5774,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       updateUserBadge(CURRENT_USER);
       mostrarApp();
       updateBellUI();
+      updateFocusUI();
       renderDash();
       return;
     }else{sessionStorage.removeItem('vs_visitor_session');}
@@ -5593,6 +5794,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
     mostrarApp();
     updateBellUI();
+    updateFocusUI();
     setInterval(checkAlerts,60000);
     renderDash();
     // ── Paralelo ──────────────────────────────────────────
@@ -5627,6 +5829,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
       mostrarApp();
       updateBellUI();
+      updateFocusUI();
       renderDash();
       // ── Paralelo ────────────────────────────────────────
       if (typeof Paralelo !== 'undefined') {
@@ -5665,6 +5868,8 @@ document.addEventListener('click',function(e){
     var dd=document.getElementById('bell-dropdown');
     if(dd)dd.style.display='none';
   }
+  var fc=document.getElementById('foco-container');
+  if(fc&&!fc.contains(e.target)){closeFocoDropdown();}
 });
 document.addEventListener('keydown',function(){if(typeof touchActivity==='function')touchActivity()});
 </script>
