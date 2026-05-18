@@ -272,6 +272,15 @@ textarea.form-input{resize:vertical;min-height:70px}
 .peso-badge-grande{background:rgba(245,158,11,.15);color:#f59e0b;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
 .peso-badge-normal{background:rgba(96,165,250,.15);color:#60a5fa;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
 .peso-badge-rapida{background:rgba(16,185,129,.15);color:#10b981;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
+/* ── PLANEJAMENTO DO DIA ── */
+.dayplan-os-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.dayplan-os-row:last-child{border-bottom:none}
+.dayplan-os-check{width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;cursor:pointer}
+.dayplan-os-info{flex:1;min-width:0}
+.dayplan-os-title{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dayplan-os-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.dayplan-h-input{width:60px;padding:4px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text);text-align:center}
+.dayplan-total{font-size:22px;font-weight:700;font-family:var(--mono);padding:0 16px}
 </style>
 </head>
 <body>
@@ -4664,6 +4673,121 @@ function onPesoInputChange(v){
   updatePesoBadge(n);
 }
 
+// ── PLANEJAMENTO DO DIA ───────────────────────────────────────────────────────
+function getDayKey(){return'vs_dayplan_'+new Date().toISOString().slice(0,10)}
+
+function getDayPlan(){
+  try{return JSON.parse(localStorage.getItem(getDayKey()))||null}catch(e){return null}
+}
+
+function openDayPlanModal(){
+  var plan=getDayPlan();
+  if(plan&&plan.confirmedAt)return; // já confirmado hoje
+  var now=new Date();
+  var dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
+  var meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+  var greetEl=document.getElementById('dayplan-greeting');
+  var dateEl=document.getElementById('dayplan-date');
+  var h=now.getHours();
+  var greeting=h<12?'Bom dia 👋':h<18?'Boa tarde 👋':'Boa noite 👋';
+  if(greetEl)greetEl.textContent=greeting+(CURRENT_USER&&CURRENT_USER.user_metadata&&CURRENT_USER.user_metadata.full_name?', '+(CURRENT_USER.user_metadata.full_name.split(' ')[0]):'')+'!';
+  if(dateEl)dateEl.textContent=dias[now.getDay()]+', '+now.getDate()+' de '+meses[now.getMonth()]+' de '+now.getFullYear();
+
+  var vf=getVelocityFactor();
+  var andamento=S.oss.filter(function(o){return o.status==='andamento'});
+  // Prioridade: porte (epico > grande > normal > rapida)
+  var ordemPorte={epico:0,grande:1,normal:2,rapida:3};
+  andamento.sort(function(a,b){
+    var pa=osPorteFromHours(a.estimatedHours||0).key;
+    var pb=osPorteFromHours(b.estimatedHours||0).key;
+    return(ordemPorte[pa]||2)-(ordemPorte[pb]||2);
+  });
+
+  var savedEntries=(plan&&plan.entries)||[];
+  var list=document.getElementById('dayplan-os-list');
+  if(!list)return;
+  list.innerHTML=andamento.length===0
+    ?'<div style="text-align:center;padding:24px;font-size:12px;color:var(--hint)">Nenhuma OS em andamento. Inicie uma OS no Kanban primeiro.</div>'
+    :andamento.map(function(os){
+      var saved=savedEntries.find(function(e){return e.osId===os.id});
+      var suggestedH=saved?saved.plannedHours:Math.round(((os.estimatedHours||2)/vf)*2)/2;
+      var checked=saved?true:false;
+      var porte=osPorteFromHours(os.estimatedHours||0);
+      return'<div class="dayplan-os-row" id="dayplan-row-'+os.id+'">'
+        +'<input type="checkbox" class="dayplan-os-check" id="dayplan-chk-'+os.id+'" '+(checked?'checked':'')
+        +' onchange="updateDayPlanTotal()">'
+        +'<div class="dayplan-os-info">'
+        +'<div class="dayplan-os-title"><span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px;margin-right:6px">'+porte.label+'</span>#'+os.num+' · '+os.titulo+'</div>'
+        +'<div class="dayplan-os-sub">Estimativa: '+os.estimatedHours+'h</div>'
+        +'</div>'
+        +'<input class="dayplan-h-input" type="number" min="0.5" step="0.5" value="'+suggestedH
+        +'" id="dayplan-h-'+os.id+'" oninput="updateDayPlanTotal()">'
+        +'<span style="font-size:12px;color:var(--muted)">h</span>'
+        +'</div>';
+    }).join('');
+
+  updateDayPlanTotal();
+  openModal('modal-dayplan');
+}
+
+function updateDayPlanTotal(){
+  var total=0;
+  var andamento=S.oss.filter(function(o){return o.status==='andamento'});
+  andamento.forEach(function(os){
+    var chk=document.getElementById('dayplan-chk-'+os.id);
+    var inp=document.getElementById('dayplan-h-'+os.id);
+    if(chk&&chk.checked&&inp)total+=parseFloat(inp.value)||0;
+  });
+  var s=getSchedule();
+  var carga=s.cargaDiaria||8;
+  var totalEl=document.getElementById('dayplan-total');
+  var statusEl=document.getElementById('dayplan-total-status');
+  if(totalEl)totalEl.textContent=total+'h';
+  if(statusEl){
+    if(total===0){statusEl.textContent='';totalEl.style.color='var(--muted)';}
+    else if(total<=carga){statusEl.textContent='✓ dentro da carga';totalEl.style.color='var(--green-text)';}
+    else if(total<=carga*1.15){statusEl.textContent='⚠ ligeiramente acima';totalEl.style.color='#f59e0b';}
+    else{statusEl.textContent='✕ acima da capacidade';totalEl.style.color='var(--red-text)';}
+  }
+}
+
+function confirmDayPlan(){
+  var andamento=S.oss.filter(function(o){return o.status==='andamento'});
+  var entries=[];
+  andamento.forEach(function(os){
+    var chk=document.getElementById('dayplan-chk-'+os.id);
+    var inp=document.getElementById('dayplan-h-'+os.id);
+    if(chk&&chk.checked){
+      entries.push({osId:os.id,osTitle:'#'+os.num+' · '+os.titulo,plannedHours:parseFloat(inp.value)||0,actualHours:0,status:'pendente'});
+    }
+  });
+  var plan={createdAt:new Date().toISOString(),confirmedAt:new Date().toISOString(),entries:entries};
+  localStorage.setItem(getDayKey(),JSON.stringify(plan));
+  closeModal('modal-dayplan');
+  toast('Planejamento salvo — bom trabalho!');
+}
+
+function recalcVelocityFactor(){
+  var entries=[];
+  var now=new Date();
+  for(var i=0;i<30;i++){
+    var d=new Date(now);d.setDate(d.getDate()-i);
+    var k='vs_dayresume_'+d.toISOString().slice(0,10);
+    try{
+      var r=JSON.parse(localStorage.getItem(k));
+      if(r&&r.confirmedAt&&Array.isArray(r.entries)){
+        r.entries.forEach(function(e){
+          if(e.plannedHours>0&&e.approvedHours>0)entries.push({planned:e.plannedHours,actual:e.approvedHours});
+        });
+      }
+    }catch(ex){}
+  }
+  if(entries.length<5)return; // mínimo 5 OSs para calcular
+  var sum=entries.reduce(function(acc,e){return acc+e.actual/e.planned},0);
+  var factor=parseFloat((sum/entries.length).toFixed(2));
+  localStorage.setItem('vs_velocity_factor',factor);
+}
+
 function setPesoValue(h){
   var n=parseFloat(h)||2;
   var sliderEl=document.getElementById('os-horas-slider');
@@ -5557,5 +5681,28 @@ var __paralelo_config = {
   .catch(function(e) { console.error('[Paralelo] Falha', e) })
 })()
 </script>
+<!-- MODAL PLANEJAMENTO DO DIA -->
+<div class="modal-overlay" id="modal-dayplan" style="z-index:400">
+  <div class="modal" style="max-width:560px">
+    <div id="dayplan-greeting" style="font-size:18px;font-weight:600;margin-bottom:4px"></div>
+    <div id="dayplan-date" style="font-size:12px;color:var(--muted);margin-bottom:20px"></div>
+    <div class="modal-title" style="margin-bottom:12px">Planejamento do dia</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Selecione as OSs que vai trabalhar hoje e ajuste as horas estimadas.</div>
+    <div id="dayplan-os-list" style="max-height:320px;overflow-y:auto"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+      <div>
+        <div style="font-size:11px;color:var(--muted)">Total planejado</div>
+        <div style="display:flex;align-items:baseline;gap:6px">
+          <span id="dayplan-total" class="dayplan-total" style="color:var(--accent)">0h</span>
+          <span id="dayplan-total-status" style="font-size:11px;color:var(--muted)"></span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeModal('modal-dayplan')">Depois</button>
+        <button class="btn btn-primary" onclick="confirmDayPlan()">Começar o dia →</button>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
 </html>
