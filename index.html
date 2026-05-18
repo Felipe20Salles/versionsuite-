@@ -281,6 +281,14 @@ textarea.form-input{resize:vertical;min-height:70px}
 .dayplan-os-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .dayplan-h-input{width:60px;padding:4px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text);text-align:center}
 .dayplan-total{font-size:22px;font-weight:700;font-family:var(--mono);padding:0 16px}
+/* ── EXPORT REDMINE ── */
+.export-preview-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:1px solid var(--border);font-size:12px}
+.export-preview-row:last-child{border-bottom:none}
+.export-preview-row.row-os{background:rgba(16,185,129,.04)}
+.export-preview-row.row-event{background:rgba(124,111,247,.04)}
+.export-preview-row.row-noos{opacity:.4;text-decoration:line-through}
+.export-col{font-family:var(--mono);color:var(--muted);font-size:11px;flex-shrink:0}
+.export-row-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 /* ── EVENTO PONTUAL ── */
 .agenda-event-pill{display:flex;align-items:center;gap:4px;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:500;background:rgba(124,111,247,.15);border:1px solid rgba(124,111,247,.3);color:#a78bfa;margin-bottom:2px;cursor:pointer;overflow:hidden;white-space:nowrap}
 .agenda-event-pill .ev-time{font-family:var(--mono);font-size:9px;opacity:.8;flex-shrink:0}
@@ -5177,6 +5185,79 @@ function salvarAgendaEvent(){
   toast('Evento salvo');
 }
 
+// ── EXPORTAÇÃO REDMINE ────────────────────────────────────────────────────────
+var _exportRows=[];
+
+function openExportRedmine(){
+  var today=new Date().toISOString().slice(0,10);
+  var dataEl=document.getElementById('dreport-data');if(dataEl)dataEl.value=today;
+  buildExportPreview();
+  openModal('modal-export-redmine');
+}
+
+function buildExportPreview(){
+  var dataEl=document.getElementById('dreport-data');
+  var dateStr=dataEl?dataEl.value:new Date().toISOString().slice(0,10);
+  _exportRows=[];
+  var resumeKey='vs_dayresume_'+dateStr;
+  var resume=null;try{resume=JSON.parse(localStorage.getItem(resumeKey))}catch(e){}
+  if(resume&&Array.isArray(resume.entries)){
+    resume.entries.forEach(function(e){
+      var os=S.oss.find(function(o){return o.id===e.osId});
+      if(!os||!e.approvedHours)return;
+      var tipos=getTipoAtividades();
+      var tipoLabel=os.activityTypeId?(tipos.find(function(t){return t.id===os.activityTypeId})||{name:''}).name:'';
+      _exportRows.push({type:'os',osNum:os.num,date:dateStr,hours:e.approvedHours,activity:tipoLabel});
+    });
+  }
+  getEventsForDate(dateStr).forEach(function(ev){
+    var dur=0;
+    if(ev.startTime&&ev.endTime){dur=parseFloat(((toMin(ev.endTime)-toMin(ev.startTime))/60).toFixed(2))}
+    var tipos=getTipoAtividades();
+    var tipoLabel=ev.activityTypeId?(tipos.find(function(t){return t.id===ev.activityTypeId})||{name:''}).name:'';
+    var osNum=ev.osId?(S.oss.find(function(o){return o.id===ev.osId})||{}).num||'?':null;
+    _exportRows.push({type:ev.osId?'event':'noos',osNum:osNum,date:dateStr,hours:dur,activity:tipoLabel,eventTitle:ev.title});
+  });
+  var previewEl=document.getElementById('dreport-preview');if(!previewEl)return;
+  if(_exportRows.length===0){
+    previewEl.innerHTML='<div style="padding:20px;text-align:center;font-size:12px;color:var(--hint)">Nenhum dado para exportar nesta data.</div>';
+    return;
+  }
+  var html='<div class="export-preview-row" style="background:var(--surface);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px">'
+    +'<div style="width:8px"></div>'
+    +'<div style="flex:0 0 80px">OS</div>'
+    +'<div style="flex:0 0 90px">Data</div>'
+    +'<div style="flex:0 0 60px">Horas</div>'
+    +'<div style="flex:1">Atividade</div>'
+    +'</div>';
+  _exportRows.forEach(function(row){
+    var dotColor=row.type==='os'?'#10b981':row.type==='event'?'#a78bfa':'#4b5563';
+    html+='<div class="export-preview-row row-'+row.type+'">'
+      +'<div class="export-row-dot" style="background:'+dotColor+'"></div>'
+      +'<div class="export-col" style="flex:0 0 80px">'+(row.osNum||'—')+'</div>'
+      +'<div class="export-col" style="flex:0 0 90px">'+row.date+'</div>'
+      +'<div class="export-col" style="flex:0 0 60px">'+row.hours+'h</div>'
+      +'<div style="flex:1;font-size:11px;color:var(--text)">'+(row.activity||row.eventTitle||'')+'</div>'
+      +'</div>';
+  });
+  previewEl.innerHTML=html;
+}
+
+function downloadExportCSV(){
+  var exportable=_exportRows.filter(function(r){return r.type!=='noos'});
+  if(!exportable.length){toast('Nenhuma linha para exportar','err');return}
+  var lines=['Numero OS;Data;Tempo;Atividade'];
+  exportable.forEach(function(r){lines.push([r.osNum||'',r.date,r.hours+'h',r.activity||''].join(';'))});
+  var blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  var dateEl=document.getElementById('dreport-data');
+  a.download='redmine_horas_'+((dateEl&&dateEl.value)||new Date().toISOString().slice(0,10)).replace(/-/g,'')+'.csv';
+  a.click();URL.revokeObjectURL(url);
+  toast('CSV baixado');
+}
+
 // ── FOCO / TIMER ─────────────────────────────────────────────────────────────
 function getFocusState(){try{return JSON.parse(localStorage.getItem('vs_focus_state'))||null}catch(e){return null}}
 function saveFocusState(st){
@@ -6331,6 +6412,7 @@ var __paralelo_config = {
       <span style="font-size:11px;color:var(--hint)">Após confirmar, a sessão do dia é encerrada.</span>
       <div style="display:flex;gap:8px">
         <button class="btn" onclick="closeModal('modal-dayresume')">Ajustar depois</button>
+        <button class="btn btn-sm btn-ghost" onclick="openExportRedmine()">📤 Exportar para Redmine</button>
         <button class="btn btn-primary" onclick="confirmDayResume()">✓ Confirmar e apropriar</button>
       </div>
     </div>
@@ -6394,6 +6476,26 @@ var __paralelo_config = {
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-agenda-event')">Cancelar</button>
       <button class="btn btn-primary" onclick="salvarAgendaEvent()">Salvar</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL EXPORTAÇÃO REDMINE -->
+<div class="modal-overlay" id="modal-export-redmine" style="z-index:400">
+  <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto">
+    <div class="modal-title">Exportação para Redmine</div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <input type="date" class="form-input" id="dreport-data" style="width:160px" onchange="buildExportPreview()">
+      <button class="btn btn-sm" onclick="buildExportPreview()">Atualizar</button>
+      <span style="font-size:11px;color:var(--hint);margin-left:auto">
+        <span style="width:8px;height:8px;border-radius:50%;background:#10b981;display:inline-block;margin-right:4px"></span>Horas OS
+        <span style="width:8px;height:8px;border-radius:50%;background:#a78bfa;display:inline-block;margin-left:10px;margin-right:4px"></span>Evento com OS
+        <span style="font-size:10px;color:var(--hint);margin-left:10px">riscado = sem OS (não exportado)</span>
+      </span>
+    </div>
+    <div id="dreport-preview" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;overflow:hidden"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('modal-export-redmine')">Fechar</button>
+      <button class="btn btn-primary" onclick="downloadExportCSV()">⬇ Baixar CSV</button>
     </div>
   </div>
 </div>
