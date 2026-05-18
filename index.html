@@ -281,6 +281,17 @@ textarea.form-input{resize:vertical;min-height:70px}
 .dayplan-os-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .dayplan-h-input{width:60px;padding:4px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text);text-align:center}
 .dayplan-total{font-size:22px;font-weight:700;font-family:var(--mono);padding:0 16px}
+/* ── EVENTO PONTUAL ── */
+.agenda-event-pill{display:flex;align-items:center;gap:4px;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:500;background:rgba(124,111,247,.15);border:1px solid rgba(124,111,247,.3);color:#a78bfa;margin-bottom:2px;cursor:pointer;overflow:hidden;white-space:nowrap}
+.agenda-event-pill .ev-time{font-family:var(--mono);font-size:9px;opacity:.8;flex-shrink:0}
+.agenda-event-pill .ev-title{overflow:hidden;text-overflow:ellipsis;flex:1}
+.agenda-event-pill .ev-os-tag{font-size:9px;background:rgba(124,111,247,.2);padding:1px 5px;border-radius:4px;flex-shrink:0}
+.recur-days-grid{display:flex;gap:4px;flex-wrap:wrap}
+.recur-day-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border2);background:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--font);transition:all .15s}
+.recur-day-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.recur-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.recur-month-btn{height:30px;border-radius:4px;border:1px solid var(--border2);background:none;color:var(--muted);font-size:11px;cursor:pointer;font-family:var(--mono);transition:all .15s}
+.recur-month-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
 /* ── RESUMO DO DIA ── */
 .resume-stat-box{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center;flex:1}
 .resume-stat-val{font-size:22px;font-weight:700;font-family:var(--mono);letter-spacing:-1px}
@@ -1890,7 +1901,7 @@ function goScreen(name){
     boletim:'',
     ponto:(!isVisitor&&canMenu('ponto'))?'<button class="btn btn-primary btn-sm" onclick="openNovoRegistro()">+ Adicionar dia</button>':'',
     historico:'',preferencias:'',
-    agenda:(!isVisitor&&can('agenda_editar'))?'<button class="btn btn-primary btn-sm" onclick="openNovaPublicacao()">+ Nova publicação</button>':''
+    agenda:(!isVisitor&&can('agenda_editar'))?'<button class="btn btn-primary btn-sm" onclick="openNovaPublicacao()">+ Nova publicação</button> <button class="btn btn-sm btn-ghost" onclick="openNewAgendaEvent()">+ Evento pontual</button>':''
   };
   document.getElementById('topbar-title').textContent=titles[name]||name;
   document.getElementById('topbar-actions').innerHTML=acts[name]||'';
@@ -4047,8 +4058,16 @@ function renderAgenda(){
           (showLabel?p.titulo:'')+'</div>';
       }).join('');
       if(pubsDia.length>MAX_PILLS)pills+='<div style="font-size:9px;color:var(--hint);padding:1px 4px">+'+(pubsDia.length-MAX_PILLS)+' mais</div>';
+      var evs=getEventsForDate(dStr);
+      var eventHtml=evs.map(function(ev){
+        var osTag=ev.osId?'<span class="ev-os-tag">#'+((S.oss.find(function(o){return o.id===ev.osId})||{}).num||'OS')+'</span>':'';
+        return'<div class="agenda-event-pill" onclick="openEditAgendaEvent(\''+ev.id+'\',\''+dStr+'\')" title="'+escHtml(ev.title)+'">'
+          +'<span class="ev-time">'+(ev.startTime||'')+'</span>'
+          +'<span class="ev-title">'+escHtml(ev.title)+'</span>'
+          +osTag+'</div>';
+      }).join('');
       return'<div class="agenda-day-cell'+(isHoje?' hoje-cell':'')+'" style="'+(isHoje?'':cellBg)+'">'+
-        '<div class="agenda-day-num'+(isHoje?' hoje-num':'')+'">'+dayNum+'</div>'+pills+'</div>';
+        '<div class="agenda-day-num'+(isHoje?' hoje-num':'')+'">'+dayNum+'</div>'+pills+eventHtml+'</div>';
     }).join('');
     gridHtml+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px">'+cells+'</div>';
   });
@@ -4992,6 +5011,170 @@ function confirmDayResume(){
   saveFocusState(null);
   closeModal('modal-dayresume');
   toast('Horas apropriadas — até amanhã!');
+}
+
+// ── AGENDA: EVENTOS PONTUAIS (vs_agenda_events) ───────────────────────────────
+function getAgendaEvents(){try{return JSON.parse(localStorage.getItem('vs_agenda_events'))||[]}catch(e){return[]}}
+function saveAgendaEvents(evs){localStorage.setItem('vs_agenda_events',JSON.stringify(evs))}
+
+var _aevEditId=null;
+var _aevSelectedOs=null;
+
+function getEventsForDate(dateStr){
+  var evs=getAgendaEvents();
+  var d=new Date(dateStr+'T00:00:00');
+  return evs.filter(function(ev){
+    if(ev.exceptions&&ev.exceptions[dateStr]===null)return false;
+    var override=ev.exceptions&&ev.exceptions[dateStr];
+    var evDate=(override&&override.startDate)||ev.startDate;
+    if(ev.recurrence&&ev.recurrence.type==='weekly'){
+      return ev.recurrence.days.indexOf(d.getDay())>-1&&ev.startDate<=dateStr;
+    }
+    if(ev.recurrence&&ev.recurrence.type==='monthly'){
+      return ev.recurrence.dayOfMonth===d.getDate()&&ev.startDate<=dateStr;
+    }
+    return evDate===dateStr;
+  });
+}
+
+function openNewAgendaEvent(){
+  _aevEditId=null;_aevSelectedOs=null;
+  document.getElementById('agenda-event-modal-title').textContent='Novo evento pontual';
+  ['aev-titulo','aev-desc','aev-os-search'].forEach(function(id){var el=document.getElementById(id);if(el)el.value=''});
+  var resEl=document.getElementById('aev-os-results');if(resEl)resEl.innerHTML='';
+  var selEl=document.getElementById('aev-os-selected');if(selEl)selEl.style.display='none';
+  var rtype=document.getElementById('aev-recur-type');if(rtype)rtype.value='none';
+  onRecurTypeChange('none');
+  document.querySelectorAll('.recur-day-btn').forEach(function(b){b.classList.remove('active')});
+  var dataEl=document.getElementById('aev-data');if(dataEl)dataEl.value=new Date().toISOString().slice(0,10);
+  var inicioEl=document.getElementById('aev-inicio');if(inicioEl)inicioEl.value='';
+  var fimEl=document.getElementById('aev-fim');if(fimEl)fimEl.value='';
+  populateEventAtividade();
+  var errEl=document.getElementById('aev-error');if(errEl)errEl.style.display='none';
+  openModal('modal-agenda-event');
+}
+
+function openEditAgendaEvent(evId,dateStr){
+  var evs=getAgendaEvents();
+  var ev=evs.find(function(e){return e.id===evId});if(!ev)return;
+  _aevEditId=evId;
+  _aevSelectedOs=ev.osId?{id:ev.osId,title:ev.osTitle||ev.osId}:null;
+  document.getElementById('agenda-event-modal-title').textContent='Editar evento';
+  var tEl=document.getElementById('aev-titulo');if(tEl)tEl.value=ev.title||'';
+  var dEl=document.getElementById('aev-desc');if(dEl)dEl.value=ev.description||'';
+  var dataEl=document.getElementById('aev-data');if(dataEl)dataEl.value=dateStr||ev.startDate||'';
+  var iEl=document.getElementById('aev-inicio');if(iEl)iEl.value=ev.startTime||'';
+  var fEl=document.getElementById('aev-fim');if(fEl)fEl.value=ev.endTime||'';
+  populateEventAtividade();
+  var atEl=document.getElementById('aev-atividade');if(atEl)atEl.value=ev.activityTypeId||'';
+  var searchEl=document.getElementById('aev-os-search');if(searchEl)searchEl.value='';
+  var resEl=document.getElementById('aev-os-results');if(resEl)resEl.innerHTML='';
+  if(_aevSelectedOs){
+    var selEl=document.getElementById('aev-os-selected');
+    var selLbl=document.getElementById('aev-os-selected-label');
+    if(selEl)selEl.style.display='flex';
+    if(selLbl)selLbl.textContent=_aevSelectedOs.title;
+  }else{var selEl2=document.getElementById('aev-os-selected');if(selEl2)selEl2.style.display='none';}
+  var rtype=document.getElementById('aev-recur-type');if(rtype)rtype.value=(ev.recurrence&&ev.recurrence.type)||'none';
+  onRecurTypeChange((ev.recurrence&&ev.recurrence.type)||'none');
+  if(ev.recurrence&&ev.recurrence.type==='weekly'&&ev.recurrence.days){
+    document.querySelectorAll('.recur-day-btn').forEach(function(b){
+      b.classList.toggle('active',ev.recurrence.days.indexOf(parseInt(b.dataset.day))>-1);
+    });
+  }
+  var errEl=document.getElementById('aev-error');if(errEl)errEl.style.display='none';
+  openModal('modal-agenda-event');
+}
+
+function populateEventAtividade(){
+  var sel=document.getElementById('aev-atividade');if(!sel)return;
+  var tipos=getTipoAtividades();
+  sel.innerHTML='<option value="">Sem tipo</option>'+tipos.map(function(t){
+    return'<option value="'+t.id+'">'+escHtml(t.name)+'</option>';
+  }).join('');
+}
+
+function searchEventOS(q){
+  q=(q||'').toLowerCase().trim();
+  var res=document.getElementById('aev-os-results');if(!res)return;
+  if(!q){res.innerHTML='';return}
+  var matches=S.oss.filter(function(o){
+    return(o.num&&String(o.num).toLowerCase().includes(q))||(o.titulo&&o.titulo.toLowerCase().includes(q));
+  }).slice(0,5);
+  res.innerHTML=matches.map(function(os){
+    return'<div style="padding:5px 8px;cursor:pointer;font-size:12px;border-radius:var(--radius)" onclick="selectEventOS(\''+os.id+'\',\'#'+os.num+' · '+encodeURIComponent(os.titulo)+'\')" onmouseover="this.style.background=\'var(--card2)\'" onmouseout="this.style.background=\'\'"><span style="font-family:var(--mono);color:var(--muted)">#'+escHtml(String(os.num))+'</span> '+escHtml(os.titulo)+'</div>';
+  }).join('');
+}
+
+function selectEventOS(osId,encodedTitle){
+  var title=decodeURIComponent(encodedTitle);
+  _aevSelectedOs={id:osId,title:title};
+  var searchEl=document.getElementById('aev-os-search');if(searchEl)searchEl.value='';
+  var resEl=document.getElementById('aev-os-results');if(resEl)resEl.innerHTML='';
+  var lblEl=document.getElementById('aev-os-selected-label');if(lblEl)lblEl.textContent=title;
+  var selEl=document.getElementById('aev-os-selected');if(selEl)selEl.style.display='flex';
+}
+
+function clearEventOS(){
+  _aevSelectedOs=null;
+  var selEl=document.getElementById('aev-os-selected');if(selEl)selEl.style.display='none';
+  var lblEl=document.getElementById('aev-os-selected-label');if(lblEl)lblEl.textContent='';
+}
+
+function onRecurTypeChange(v){
+  var wEl=document.getElementById('aev-recur-weekly');if(wEl)wEl.style.display=v==='weekly'?'block':'none';
+  var mEl=document.getElementById('aev-recur-monthly');if(mEl)mEl.style.display=v==='monthly'?'block':'none';
+  if(v==='monthly'){
+    var grid=document.getElementById('aev-month-grid');
+    if(grid&&!grid.children.length){
+      grid.innerHTML=Array.from({length:31},function(_,i){
+        return'<button type="button" class="recur-month-btn" data-day="'+(i+1)+'" onclick="toggleRecurMonth(this)">'+(i+1)+'</button>';
+      }).join('');
+    }
+  }
+}
+
+function toggleRecurDay(btn){btn.classList.toggle('active')}
+function toggleRecurMonth(btn){btn.classList.toggle('active')}
+
+function salvarAgendaEvent(){
+  var titulo=(document.getElementById('aev-titulo').value||'').trim();
+  var errEl=document.getElementById('aev-error');
+  if(!titulo){if(errEl){errEl.style.display='block';errEl.textContent='Título é obrigatório.'}return}
+  if(errEl)errEl.style.display='none';
+  var recurType=document.getElementById('aev-recur-type').value;
+  var recurDays=[];
+  if(recurType==='weekly'){
+    document.querySelectorAll('.recur-day-btn.active').forEach(function(b){recurDays.push(parseInt(b.dataset.day))});
+  }
+  var recurDayOfMonth=null;
+  if(recurType==='monthly'){
+    var active=document.querySelector('.recur-month-btn.active');
+    recurDayOfMonth=active?parseInt(active.dataset.day):null;
+  }
+  var ev={
+    id:_aevEditId||uid(),
+    title:titulo,
+    activityTypeId:(document.getElementById('aev-atividade').value)||null,
+    osId:_aevSelectedOs?_aevSelectedOs.id:null,
+    osTitle:_aevSelectedOs?_aevSelectedOs.title:null,
+    startDate:document.getElementById('aev-data').value,
+    startTime:document.getElementById('aev-inicio').value,
+    endTime:document.getElementById('aev-fim').value,
+    description:document.getElementById('aev-desc').value,
+    recurrence:{type:recurType,days:recurDays,dayOfMonth:recurDayOfMonth},
+    exceptions:{},
+    createdAt:_aevEditId?undefined:new Date().toISOString()
+  };
+  var evs=getAgendaEvents();
+  if(_aevEditId){
+    var idx=evs.findIndex(function(e){return e.id===_aevEditId});
+    if(idx>-1)evs[idx]=ev;else evs.push(ev);
+  }else{evs.push(ev)}
+  saveAgendaEvents(evs);
+  closeModal('modal-agenda-event');
+  renderAgenda();
+  toast('Evento salvo');
 }
 
 // ── FOCO / TIMER ─────────────────────────────────────────────────────────────
@@ -6150,6 +6333,67 @@ var __paralelo_config = {
         <button class="btn" onclick="closeModal('modal-dayresume')">Ajustar depois</button>
         <button class="btn btn-primary" onclick="confirmDayResume()">✓ Confirmar e apropriar</button>
       </div>
+    </div>
+  </div>
+</div>
+<!-- MODAL AGENDA: EVENTO PONTUAL -->
+<div class="modal-overlay" id="modal-agenda-event" style="z-index:400">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-title" id="agenda-event-modal-title">Novo evento pontual</div>
+    <div class="form-group">
+      <label class="form-label">Título</label>
+      <input class="form-input" id="aev-titulo" placeholder="Ex: Reunião de alinhamento">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tipo de Atividade</label>
+      <select class="form-input" id="aev-atividade"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">OS vinculada <span style="color:var(--hint);font-size:10px">(opcional — entra na exportação Redmine)</span></label>
+      <input class="form-input" id="aev-os-search" placeholder="Buscar por #número ou título..." oninput="searchEventOS(this.value)">
+      <div id="aev-os-results" style="max-height:100px;overflow-y:auto;margin-top:4px"></div>
+      <div id="aev-os-selected" style="display:none;margin-top:6px;font-size:12px;background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between">
+        <span id="aev-os-selected-label"></span>
+        <span style="cursor:pointer;color:var(--muted);font-size:10px" onclick="clearEventOS()">✕ remover</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div class="form-group" style="flex:1"><label class="form-label">Data</label><input type="date" class="form-input" id="aev-data"></div>
+      <div class="form-group" style="flex:0 0 100px"><label class="form-label">Início</label><input type="time" class="form-input" id="aev-inicio"></div>
+      <div class="form-group" style="flex:0 0 100px"><label class="form-label">Fim</label><input type="time" class="form-input" id="aev-fim"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Descrição</label>
+      <textarea class="form-input" id="aev-desc" rows="2" placeholder="Pauta, link, contexto..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Recorrência</label>
+      <select class="form-input" id="aev-recur-type" onchange="onRecurTypeChange(this.value)" style="margin-bottom:10px">
+        <option value="none">Não repete</option>
+        <option value="weekly">Semanal</option>
+        <option value="monthly">Mensal</option>
+      </select>
+      <div id="aev-recur-weekly" style="display:none">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Repetir às:</div>
+        <div class="recur-days-grid">
+          <button type="button" class="recur-day-btn" data-day="0" onclick="toggleRecurDay(this)">Dom</button>
+          <button type="button" class="recur-day-btn" data-day="1" onclick="toggleRecurDay(this)">Seg</button>
+          <button type="button" class="recur-day-btn" data-day="2" onclick="toggleRecurDay(this)">Ter</button>
+          <button type="button" class="recur-day-btn" data-day="3" onclick="toggleRecurDay(this)">Qua</button>
+          <button type="button" class="recur-day-btn" data-day="4" onclick="toggleRecurDay(this)">Qui</button>
+          <button type="button" class="recur-day-btn" data-day="5" onclick="toggleRecurDay(this)">Sex</button>
+          <button type="button" class="recur-day-btn" data-day="6" onclick="toggleRecurDay(this)">Sáb</button>
+        </div>
+      </div>
+      <div id="aev-recur-monthly" style="display:none">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Dia do mês:</div>
+        <div class="recur-month-grid" id="aev-month-grid"></div>
+      </div>
+    </div>
+    <div id="aev-error" style="display:none;font-size:12px;color:var(--red-text);padding:8px 12px;background:rgba(239,68,68,.08);border-radius:8px"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-agenda-event')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarAgendaEvent()">Salvar</button>
     </div>
   </div>
 </div>
