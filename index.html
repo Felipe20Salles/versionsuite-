@@ -1883,10 +1883,10 @@ function openEditOS(osId){
   populateProdutoSel();document.getElementById('os-produto').value=os.produto;
   populateVersaoSelOS();document.getElementById('os-versao-sel').value=os.versaoId;
   populateAtribSel(os.atribuicao||'');
-  document.getElementById('e-novidade').checked=!!os.entregas.novidade.aplicavel;
-  document.getElementById('e-help').checked=!!os.entregas.help.aplicavel;
-  document.getElementById('e-tutorial').checked=!!os.entregas.tutorial.aplicavel;
-  document.getElementById('e-evidencia').checked=!!os.entregas.evidencia.aplicavel;
+  document.getElementById('e-novidade').checked=!!(os.entregas.novidade&&os.entregas.novidade.aplicavel);
+  document.getElementById('e-help').checked=!!(os.entregas.help&&os.entregas.help.aplicavel);
+  document.getElementById('e-tutorial').checked=!!(os.entregas.tutorial&&os.entregas.tutorial.aplicavel);
+  document.getElementById('e-evidencia').checked=!!(os.entregas.evidencia&&os.entregas.evidencia.aplicavel);
   openModal('modal-os');
 }
 function salvarOS(){
