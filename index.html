@@ -2021,7 +2021,7 @@ function renderKanban(){
             '</div>'+
             (h>0?'<span class="os-horas-label">'+h.toFixed(1)+'h</span>':'')+
           '</div>'+
-          '<div class="os-checks-row">'+pips+'</div>'+
+          (pips?'<div class="os-checks-row">'+pips+'</div>':'')+
           (isIncompleta?'<div class="os-incompleta-badge">⚠ não concluída na versão encerrada</div>':'')+
         '</div>'+
         '<div class="os-card-actions">'+
@@ -2114,7 +2114,6 @@ function salvarOS(){
   var dup=S.oss.find(function(o){return o.versaoId===vid&&o.num===num&&o.id!==S.editOS});
   if(dup){errEl.style.display='block';errEl.textContent='OS '+num+' já cadastrada nesta versão.';return}
   errEl.style.display='none';
-  function mkE(chk,old){return{aplicavel:chk,feito:old?old.feito:false}}
   var old=S.editOS?S.oss.find(function(o){return o.id===S.editOS}):null;
   var osId=S.editOS||uid();
   var data={id:osId,num:num,titulo:document.getElementById('os-titulo').value.trim(),
@@ -4230,6 +4229,7 @@ async function load(){
     S.oss=(oss||[]).map(function(o){return{
       id:o.id,num:o.num,titulo:o.titulo,produto:o.produto,
       status:o.status,obs:o.obs||'',link:o.link||'',atribuicao:o.atribuicao||'',
+      estimatedHours:o.estimated_hours||0,
       versaoId:o.versao_id,entregas:o.entregas||{},
       criadaEm:o.created_at,createdBy:o.created_by||null,
       tipoRedmine:o.tipo_redmine||'',paiRedmine:o.pai_redmine||''
@@ -4295,7 +4295,7 @@ async function dbSalvarOS(os){
   var {data,error}=await sb.from('oss').upsert({
     id:os.id,versao_id:os.versaoId,num:os.num,titulo:os.titulo,
     produto:os.produto,status:os.status,obs:os.obs||'',link:os.link||'',
-    atribuicao:os.atribuicao||'',entregas:os.entregas,created_by:CURRENT_USER.id,
+    atribuicao:os.atribuicao||'',estimated_hours:os.estimatedHours||0,entregas:os.entregas,created_by:CURRENT_USER.id,
     tipo_redmine:os.tipoRedmine||'',pai_redmine:os.paiRedmine||''
   }).select().single();
   if(error)throw error;
@@ -4458,7 +4458,6 @@ function salvarOS(){
   var dup=S.oss.find(function(o){return o.versaoId===vid&&o.num===num&&o.id!==S.editOS});
   if(dup){errEl.style.display='block';errEl.textContent='OS '+num+' já cadastrada nesta versão.';return}
   errEl.style.display='none';
-  function mkE(chk,old){return{aplicavel:chk,feito:old?old.feito:false}}
   var old=S.editOS?S.oss.find(function(o){return o.id===S.editOS}):null;
   var osId=S.editOS||uid();
   var data={id:osId,num:num,titulo:document.getElementById('os-titulo').value.trim(),
@@ -4496,7 +4495,8 @@ function moveOS(osId,newStatus){
 }
 
 function toggleE(osId,key){
-  var os=S.oss.find(function(o){return o.id===osId});if(!os||!os.entregas[key].aplicavel)return;
+  var os=S.oss.find(function(o){return o.id===osId});
+  if(!os||!os.entregas||!os.entregas[key]||!os.entregas[key].aplicavel)return;
   os.entregas[key].feito=!os.entregas[key].feito;
   if(os.entregas[key].feito&&os.status==='afazer')os.status='andamento';
   if(Object.values(os.entregas).filter(function(e){return e.aplicavel}).every(function(e){return e.feito}))os.status='concluido';
