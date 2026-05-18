@@ -665,6 +665,9 @@ textarea.form-input{resize:vertical;min-height:70px}
           <button id="pref-tab-btn-plataforma"
             style="padding:8px 18px;font-size:13px;cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted)"
             onclick="goPrefsTab('plataforma')">Plataforma</button>
+          <button id="pref-tab-btn-integracoes"
+            style="padding:8px 18px;font-size:13px;cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted)"
+            onclick="goPrefsTab('integracoes')">Integrações</button>
           <button id="pref-tab-btn-admin"
             style="padding:8px 18px;font-size:13px;cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);display:none"
             onclick="goPrefsTab('admin')">Admin</button>
@@ -693,24 +696,6 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div id="produtos-list" style="display:flex;flex-direction:column;gap:6px"></div>
             <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addProduto()">+ Adicionar produto</button>
           </div>
-          <div class="pref-section">
-            <div class="pref-section-title">Tipo de Atividade</div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Tipos usados ao exportar horas para o Redmine.</div>
-            <div id="tipo-atividade-list" style="display:flex;flex-direction:column;gap:6px"></div>
-            <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addTipoAtividade()">+ Adicionar tipo</button>
-          </div>
-          <div class="pref-section" id="pref-section-visitor">
-            <div class="pref-section-title">Acesso de Visitantes</div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Senha solicitada ao visitante no login. Se vazia, usa o padrão <code style="background:var(--card2);padding:1px 5px;border-radius:4px">visita2024</code>.</div>
-            <div class="form-group" style="max-width:280px">
-              <label class="form-label">Senha de acesso para visitantes</label>
-              <input type="password" class="form-input" id="pref-visitor-pass" placeholder="visita2024" oninput="salvarSenhaVisitante()">
-            </div>
-            <div style="margin-top:20px">
-              <div style="font-size:13px;font-weight:600;margin-bottom:10px">Acessos recentes</div>
-              <div id="visitor-log-table" style="font-size:12px;color:var(--muted)">Nenhum acesso registrado.</div>
-            </div>
-          </div>
         </div>
 
         <!-- Painel: Admin -->
@@ -734,42 +719,65 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div id="users-list-hint" style="font-size:11px;color:var(--hint)">Usuários aparecem automaticamente após o primeiro login com Google.</div>
           </div>
 
+          <div class="pref-section" id="pref-section-visitor">
+            <div class="pref-section-title">Acesso de Visitantes</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Senha solicitada ao visitante no login. Se vazia, usa o padrão <code style="background:var(--card2);padding:1px 5px;border-radius:4px">visita2024</code>.</div>
+            <div class="form-group" style="max-width:280px">
+              <label class="form-label">Senha de acesso para visitantes</label>
+              <input type="password" class="form-input" id="pref-visitor-pass" placeholder="visita2024" oninput="salvarSenhaVisitante()">
+            </div>
+            <div style="margin-top:20px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:10px">Acessos recentes</div>
+              <div id="visitor-log-table" style="font-size:12px;color:var(--muted)">Nenhum acesso registrado.</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Painel: Integrações -->
+        <div id="pref-tab-integracoes" style="display:none">
           <div class="pref-section" id="pref-section-redmine">
-  <div class="pref-section-title">Integração Redmine</div>
-  <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Configure para importar tarefas no Kanban e enviar horas registradas. Requer o proxy local rodando.</div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin-bottom:10px">
-    <div class="form-group" style="margin:0">
-      <label class="form-label">URL do proxy</label>
-      <input class="form-input" id="pref-redmine-proxyurl" placeholder="http://localhost:3001" oninput="saveRedmineConfigFromInputs()">
-    </div>
-    <div class="form-group" style="margin:0">
-      <label class="form-label">ID de atividade padrão</label>
-      <input class="form-input" id="pref-redmine-activity" type="number" placeholder="Ex: 9" oninput="saveRedmineConfigFromInputs()">
-      <div style="font-size:11px;color:var(--hint);margin-top:4px">Redmine → Administração → Enumerações → Atividades.</div>
-    </div>
-  </div>
-  <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:13px">
-    <input type="checkbox" id="pref-redmine-proxy" onchange="saveRedmineConfigFromInputs()" style="width:15px;height:15px;accent-color:var(--accent)">
-    Proxy ativo
-  </label>
-  <button class="btn btn-sm btn-ghost" onclick="testRedmineConexao()">🔌 Testar conexão</button>
-  <div style="font-size:11px;color:var(--hint);margin-top:10px;line-height:1.6">
-    Para iniciar o proxy: copie <code style="background:var(--card2);padding:1px 5px;border-radius:4px">redmine.env.example</code> para <code style="background:var(--card2);padding:1px 5px;border-radius:4px">.env</code>, preencha as variáveis e rode <code style="background:var(--card2);padding:1px 5px;border-radius:4px">node redmine-proxy.js</code>.
-  </div>
-  <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
-    <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px">Mapeamento de Status</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">Ao mover um card no Kanban, o status da issue no Redmine é atualizado automaticamente.</div>
-    <button class="btn btn-sm btn-ghost" onclick="loadRedmineStatuses()" style="margin-bottom:12px">🔄 Carregar status disponíveis</button>
-    <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;max-width:400px">
-      <label style="font-size:12px;color:var(--muted)">A fazer →</label>
-      <select id="pref-redmine-status-afazer" class="form-input" style="font-size:12px;padding:4px 8px" onchange="saveRedmineStatusMapFromInputs()"><option value="">— selecione —</option></select>
-      <label style="font-size:12px;color:var(--muted)">Em andamento →</label>
-      <select id="pref-redmine-status-andamento" class="form-input" style="font-size:12px;padding:4px 8px" onchange="saveRedmineStatusMapFromInputs()"><option value="">— selecione —</option></select>
-      <label style="font-size:12px;color:var(--muted)">Concluído →</label>
-      <select id="pref-redmine-status-concluido" class="form-input" style="font-size:12px;padding:4px 8px" onchange="saveRedmineStatusMapFromInputs()"><option value="">— selecione —</option></select>
-    </div>
-  </div>
-</div>
+            <div class="pref-section-title">Integração Redmine</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Configure para importar tarefas no Kanban e enviar horas registradas. Requer o proxy local rodando.</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:520px;margin-bottom:10px">
+              <div class="form-group" style="margin:0">
+                <label class="form-label">URL do proxy</label>
+                <input class="form-input" id="pref-redmine-proxyurl" placeholder="http://localhost:3001" oninput="saveRedmineConfigFromInputs()">
+              </div>
+              <div class="form-group" style="margin:0">
+                <label class="form-label">ID de atividade padrão</label>
+                <input class="form-input" id="pref-redmine-activity" type="number" placeholder="Ex: 9" oninput="saveRedmineConfigFromInputs()">
+                <div style="font-size:11px;color:var(--hint);margin-top:4px">Redmine → Administração → Enumerações → Atividades.</div>
+              </div>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer;font-size:13px">
+              <input type="checkbox" id="pref-redmine-proxy" onchange="saveRedmineConfigFromInputs()" style="width:15px;height:15px;accent-color:var(--accent)">
+              Proxy ativo
+            </label>
+            <button class="btn btn-sm btn-ghost" onclick="testRedmineConexao()">🔌 Testar conexão</button>
+            <div style="font-size:11px;color:var(--hint);margin-top:10px;line-height:1.6">
+              Para iniciar o proxy: copie <code style="background:var(--card2);padding:1px 5px;border-radius:4px">redmine.env.example</code> para <code style="background:var(--card2);padding:1px 5px;border-radius:4px">.env</code>, preencha as variáveis e rode <code style="background:var(--card2);padding:1px 5px;border-radius:4px">node redmine-proxy.js</code>.
+            </div>
+            <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+              <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px">Tipos de Atividade</div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">Tipos usados ao exportar horas para o Redmine.</div>
+              <div id="tipo-atividade-list" style="display:flex;flex-direction:column;gap:6px"></div>
+              <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addTipoAtividade()">+ Adicionar tipo</button>
+            </div>
+            <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px">
+              <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:6px">Mapeamento de Status</div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5">Ao mover um card no Kanban, o status da issue no Redmine é atualizado automaticamente.</div>
+              <div id="pref-redmine-status-hint" style="font-size:11px;color:var(--hint);margin-bottom:10px;display:none">Ative o proxy para carregar os status disponíveis.</div>
+              <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;max-width:400px">
+                <label style="font-size:12px;color:var(--muted)">A fazer →</label>
+                <select id="pref-redmine-status-afazer" class="form-input" style="font-size:12px;padding:4px 8px" onchange="saveRedmineStatusMapFromInputs()"><option value="">— selecione —</option></select>
+                <label style="font-size:12px;color:var(--muted)">Em andamento →</label>
+                <select id="pref-redmine-status-andamento" class="form-input" style="font-size:12px;padding:4px 8px" onchange="saveRedmineStatusMapFromInputs()"><option value="">— selecione —</option></select>
+                <label style="font-size:12px;color:var(--muted)">Concluído →</label>
+                <select id="pref-redmine-status-concluido" class="form-input" style="font-size:12px;padding:4px 8px" onchange="saveRedmineStatusMapFromInputs()"><option value="">— selecione —</option></select>
+              </div>
+            </div>
+          </div>
 
           <div class="pref-section" id="pref-section-zendesk">
             <div class="pref-section-title">Integração Zendesk</div>
@@ -1713,7 +1721,7 @@ function populateProdutoSel(){
 var _prefTab='pessoal';
 function goPrefsTab(nome){
   _prefTab=nome;
-  ['pessoal','plataforma','admin'].forEach(function(t){
+  ['pessoal','plataforma','integracoes','admin'].forEach(function(t){
     var panel=document.getElementById('pref-tab-'+t);
     var btn=document.getElementById('pref-tab-btn-'+t);
     if(panel)panel.style.display=(t===nome)?'':'none';
@@ -4613,6 +4621,7 @@ function saveRedmineConfigFromInputs(){
   var proxy=!!((document.getElementById('pref-redmine-proxy')||{}).checked);
   saveRedmineConfig({proxyUrl:proxyUrl,actId:actId,proxy:proxy});
   _redmineUpdateButtons(!!(proxyUrl&&proxy));
+  if(proxyUrl&&proxy)loadRedmineStatuses(true);
 }
 function _redmineUpdateButtons(hasCfg){
   var btnK=document.getElementById('btn-importar-redmine');
@@ -4629,7 +4638,7 @@ function renderRedmineConfig(){
   if(a)a.value=cfg.actId||'';
   if(p)p.checked=!!(cfg.proxy);
   _redmineUpdateButtons(!!(cfg.proxyUrl&&cfg.proxy));
-  if(cfg.proxy&&cfg.proxyUrl){loadRedmineStatuses();}
+  loadRedmineStatuses(true);
 }
 async function _redmineFetch(cfg,path,method,body){
   var proxyUrl=(cfg.proxyUrl||'http://localhost:3001').replace(/\/+$/,'');
@@ -4665,9 +4674,15 @@ function saveRedmineStatusMapFromInputs(){
   if(sc&&sc.value)map.concluido=parseInt(sc.value,10);
   saveRedmineStatusMap(map);
 }
-async function loadRedmineStatuses(){
+async function loadRedmineStatuses(silent){
   var cfg=getRedmineConfig();
-  if(!cfg.proxyUrl||!cfg.proxy){toast('Ative o proxy Redmine primeiro','err');return}
+  var hint=document.getElementById('pref-redmine-status-hint');
+  if(!cfg.proxyUrl||!cfg.proxy){
+    if(hint)hint.style.display='';
+    if(!silent)toast('Ative o proxy Redmine primeiro','err');
+    return;
+  }
+  if(hint)hint.style.display='none';
   try{
     var r=await _redmineFetch(cfg,'/issue_statuses.json','GET');
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -4682,9 +4697,9 @@ async function loadRedmineStatuses(){
       sel.innerHTML=opts;
       if(map[k])sel.value=String(map[k]);
     });
-    toast('Status carregados ✓');
+    if(!silent)toast('Status carregados ✓');
   }catch(e){
-    toast('Erro ao carregar status: '+e.message,'err');
+    if(!silent)toast('Erro ao carregar status: '+e.message,'err');
   }
 }
 async function sincronizarStatusRedmine(os,novoStatus){
