@@ -5474,12 +5474,14 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
 })();
 
 document.addEventListener('click',function(e){
+  if(typeof touchActivity==='function')touchActivity();
   var bc=document.getElementById('bell-container');
   if(bc&&!bc.contains(e.target)){
     var dd=document.getElementById('bell-dropdown');
     if(dd)dd.style.display='none';
   }
 });
+document.addEventListener('keydown',function(){if(typeof touchActivity==='function')touchActivity()});
 </script>
 <!-- Paralelo SDK -->
 <script>
