@@ -24,7 +24,7 @@ if (!REDMINE_KEY) {
 }
 
 const CORS = {
-  'Access-Control-Allow-Origin': 'null, http://localhost, http://localhost:8080, https://versionsuite.netlify.app',
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type'
 };
