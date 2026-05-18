@@ -4491,11 +4491,7 @@ function renderRedmineConfig(){
   if(a)a.value=cfg.actId||'';
   if(p)p.checked=!!(cfg.proxy);
   _redmineUpdateButtons(!!(cfg.proxyUrl&&cfg.proxy));
-  var map=getRedmineStatusMap();
-  ['afazer','andamento','concluido'].forEach(function(k){
-    var sel=document.getElementById('pref-redmine-status-'+k);
-    if(sel&&map[k])sel.value=String(map[k]);
-  });
+  if(cfg.proxy&&cfg.proxyUrl){loadRedmineStatuses();}
 }
 async function _redmineFetch(cfg,path,method,body){
   var proxyUrl=(cfg.proxyUrl||'http://localhost:3001').replace(/\/+$/,'');
@@ -4747,6 +4743,30 @@ function renderCentralAjuda(){
 }
 
 // ── IMPORTAR DO REDMINE (Kanban) ──────────────────────────────────────────────
+function matchAtribuicaoRedmine(redmineName){
+  if(!redmineName)return'';
+  var parts=redmineName.toLowerCase().split(/\s+/).filter(Boolean);
+  var best=null,bestScore=0;
+  (S_USERS||[]).forEach(function(u){
+    var uparts=(u.displayName||'').toLowerCase().split(/\s+/).filter(Boolean);
+    var matches=parts.filter(function(p){return uparts.indexOf(p)>-1}).length;
+    var score=matches/(Math.max(parts.length,uparts.length)||1);
+    if(score>bestScore){bestScore=score;best=u.displayName;}
+  });
+  return bestScore>=0.5?best:'-Sem atribuição-';
+}
+function matchProdutoRedmine(redmineProjectName){
+  if(!redmineProjectName)return'';
+  var lower=redmineProjectName.toLowerCase();
+  var prods=(S.prefs&&S.prefs.produtos)||[];
+  var exact=prods.find(function(p){return p.toLowerCase()===lower});
+  if(exact)return exact;
+  var partial=prods.find(function(p){
+    var pl=p.toLowerCase();
+    return lower.indexOf(pl)>-1||pl.indexOf(lower)>-1;
+  });
+  return partial||redmineProjectName;
+}
 async function importarDoRedmine(){
   var cfg=getRedmineConfig();
   if(!cfg.proxyUrl||!cfg.proxy){toast('Ative o proxy Redmine nas Preferências','err');return}
@@ -4787,8 +4807,8 @@ async function importarDoRedmine(){
       var novaOS={
         id:crypto.randomUUID(),versaoId:S.versaoK,
         num:String(iss.id),titulo:iss.subject||'',
-        produto:iss.project?iss.project.name:'',
-        atribuicao:iss.assigned_to?iss.assigned_to.name:'',
+        produto:matchProdutoRedmine(iss.project?iss.project.name:''),
+        atribuicao:matchAtribuicaoRedmine(iss.assigned_to?iss.assigned_to.name:''),
         obs:iss.description||'',status:'afazer',link:'',entregas:{},
         createdBy:CURRENT_USER.id,
         tipoRedmine:iss.tracker?iss.tracker.name:'',
