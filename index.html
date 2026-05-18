@@ -4717,7 +4717,7 @@ function openDayPlanModal(){
         +'<input type="checkbox" class="dayplan-os-check" id="dayplan-chk-'+os.id+'" '+(checked?'checked':'')
         +' onchange="updateDayPlanTotal()">'
         +'<div class="dayplan-os-info">'
-        +'<div class="dayplan-os-title"><span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px;margin-right:6px">'+porte.label+'</span>#'+os.num+' · '+os.titulo+'</div>'
+        +'<div class="dayplan-os-title"><span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px;margin-right:6px">'+porte.label+'</span>#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)+'</div>'
         +'<div class="dayplan-os-sub">Estimativa: '+os.estimatedHours+'h</div>'
         +'</div>'
         +'<input class="dayplan-h-input" type="number" min="0.5" step="0.5" value="'+suggestedH
@@ -5641,6 +5641,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       // ────────────────────────────────────────────────────
       // Abrir modal de planejamento se ainda não confirmado hoje
       setTimeout(function(){
+        if(!CURRENT_USER)return;
         if(typeof openDayPlanModal==='function'){
           var _p=getDayPlan();
           if(!_p||!_p.confirmedAt)openDayPlanModal();
