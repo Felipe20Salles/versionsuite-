@@ -5639,6 +5639,13 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
   })
 }
       // ────────────────────────────────────────────────────
+      // Abrir modal de planejamento se ainda não confirmado hoje
+      setTimeout(function(){
+        if(typeof openDayPlanModal==='function'){
+          var _p=getDayPlan();
+          if(!_p||!_p.confirmedAt)openDayPlanModal();
+        }
+      },1200);
     }else if(event==='SIGNED_OUT'){
       _appIniciado=false;
       CURRENT_USER=null;
