@@ -3992,7 +3992,8 @@ async function load(){
       id:o.id,num:o.num,titulo:o.titulo,produto:o.produto,
       status:o.status,obs:o.obs||'',link:o.link||'',atribuicao:o.atribuicao||'',
       versaoId:o.versao_id,entregas:o.entregas||{},
-      criadaEm:o.created_at,createdBy:o.created_by||null
+      criadaEm:o.created_at,createdBy:o.created_by||null,
+      tipoRedmine:o.tipo_redmine||'',paiRedmine:o.pai_redmine||''
     }});
 
     // Pontos (apenas do usuário)
@@ -4054,7 +4055,8 @@ async function dbSalvarOS(os){
   var {data,error}=await sb.from('oss').upsert({
     id:os.id,versao_id:os.versaoId,num:os.num,titulo:os.titulo,
     produto:os.produto,status:os.status,obs:os.obs||'',link:os.link||'',
-    atribuicao:os.atribuicao||'',entregas:os.entregas,created_by:CURRENT_USER.id
+    atribuicao:os.atribuicao||'',entregas:os.entregas,created_by:CURRENT_USER.id,
+    tipo_redmine:os.tipoRedmine||'',pai_redmine:os.paiRedmine||''
   }).select().single();
   if(error)throw error;
   return data;
