@@ -263,6 +263,15 @@ textarea.form-input{resize:vertical;min-height:70px}
 .bell-dd-item:last-child{border-bottom:none}
 .bell-dd-time{font-size:10px;color:var(--hint);margin-top:2px}
 .bell-dd-empty{padding:20px 14px;font-size:12px;color:var(--hint);text-align:center}
+/* ── PESO INTELIGENTE ── */
+.peso-slider-wrap{display:flex;flex-direction:column;gap:10px}
+.peso-slider{-webkit-appearance:none;width:100%;height:4px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer}
+.peso-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}
+.peso-markers{display:flex;justify-content:space-between;font-size:10px;color:var(--hint);font-family:var(--mono)}
+.peso-badge-epico{background:rgba(167,139,250,.15);color:#a78bfa;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
+.peso-badge-grande{background:rgba(245,158,11,.15);color:#f59e0b;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
+.peso-badge-normal{background:rgba(96,165,250,.15);color:#60a5fa;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
+.peso-badge-rapida{background:rgba(16,185,129,.15);color:#10b981;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
 </style>
 </head>
 <body>
@@ -996,15 +1005,21 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div class="form-group" style="flex:1"><label class="form-label">Link evidência</label><input class="form-input" id="os-link" placeholder="https://..."></div>
       <div class="form-group" style="flex:1"><label class="form-label">Observações</label><input class="form-input" id="os-obs" placeholder="Notas internas..."></div>
     </div>
-    <!-- Entregas em 2 colunas -->
+    <!-- Peso Inteligente -->
     <div class="form-group">
-      <label class="form-label" style="margin-bottom:6px">Entregas aplicáveis</label>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-        <label class="form-check"><input type="checkbox" id="e-novidade" checked><span class="form-check-label">Novidade de versão</span><span class="form-check-hint">Boletim</span></label>
-        <label class="form-check"><input type="checkbox" id="e-help"><span class="form-check-label">Help (Zendesk)</span><span class="form-check-hint">Artigo</span></label>
-        <label class="form-check"><input type="checkbox" id="e-tutorial"><span class="form-check-label">Tutorial</span><span class="form-check-hint">Vídeo</span></label>
-        <label class="form-check"><input type="checkbox" id="e-evidencia" checked><span class="form-check-label">Evidência</span><span class="form-check-hint">Documento</span></label>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <label class="form-label" style="margin:0">Estimativa de esforço</label>
+        <span id="os-peso-badge" class="peso-badge-normal">Normal</span>
       </div>
+      <div class="peso-slider-wrap">
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="range" class="peso-slider" id="os-horas-slider" min="1" max="24" step="0.5" value="4" oninput="onPesoSliderChange(this.value)">
+          <input type="number" id="os-horas-input" min="0.5" step="0.5" value="4" style="width:70px;padding:5px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text);text-align:center" oninput="onPesoInputChange(this.value)">
+          <span style="font-size:12px;color:var(--muted)">h</span>
+        </div>
+        <div class="peso-markers"><span>1h</span><span>2h</span><span>6h</span><span>14h</span><span>24h</span></div>
+      </div>
+      <div style="font-size:11px;color:var(--hint);margin-top:6px" id="os-velocity-hint"></div>
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-os')">Cancelar</button>
@@ -1636,11 +1651,11 @@ var DIAS_SEMANA=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 var ELABELS={novidade:'Novidade de versão',help:'Help (Zendesk)',tutorial:'Tutorial',evidencia:'Evidência de entrega'};
 function getOSClassificacao(os){
-  var aplicaveis=Object.values(os.entregas||{}).filter(function(e){return e.aplicavel}).length;
-  if(aplicaveis===0)return{label:'S',title:'Sem entregas',color:'var(--muted)'};
-  if(aplicaveis===1)return{label:'P',title:'Pequena (1 entrega)',color:'#10b981'};
-  if(aplicaveis===2)return{label:'M',title:'Média (2 entregas)',color:'#f59e0b'};
-  return{label:'G',title:'Grande ('+aplicaveis+' entregas)',color:'#ef4444'};
+  var h=os.estimatedHours||0;
+  if(h<=2)return{label:'R',title:'Rápida (≤2h)',color:'var(--green-text)'};
+  if(h<=6)return{label:'N',title:'Normal (≤6h)',color:'var(--accent)'};
+  if(h<=14)return{label:'G',title:'Grande (≤14h)',color:'#f59e0b'};
+  return{label:'E',title:'Épico (>14h)',color:'#a78bfa'};
 }
 var SEG_COLORS=['#6366f1','#3b82f6','#10b981','#f59e0b','#ec4899','#ef4444','#a855f7','#14b8a6','#f97316','#84cc16'];
 var CANAL_LABELS={inline:'Inline/Banner',email:'E-mail',entregate:'Entre a Gente',webinar:'Webinar',teams:'Teams'};
@@ -2070,8 +2085,8 @@ function openNovaOS(){
   var nomeAtual='';
   if(CURRENT_USER&&!CURRENT_USER.isVisitor){var meta=CURRENT_USER.user_metadata||{};nomeAtual=meta.full_name||meta.name||'';}
   populateProdutoSel();populateVersaoSelOS();populateAtribSel(nomeAtual);
-  document.getElementById('e-novidade').checked=true;document.getElementById('e-help').checked=false;
-  document.getElementById('e-tutorial').checked=false;document.getElementById('e-evidencia').checked=true;
+  var vf=getVelocityFactor();
+  setPesoValue(Math.round((4/Math.max(vf,0.1))*2)/2);
   openModal('modal-os');
 }
 function openEditOS(osId){
@@ -2088,10 +2103,7 @@ function openEditOS(osId){
   populateProdutoSel();document.getElementById('os-produto').value=os.produto;
   populateVersaoSelOS();document.getElementById('os-versao-sel').value=os.versaoId;
   populateAtribSel(os.atribuicao||'');
-  document.getElementById('e-novidade').checked=!!(os.entregas.novidade&&os.entregas.novidade.aplicavel);
-  document.getElementById('e-help').checked=!!(os.entregas.help&&os.entregas.help.aplicavel);
-  document.getElementById('e-tutorial').checked=!!(os.entregas.tutorial&&os.entregas.tutorial.aplicavel);
-  document.getElementById('e-evidencia').checked=!!(os.entregas.evidencia&&os.entregas.evidencia.aplicavel);
+  setPesoValue(os.estimatedHours||4);
   openModal('modal-os');
 }
 function salvarOS(){
@@ -2114,10 +2126,8 @@ function salvarOS(){
     versaoId:vid,
     criadaEm:old?old.criadaEm:new Date().toISOString(),
     createdBy:old?old.createdBy:(CURRENT_USER?CURRENT_USER.id:null),
-    entregas:{novidade:mkE(document.getElementById('e-novidade').checked,old&&old.entregas.novidade),
-      help:mkE(document.getElementById('e-help').checked,old&&old.entregas.help),
-      tutorial:mkE(document.getElementById('e-tutorial').checked,old&&old.entregas.tutorial),
-      evidencia:mkE(document.getElementById('e-evidencia').checked,old&&old.entregas.evidencia)}};
+    estimatedHours:parseFloat(document.getElementById('os-horas-input').value)||2,
+    entregas:old?old.entregas:{}};
   dbSalvarOS(data).then(function(saved){
     data.id=saved.id;
     if(S.editOS){var i=S.oss.findIndex(function(o){return o.id===S.editOS});if(i>-1)S.oss[i]=data}
@@ -4457,10 +4467,8 @@ function salvarOS(){
     atribuicao:document.getElementById('os-atribuicao').value.trim(),
     versaoId:vid,criadaEm:old?old.criadaEm:new Date().toISOString(),
     createdBy:old?old.createdBy:(CURRENT_USER?CURRENT_USER.id:null),
-    entregas:{novidade:mkE(document.getElementById('e-novidade').checked,old&&old.entregas.novidade),
-      help:mkE(document.getElementById('e-help').checked,old&&old.entregas.help),
-      tutorial:mkE(document.getElementById('e-tutorial').checked,old&&old.entregas.tutorial),
-      evidencia:mkE(document.getElementById('e-evidencia').checked,old&&old.entregas.evidencia)}};
+    estimatedHours:parseFloat(document.getElementById('os-horas-input').value)||2,
+    entregas:old?old.entregas:{}};
   dbSalvarOS(data).then(function(){
     if(S.editOS){var i=S.oss.findIndex(function(o){return o.id===S.editOS});if(i>-1)S.oss[i]=data}
     else S.oss.push(data);
@@ -4624,6 +4632,51 @@ function loadSchedulePrefs(){
   if(el('pref-hora-saida'))el('pref-hora-saida').value=s.saida||'17:00';
   if(el('pref-carga-diaria'))el('pref-carga-diaria').value=s.cargaDiaria||8;
   if(el('pref-wip-limit'))el('pref-wip-limit').value=s.wipLimit||3;
+}
+
+// ── PESO INTELIGENTE ─────────────────────────────────────────────────────────
+function getVelocityFactor(){return parseFloat(localStorage.getItem('vs_velocity_factor'))||1.0}
+
+function osPorteFromHours(h){
+  h=parseFloat(h)||0;
+  if(h<=2)return{key:'rapida',label:'Rápida',cls:'peso-badge-rapida'};
+  if(h<=6)return{key:'normal',label:'Normal',cls:'peso-badge-normal'};
+  if(h<=14)return{key:'grande',label:'Grande',cls:'peso-badge-grande'};
+  return{key:'epico',label:'Épico',cls:'peso-badge-epico'};
+}
+
+function updatePesoBadge(h){
+  var p=osPorteFromHours(h);
+  var el=document.getElementById('os-peso-badge');
+  if(!el)return;
+  el.textContent=p.label;
+  el.className=p.cls;
+}
+
+function onPesoSliderChange(v){
+  document.getElementById('os-horas-input').value=v;
+  updatePesoBadge(v);
+}
+
+function onPesoInputChange(v){
+  var n=parseFloat(v)||0;
+  if(n<=24)document.getElementById('os-horas-slider').value=Math.min(n,24);
+  updatePesoBadge(n);
+}
+
+function setPesoValue(h){
+  var n=parseFloat(h)||2;
+  var sliderEl=document.getElementById('os-horas-slider');
+  var inputEl=document.getElementById('os-horas-input');
+  if(sliderEl)sliderEl.value=Math.min(n,24);
+  if(inputEl)inputEl.value=n;
+  updatePesoBadge(n);
+  var vf=getVelocityFactor();
+  var hint=document.getElementById('os-velocity-hint');
+  if(hint&&vf!==1.0){
+    var dir=vf>1?'tende a superestimar':'tende a subestimar';
+    hint.textContent='Seu fator de velocidade: '+vf.toFixed(2)+' (você '+dir+')';
+  }else if(hint){hint.textContent=''}
 }
 
 // ── ALERTAS / SINO (vs_alerts_YYYY-MM-DD) ────────────────────────────────────
