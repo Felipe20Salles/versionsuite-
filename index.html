@@ -244,6 +244,11 @@ textarea.form-input{resize:vertical;min-height:70px}
 .toggle-switch.on{background:var(--accent)}
 .toggle-knob{width:18px;height:18px;border-radius:50%;background:#fff;position:absolute;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
 .toggle-switch.on .toggle-knob{left:20px}
+.pref-flow-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.pref-flow-row:last-child{border-bottom:none}
+.pref-flow-label{font-size:13px;font-weight:500}
+.pref-flow-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.pref-time-input{width:70px;padding:5px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text);text-align:center}
 </style>
 </head>
 <body>
@@ -686,6 +691,33 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div class="pref-section-title">Cor de destaque</div>
             <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Aplicada em botões, cards ativos, barras e badges.</div>
             <div class="color-palette" id="color-palette"></div>
+          </div>
+          <div class="pref-section">
+            <div class="pref-section-title">Fluxo Diário</div>
+            <div class="pref-flow-row">
+              <div><div class="pref-flow-label">Entrada</div><div class="pref-flow-sub">Hora de início do expediente</div></div>
+              <input class="pref-time-input" id="pref-hora-entrada" type="time" value="08:00" onchange="saveSchedule()">
+            </div>
+            <div class="pref-flow-row">
+              <div><div class="pref-flow-label">Almoço</div><div class="pref-flow-sub">Saída para o almoço</div></div>
+              <input class="pref-time-input" id="pref-hora-almoco" type="time" value="12:00" onchange="saveSchedule()">
+            </div>
+            <div class="pref-flow-row">
+              <div><div class="pref-flow-label">Retorno</div><div class="pref-flow-sub">Hora prevista de retorno</div></div>
+              <input class="pref-time-input" id="pref-hora-retorno" type="time" value="13:00" onchange="saveSchedule()">
+            </div>
+            <div class="pref-flow-row">
+              <div><div class="pref-flow-label">Saída</div><div class="pref-flow-sub">Fim do expediente</div></div>
+              <input class="pref-time-input" id="pref-hora-saida" type="time" value="17:00" onchange="saveSchedule()">
+            </div>
+            <div class="pref-flow-row">
+              <div><div class="pref-flow-label">Carga diária (h)</div><div class="pref-flow-sub">Horas de trabalho esperadas por dia</div></div>
+              <input class="pref-time-input" id="pref-carga-diaria" type="number" min="1" max="24" value="8" style="width:60px" onchange="saveSchedule()">
+            </div>
+            <div class="pref-flow-row">
+              <div><div class="pref-flow-label">WIP Limit</div><div class="pref-flow-sub">Máx. de OSs em andamento ao mesmo tempo</div></div>
+              <input class="pref-time-input" id="pref-wip-limit" type="number" min="1" max="10" value="3" style="width:60px" onchange="saveSchedule()">
+            </div>
           </div>
         </div>
 
@@ -1730,6 +1762,7 @@ function goPrefsTab(nome){
       btn.style.color=(t===nome)?'var(--accent)':'var(--muted)';
     }
   });
+  if(nome==='pessoal')loadSchedulePrefs();
 }
 
 // ── NAV ──────────────────────────────────────────────────────────────────────
@@ -4539,6 +4572,33 @@ function getTipoAtividades(){
   return['Documentação'];
 }
 function saveTipoAtividades(arr){localStorage.setItem('vs_tipo_atividade',JSON.stringify(arr))}
+
+// ── SCHEDULE (vs_schedule) ────────────────────────────────────────────────────
+function getSchedule(){
+  try{return JSON.parse(localStorage.getItem('vs_schedule'))||{}}catch(e){return{}}
+}
+function saveSchedule(){
+  var s={
+    entrada:document.getElementById('pref-hora-entrada').value||'08:00',
+    almoco:document.getElementById('pref-hora-almoco').value||'12:00',
+    retorno:document.getElementById('pref-hora-retorno').value||'13:00',
+    saida:document.getElementById('pref-hora-saida').value||'17:00',
+    cargaDiaria:parseFloat(document.getElementById('pref-carga-diaria').value)||8,
+    wipLimit:parseInt(document.getElementById('pref-wip-limit').value)||3
+  };
+  localStorage.setItem('vs_schedule',JSON.stringify(s));
+}
+function loadSchedulePrefs(){
+  var s=getSchedule();
+  var el=function(id){return document.getElementById(id)};
+  if(el('pref-hora-entrada'))el('pref-hora-entrada').value=s.entrada||'08:00';
+  if(el('pref-hora-almoco'))el('pref-hora-almoco').value=s.almoco||'12:00';
+  if(el('pref-hora-retorno'))el('pref-hora-retorno').value=s.retorno||'13:00';
+  if(el('pref-hora-saida'))el('pref-hora-saida').value=s.saida||'17:00';
+  if(el('pref-carga-diaria'))el('pref-carga-diaria').value=s.cargaDiaria||8;
+  if(el('pref-wip-limit'))el('pref-wip-limit').value=s.wipLimit||3;
+}
+
 function renderTipoAtividades(){
   var arr=getTipoAtividades();
   var el=document.getElementById('tipo-atividade-list');if(!el)return;
