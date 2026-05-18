@@ -4642,13 +4642,15 @@ function toggleBellDropdown(){
   }
 }
 
+function escHtml(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
 function renderBellDropdown(){
   var alerts=getAlerts();
   var body=document.getElementById('bell-dd-body');
   if(!body)return;
   if(alerts.length===0){body.innerHTML='<div class="bell-dd-empty">Nenhuma notificação hoje.</div>';return}
   body.innerHTML=alerts.slice().reverse().map(function(a){
-    return'<div class="bell-dd-item"><div>'+a.message+'</div><div class="bell-dd-time">'+a.firedAt.slice(11,16)+'</div></div>';
+    return'<div class="bell-dd-item"><div>'+escHtml(a.message)+'</div><div class="bell-dd-time">'+escHtml(a.firedAt.slice(11,16))+'</div></div>';
   }).join('');
 }
 
@@ -5351,6 +5353,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       applyVisitorMode();
       updateUserBadge(CURRENT_USER);
       mostrarApp();
+      updateBellUI();
       renderDash();
       return;
     }else{sessionStorage.removeItem('vs_visitor_session');}
@@ -5369,6 +5372,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     applyPrefs();
     if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
     mostrarApp();
+    updateBellUI();
     renderDash();
     // ── Paralelo ──────────────────────────────────────────
     if (typeof Paralelo !== 'undefined') {
@@ -5401,6 +5405,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       applyPrefs();
       if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
       mostrarApp();
+      updateBellUI();
       renderDash();
       // ── Paralelo ────────────────────────────────────────
       if (typeof Paralelo !== 'undefined') {
