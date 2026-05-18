@@ -4698,7 +4698,7 @@ function checkAlerts(){
     // If no day plan yet, open planning modal
     var planKey='vs_dayplan_'+now.toISOString().slice(0,10);
     var plan=null;try{plan=JSON.parse(localStorage.getItem(planKey))}catch(e){}
-    if(!plan||!plan.confirmedAt)setTimeout(openDayPlanModal,500);
+    if((!plan||!plan.confirmedAt)&&typeof openDayPlanModal==='function')setTimeout(openDayPlanModal,500);
   }
 
   // Almoço
