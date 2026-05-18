@@ -4526,9 +4526,9 @@ function saveRedmineStatusMapFromInputs(){
   var sa=document.getElementById('pref-redmine-status-afazer');
   var san=document.getElementById('pref-redmine-status-andamento');
   var sc=document.getElementById('pref-redmine-status-concluido');
-  if(sa&&sa.value)map.afazer=parseInt(sa.value);
-  if(san&&san.value)map.andamento=parseInt(san.value);
-  if(sc&&sc.value)map.concluido=parseInt(sc.value);
+  if(sa&&sa.value)map.afazer=parseInt(sa.value,10);
+  if(san&&san.value)map.andamento=parseInt(san.value,10);
+  if(sc&&sc.value)map.concluido=parseInt(sc.value,10);
   saveRedmineStatusMap(map);
 }
 async function loadRedmineStatuses(){
