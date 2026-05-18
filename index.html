@@ -281,6 +281,17 @@ textarea.form-input{resize:vertical;min-height:70px}
 .dayplan-os-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .dayplan-h-input{width:60px;padding:4px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text);text-align:center}
 .dayplan-total{font-size:22px;font-weight:700;font-family:var(--mono);padding:0 16px}
+/* ── RESUMO DO DIA ── */
+.resume-stat-box{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center;flex:1}
+.resume-stat-val{font-size:22px;font-weight:700;font-family:var(--mono);letter-spacing:-1px}
+.resume-stat-lbl{font-size:10px;color:var(--muted);margin-top:3px}
+.resume-os-row{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px}
+.resume-os-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.resume-cell{background:var(--surface);border-radius:6px;padding:8px 10px;text-align:center}
+.resume-cell-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.resume-cell-val{font-size:15px;font-weight:600;font-family:var(--mono)}
+.resume-h-input{width:70px;background:var(--surface);border:1px solid var(--accent);border-radius:5px;padding:4px 6px;color:var(--text);font-size:13px;text-align:center;font-family:var(--mono);font-weight:600}
+.resume-search-input{width:100%;padding:7px 10px;font-size:12px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text)}
 /* ── FOCO / TIMER ── */
 @keyframes dot-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
 .foco-pill{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:5px 12px 5px 10px;cursor:pointer;transition:border-color .15s;max-width:280px;min-width:160px;position:relative}
@@ -4605,6 +4616,11 @@ function salvarPonto(){
     else{S.pontos.push(reg);S.pontos.sort(function(a,b){return b.data.localeCompare(a.data)})}
     closeModal('modal-ponto');renderPontoList();renderDash();
     toast(editId?'Registro atualizado':'Ponto salvo');
+    if(ms.length===4){
+      var resumeKey=getResumeKey();var existing=null;
+      try{existing=JSON.parse(localStorage.getItem(resumeKey))}catch(ex){}
+      if(!existing||!existing.confirmedAt){setTimeout(openDayResumeModal,600);}
+    }
   }).catch(function(e){toast('Erro: '+e.message,'err')});
 }
 
@@ -4851,6 +4867,131 @@ function recalcVelocityFactor(){
   var sum=entries.reduce(function(acc,e){return acc+e.actual/e.planned},0);
   var factor=parseFloat((sum/entries.length).toFixed(2));
   localStorage.setItem('vs_velocity_factor',factor);
+}
+
+// ── RESUMO DO DIA ─────────────────────────────────────────────────────────────
+var _resumeExtraEntries=[];
+
+function getResumeKey(){return'vs_dayresume_'+new Date().toISOString().slice(0,10)}
+
+function openDayResumeModal(){
+  _resumeExtraEntries=[];
+  var plan=getDayPlan();
+  var planEntries=(plan&&plan.entries)||[];
+  var log=getTodayLog();
+  var trackedByOs={};
+  log.forEach(function(s){trackedByOs[s.osId]=(trackedByOs[s.osId]||0)+Math.round(s.duration/36)/100});
+  var planOsIds=planEntries.map(function(e){return e.osId});
+  var extraOsIds=Object.keys(trackedByOs).filter(function(id){return planOsIds.indexOf(id)<0&&trackedByOs[id]>=5/60});
+  var now=new Date();
+  var dias=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  var subEl=document.getElementById('resume-date-sub');
+  if(subEl)subEl.textContent=dias[now.getDay()]+', '+now.getDate()+'/'+String(now.getMonth()+1).padStart(2,'0');
+  var totalPlanned=planEntries.reduce(function(acc,e){return acc+e.plannedHours},0);
+  var totalTracked=parseFloat(Object.values(trackedByOs).reduce(function(acc,h){return acc+h},0).toFixed(2));
+  var diff=parseFloat((totalTracked-totalPlanned).toFixed(2));
+  var statsEl=document.getElementById('resume-stats');
+  if(statsEl)statsEl.innerHTML=
+    '<div class="resume-stat-box"><div class="resume-stat-val" style="color:var(--accent)">'+totalPlanned+'h</div><div class="resume-stat-lbl">Planejado</div></div>'
+    +'<div class="resume-stat-box"><div class="resume-stat-val" style="color:'+(diff>=0?'#10b981':'#f59e0b')+'">'+totalTracked+'h</div><div class="resume-stat-lbl">Rastreado</div></div>'
+    +'<div class="resume-stat-box" style="border-color:'+(diff>=0?'rgba(16,185,129,.3)':'rgba(245,158,11,.3)')+'"><div class="resume-stat-val" style="color:'+(diff>=0?'#10b981':'#f59e0b')+'">'+(diff>=0?'+':'')+diff+'h</div><div class="resume-stat-lbl">'+(diff>=0?'Acima do plano':'Abaixo do plano')+'</div></div>';
+  var cel=document.getElementById('resume-celebration');
+  if(cel)cel.style.display=diff>=0?'block':'none';
+  renderResumeOsList(planEntries,trackedByOs,extraOsIds);
+  openModal('modal-dayresume');
+}
+
+function renderResumeOsList(planEntries,trackedByOs,extraOsIds){
+  var listEl=document.getElementById('resume-os-list');if(!listEl)return;
+  var html='';
+  planEntries.forEach(function(entry){
+    var tracked=parseFloat((trackedByOs[entry.osId]||0).toFixed(2));
+    var os=S.oss.find(function(o){return o.id===entry.osId});
+    var porte=os?osPorteFromHours(os.estimatedHours||0):{key:'normal',label:'Normal',cls:'peso-badge-normal'};
+    html+=_resumeOsRowHtml(entry.osId,escHtml(entry.osTitle),entry.plannedHours,tracked,porte,false);
+  });
+  extraOsIds.forEach(function(osId){
+    var os=S.oss.find(function(o){return o.id===osId});
+    var title=os?('#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)):osId;
+    var tracked=parseFloat((trackedByOs[osId]||0).toFixed(2));
+    var porte=os?osPorteFromHours(os.estimatedHours||0):{key:'normal',label:'Normal',cls:'peso-badge-normal'};
+    html+=_resumeOsRowHtml(osId,title,null,tracked,porte,true);
+  });
+  _resumeExtraEntries.forEach(function(e){
+    html+=_resumeOsRowHtml(e.osId,escHtml(e.osTitle),null,e.hours,{key:'rapida',label:'Manual',cls:'peso-badge-rapida'},true);
+  });
+  listEl.innerHTML=html||'<div style="text-align:center;padding:20px;font-size:12px;color:var(--hint)">Nenhuma OS rastreada hoje.</div>';
+  updateResumeTotal();
+}
+
+function _resumeOsRowHtml(osId,title,planned,tracked,porte,isExtra){
+  return'<div class="resume-os-row">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+    +'<span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px">'+porte.label+'</span>'
+    +'<div style="flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+title+'</div>'
+    +(isExtra?'<span style="font-size:10px;color:#f59e0b">⚡ fora do plano</span>':'')
+    +'</div>'
+    +'<div class="resume-os-grid">'
+    +'<div class="resume-cell"><div class="resume-cell-lbl">Planejado</div><div class="resume-cell-val" style="color:var(--muted)">'+(planned!=null?planned+'h':'—')+'</div></div>'
+    +'<div class="resume-cell"><div class="resume-cell-lbl">Rastreado</div><div class="resume-cell-val" style="color:'+(tracked>0?'#10b981':'var(--muted)')+'">'+tracked+'h</div></div>'
+    +'<div class="resume-cell" style="border:1px solid rgba(124,111,247,.3)"><div class="resume-cell-lbl">Apropriar</div>'
+    +'<input class="resume-h-input" value="'+tracked+'" data-osid="'+osId+'" oninput="updateResumeTotal()"></div>'
+    +'</div></div>';
+}
+
+function updateResumeTotal(){
+  var inputs=document.querySelectorAll('.resume-h-input');
+  var total=0;inputs.forEach(function(inp){total+=parseFloat(inp.value)||0});
+  var el=document.getElementById('resume-total');
+  if(el)el.textContent=parseFloat(total.toFixed(2))+'h';
+}
+
+function toggleResumeAddOS(){
+  var panel=document.getElementById('resume-add-panel');
+  if(panel)panel.style.display=panel.style.display==='none'?'block':'none';
+}
+
+function searchResumeOS(q){
+  q=(q||'').toLowerCase().trim();
+  var results=document.getElementById('resume-add-results');if(!results)return;
+  if(!q){results.innerHTML='';return}
+  var matches=S.oss.filter(function(o){
+    return(o.num&&String(o.num).toLowerCase().includes(q))||(o.titulo&&o.titulo.toLowerCase().includes(q));
+  }).slice(0,6);
+  results.innerHTML=matches.map(function(os){
+    return'<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:var(--radius);font-size:12px" onclick="addResumeOS(\''+os.id+'\',\'#'+os.num+' · '+encodeURIComponent(os.titulo)+'\')" onmouseover="this.style.background=\'var(--card2)\'" onmouseout="this.style.background=\'\'"><span style="font-family:var(--mono);color:var(--muted)">#'+escHtml(String(os.num))+'</span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(os.titulo)+'</span></div>';
+  }).join('');
+}
+
+function addResumeOS(osId,encodedTitle){
+  var title=decodeURIComponent(encodedTitle);
+  var h=parseFloat(document.getElementById('resume-add-h').value)||1;
+  _resumeExtraEntries.push({osId:osId,osTitle:title,hours:h});
+  document.getElementById('resume-add-search').value='';
+  document.getElementById('resume-add-results').innerHTML='';
+  document.getElementById('resume-add-panel').style.display='none';
+  var plan=getDayPlan();var planEntries=(plan&&plan.entries)||[];
+  var log=getTodayLog();
+  var trackedByOs={};
+  log.forEach(function(s){trackedByOs[s.osId]=(trackedByOs[s.osId]||0)+Math.round(s.duration/36)/100});
+  var planOsIds=planEntries.map(function(e){return e.osId});
+  var extraOsIds=Object.keys(trackedByOs).filter(function(id){return planOsIds.indexOf(id)<0&&trackedByOs[id]>=5/60});
+  renderResumeOsList(planEntries,trackedByOs,extraOsIds);
+}
+
+function confirmDayResume(){
+  var inputs=document.querySelectorAll('.resume-h-input');
+  var entries=[];
+  inputs.forEach(function(inp){
+    var osId=inp.dataset.osid;var h=parseFloat(inp.value)||0;
+    if(h>0)entries.push({osId:osId,approvedHours:h});
+  });
+  var resume={confirmedAt:new Date().toISOString(),entries:entries};
+  localStorage.setItem(getResumeKey(),JSON.stringify(resume));
+  recalcVelocityFactor();
+  saveFocusState(null);
+  closeModal('modal-dayresume');
+  toast('Horas apropriadas — até amanhã!');
 }
 
 // ── FOCO / TIMER ─────────────────────────────────────────────────────────────
@@ -5962,6 +6103,53 @@ var __paralelo_config = {
     <div style="display:flex;gap:8px">
       <button class="btn" onclick="closeModal('modal-wip')">Cancelar</button>
       <button class="btn" style="color:var(--red-text);border-color:rgba(239,68,68,.3)" id="wip-force-btn">Forçar mesmo assim</button>
+    </div>
+  </div>
+</div>
+<!-- MODAL RESUMO DO DIA -->
+<div class="modal-overlay" id="modal-dayresume" style="z-index:400">
+  <div class="modal" style="max-width:600px;max-height:90vh;overflow-y:auto">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-size:16px;font-weight:600">Resumo do dia</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px" id="resume-date-sub"></div>
+      </div>
+      <div id="resume-celebration" style="display:none;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.25);border-radius:8px;padding:6px 12px;text-align:center">
+        <div style="font-size:18px">🎯</div>
+        <div style="font-size:10px;color:#10b981;font-weight:600;margin-top:2px">Plano cumprido!</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:20px" id="resume-stats"></div>
+    <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:10px;display:flex;justify-content:space-between">
+      <span>OSs — planejado vs rastreado vs apropriar</span>
+      <span style="font-size:10px;color:var(--hint);text-transform:none;letter-spacing:0">Ajuste antes de confirmar</span>
+    </div>
+    <div id="resume-os-list"></div>
+    <div style="margin-top:12px">
+      <button class="btn btn-sm btn-ghost" onclick="toggleResumeAddOS()" id="resume-add-btn">+ Adicionar OS que esqueci de rastrear</button>
+      <div id="resume-add-panel" style="display:none;margin-top:8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Buscar OS pelo número ou título</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="resume-search-input" id="resume-add-search" placeholder="#número ou título..." oninput="searchResumeOS(this.value)">
+          <input type="number" id="resume-add-h" min="0.5" step="0.5" value="1" style="width:70px;padding:6px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);text-align:center">
+          <span style="font-size:12px;color:var(--muted)">h</span>
+        </div>
+        <div id="resume-add-results" style="margin-top:8px;max-height:120px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-top:16px">
+      <div>
+        <div style="font-size:12px;color:var(--muted)">Total a apropriar</div>
+        <div style="font-size:10px;color:var(--hint);margin-top:2px">Salvo e disponível para exportar ao Redmine</div>
+      </div>
+      <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--accent)" id="resume-total">0h</div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+      <span style="font-size:11px;color:var(--hint)">Após confirmar, a sessão do dia é encerrada.</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="closeModal('modal-dayresume')">Ajustar depois</button>
+        <button class="btn btn-primary" onclick="confirmDayResume()">✓ Confirmar e apropriar</button>
+      </div>
     </div>
   </div>
 </div>
