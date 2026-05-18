@@ -4684,6 +4684,51 @@ function fireAlert(type,message){
   updateBellUI();
 }
 
+var _lastActivityAt=Date.now();
+function touchActivity(){_lastActivityAt=Date.now()}
+
+function checkAlerts(){
+  var s=getSchedule();
+  var now=new Date();
+  var hhmm=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+
+  // Início do expediente
+  if(hhmm===s.entrada){
+    fireAlert('inicio','Bom dia! Hora de planejar seu dia — que tal começar pelo planejamento?');
+    // If no day plan yet, open planning modal
+    var planKey='vs_dayplan_'+now.toISOString().slice(0,10);
+    var plan=null;try{plan=JSON.parse(localStorage.getItem(planKey))}catch(e){}
+    if(!plan||!plan.confirmedAt)setTimeout(openDayPlanModal,500);
+  }
+
+  // Almoço
+  if(hhmm===s.almoco){
+    fireAlert('almoco','Hora do almoço! Não esqueça de registrar o ponto antes de sair.');
+  }
+
+  // Retorno — detected by activity after long pause
+  var pausaMin=(Date.now()-_lastActivityAt)/60000;
+  if(pausaMin<2)touchActivity();
+  if(s.retorno&&hhmm>=s.retorno&&pausaMin>30){
+    fireAlert('retorno','Bem-vindo de volta! Reveja o planejamento — o que ainda falta para hoje?');
+    _lastActivityAt=Date.now();
+  }
+
+  // Fim do expediente (15 min antes)
+  var saidaMin=toMin(s.saida||'17:00');
+  var nowMin=now.getHours()*60+now.getMinutes();
+  if(nowMin===saidaMin-15){
+    fireAlert('fim','Expediente quase no fim. Hora de fechar as OSs do dia e apropriar as horas.');
+  }
+
+  // Hora extra (30 min após saída)
+  if(nowMin===saidaMin+30){
+    fireAlert('extra','Ainda por aqui? Você é muito dedicado! Não esqueça de registrar tudo antes de sair.');
+  }
+
+  updateBellUI();
+}
+
 function renderTipoAtividades(){
   var arr=getTipoAtividades();
   var el=document.getElementById('tipo-atividade-list');if(!el)return;
@@ -5371,6 +5416,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
     mostrarApp();
     updateBellUI();
+    setInterval(checkAlerts,60000);
     renderDash();
     // ── Paralelo ──────────────────────────────────────────
     if (typeof Paralelo !== 'undefined') {
