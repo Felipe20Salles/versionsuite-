@@ -596,11 +596,11 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div id="screen-kanban" class="screen">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
           <select class="form-input" id="kanban-versao-sel" style="width:auto" onchange="onVersaoChange()"></select>
-          <div class="filter-bar" style="margin:0">
-            <button class="filter-chip active" onclick="setFiltro(this,'todos')">Todos</button>
-            <button class="filter-chip" onclick="setFiltro(this,'Gestão de Talentos')">GT</button>
-            <button class="filter-chip" onclick="setFiltro(this,'Pagadoria')">Pagadoria</button>
-          </div>
+          <select class="form-input" id="kanban-filtro-sel" style="width:auto" onchange="setFiltro(this.value)">
+            <option value="todos">Todos</option>
+            <option value="Gestão de Talentos">GT</option>
+            <option value="Pagadoria">Pagadoria</option>
+          </select>
           <div style="display:flex;align-items:center;gap:6px;border-left:1px solid var(--border);padding-left:8px">
             <span style="font-size:12px;color:var(--muted);white-space:nowrap">Atribuído a:</span>
             <select id="kanban-atrib-sel" class="form-input" style="padding:4px 8px;font-size:12px;height:auto" onchange="setFiltroAtribuicao(this.value)">
@@ -2149,7 +2149,7 @@ function salvarVersao(){
 
 // ── KANBAN ────────────────────────────────────────────────────────────────────
 function onVersaoChange(){S.versaoK=document.getElementById('kanban-versao-sel').value;renderKanban()}
-function setFiltro(btn,f){document.querySelectorAll('.filter-chip').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');S.filtro=f;renderKanban()}
+function setFiltro(f){S.filtro=f||'todos';renderKanban()}
 function statusLabel(k){return{afazer:'A fazer',andamento:'Em andamento',concluido:'Concluído'}[k]||k}
 function statusNext(k){return{afazer:'andamento',andamento:'concluido',concluido:null}[k]}
 function statusPrev(k){return{afazer:null,andamento:'afazer',concluido:'andamento'}[k]}
@@ -2185,6 +2185,8 @@ function renderKanban(){
     }).join('');
     atribSel.value=curVal;
   }
+  var filtroSel=document.getElementById('kanban-filtro-sel');
+  if(filtroSel)filtroSel.value=S.filtro||'todos';
   var sel=document.getElementById('kanban-versao-sel');
   sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+(v.ativa?'':' ✓')+'</option>'}).join('');
   if(S.versaoK)sel.value=S.versaoK;
