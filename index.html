@@ -1989,7 +1989,7 @@ function goScreen(name){
   var titles={dashboard:'Dashboard',kanban:'Kanban',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda de Publicações'};
   var isVisitor=CURRENT_USER&&CURRENT_USER.isVisitor;
   var acts={
-    dashboard:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
+    dashboard:isVisitor?'':'<button class="btn btn-sm btn-ghost" onclick="openDayPlanModal(true)" style="margin-right:4px">📋 Revisar plano</button><button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
     kanban:(!isVisitor&&can('os_criar'))?'<button class="btn btn-primary btn-sm" onclick="openNovaOS()">+ Nova OS</button>':'',
     boletim:'',
     ponto:(!isVisitor&&canMenu('ponto'))?'<button class="btn btn-primary btn-sm" onclick="openNovoRegistro()">+ Adicionar dia</button>':'',
@@ -4873,9 +4873,9 @@ function getDayPlan(){
   try{return JSON.parse(localStorage.getItem(getDayKey()))||null}catch(e){return null}
 }
 
-function openDayPlanModal(){
+function openDayPlanModal(force){
   var plan=getDayPlan();
-  if(plan&&plan.confirmedAt)return; // já confirmado hoje
+  if(!force&&plan&&plan.confirmedAt)return; // já confirmado hoje
   var now=new Date();
   var dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
   var meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
