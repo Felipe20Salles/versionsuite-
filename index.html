@@ -229,6 +229,18 @@ textarea.form-input{resize:vertical;min-height:70px}
 /* PREFS */
 .pref-section{margin-bottom:24px}
 .pref-section-title{font-size:12px;font-weight:500;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+/* Admin redesign */
+.admin-roles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:4px}
+.admin-role-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;display:flex;flex-direction:column;justify-content:space-between;min-height:160px;transition:border-color .15s}
+.admin-role-card:hover{border-color:var(--border2)}
+.admin-role-card.empty-card{opacity:.45}
+.admin-avatar-stack{display:flex;align-items:center}
+.admin-av{width:22px;height:22px;border-radius:50%;border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff}
+.admin-av+.admin-av{margin-left:-6px}
+.admin-equipe-rows{display:flex;flex-direction:column;gap:10px}
+.admin-equipe-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);transition:border-color .15s}
+.admin-equipe-row:hover{border-color:var(--border2)}
+.admin-col-lbl{font-size:9px;font-weight:600;color:var(--hint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
 .role-badge-admin{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
 .role-badge-membro{background:rgba(99,102,241,.15);color:#6366f1;border:1px solid rgba(99,102,241,.3)}
 .role-badge-visualizador{background:rgba(107,114,128,.15);color:#9ca3af;border:1px solid rgba(107,114,128,.2)}
@@ -1434,20 +1446,40 @@ function renderEquipesPrefs(){
   var linhas=S_EQUIPES.map(function(e){
     var gestorNome='—';
     if(e.gestorId){var gu=S_USERS.find(function(u){return u.id===e.gestorId});if(gu)gestorNome=escHtml(gu.displayName);}
-    return'<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border2)">'+
-      '<div style="flex:1;font-size:13px">'+escHtml(e.nome)+'</div>'+
-      '<div style="font-size:12px;color:var(--muted)">Gestor: '+gestorNome+'</div>'+
-      '<button class="btn btn-xs btn-ghost" onclick="editarEquipe(\''+e.id+'\')">✏</button>'+
-      '<button class="btn btn-xs btn-ghost" style="color:var(--err)" onclick="removerEquipe(\''+e.id+'\')">✕</button>'+
+    var memberCount=S_USERS.filter(function(u){return u.equipeId===e.id}).length;
+    return'<div class="admin-equipe-row">'+
+      '<div style="display:flex;align-items:center;gap:24px;flex:1;min-width:0">'+
+        '<div style="width:160px;min-width:0">'+
+          '<div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(e.nome)+'</div>'+
+        '</div>'+
+        '<div style="width:160px;min-width:0">'+
+          '<div class="admin-col-lbl">Gestor Responsável</div>'+
+          '<div style="font-size:12px;color:var(--muted)">'+gestorNome+'</div>'+
+        '</div>'+
+        '<div>'+
+          '<div class="admin-col-lbl">Membros</div>'+
+          '<div style="font-size:13px;font-weight:500;color:var(--text)">'+memberCount+'</div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="display:flex;align-items:center;gap:6px;flex-shrink:0">'+
+        '<button class="btn btn-ghost" style="width:32px;height:32px;padding:0;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--muted)" aria-label="Mais ações" onclick="editarEquipe(\''+e.id+'\')">⋯</button>'+
+        '<button class="btn btn-ghost" style="font-size:11px;padding:5px 12px" onclick="editarEquipe(\''+e.id+'\')">Ver Equipe</button>'+
+        '<button class="btn btn-ghost" style="font-size:11px;padding:5px 8px;color:var(--err)" onclick="removerEquipe(\''+e.id+'\')">✕</button>'+
+      '</div>'+
     '</div>';
   }).join('');
   sec.innerHTML=
-    '<div class="pref-section-title">Equipes</div>'+
-    '<div id="equipes-list">'+
-      (linhas||'<div style="font-size:12px;color:var(--hint);padding:6px 0">Nenhuma equipe cadastrada.</div>')+
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">'+
+      '<div>'+
+        '<div class="pref-section-title" style="margin-bottom:2px">Equipes</div>'+
+        '<div style="font-size:12px;color:var(--hint)">Organize seus colaboradores por departamento para relatórios e permissões.</div>'+
+      '</div>'+
+      '<button class="btn btn-ghost" style="font-size:11px;white-space:nowrap;color:var(--accent)" onclick="novaEquipeForm()">+ Nova equipe</button>'+
     '</div>'+
-    '<button class="btn btn-sm" style="margin-top:12px" onclick="novaEquipeForm()">+ Nova equipe</button>'+
-    '<div id="equipe-form" style="display:none;margin-top:12px;padding:12px;background:var(--card2);border-radius:var(--radius)">'+
+    '<div class="admin-equipe-rows">'+
+      (linhas||'<div style="font-size:12px;color:var(--hint);padding:12px 16px">Nenhuma equipe cadastrada.</div>')+
+    '</div>'+
+    '<div id="equipe-form" style="display:none;margin-top:12px;padding:14px;background:var(--card2);border-radius:var(--radius)">'+
       '<input type="hidden" id="equipe-form-id">'+
       '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'+
         '<input class="form-input" id="equipe-form-nome" placeholder="Nome da equipe" style="flex:1;min-width:150px">'+
@@ -1530,51 +1562,45 @@ async function renderRolesPrefs(){
   S_ROLES=rolesData||[];
   S_ROLES.forEach(function(r){ROLE_LABELS[r.nome]=r.label||r.nome;});
 
-  function mkCheckbox(roleId,key,checked){
-    return'<label class="form-check" style="margin-bottom:4px">'+
-      '<input type="checkbox" '+(checked?'checked':'')+' onchange="rolesPermToggle(\''+roleId+'\',\''+key+'\',this.checked)" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer">'+
-      '<span class="form-check-label">'+PERM_LABELS[key]+'</span>'+
-    '</label>';
-  }
-
   function mkRoleCard(r){
-    var p=r.permissoes||{acoes:{},menus:{}};
-    var userCount=S_USERS.filter(function(u){return u.role===r.nome}).length;
-    return'<div class="card" style="margin-bottom:10px" id="roles-card-'+r.id+'">'+
-      '<div style="display:flex;align-items:center;gap:8px;cursor:pointer" onclick="rolesToggleCard(\''+r.id+'\')">'+
-        '<span style="flex:1;font-size:13px;font-weight:500">'+escHtml(r.label||r.nome)+'</span>'+
-        '<span style="font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:10px;background:var(--card2);color:var(--hint)">'+userCount+' usuário(s)</span>'+
-        '<span id="roles-card-arrow-'+r.id+'" style="color:var(--hint);font-size:12px;transition:transform .2s">▼</span>'+
+    var COLORS=['#7c6ff7','#10b981','#f59e0b','#60a5fa','#f87171','#a78bfa'];
+    var users=S_USERS.filter(function(u){return u.role===r.nome});
+    var userCount=users.length;
+    var isAdminRole=r.nome==='admin';
+    var badgeCss=isAdminRole
+      ?'background:rgba(124,111,247,.15);color:var(--accent);border:1px solid rgba(124,111,247,.25)'
+      :'background:rgba(255,255,255,.05);color:var(--muted);border:1px solid rgba(255,255,255,.1)';
+    var avatars=users.slice(0,4).map(function(u,i){
+      var letter=u.displayName?u.displayName[0].toUpperCase():'?';
+      return'<div class="admin-av" style="background:'+COLORS[i%COLORS.length]+'" title="'+escHtml(u.displayName)+'">'+letter+'</div>';
+    }).join('');
+    var avatarZone=avatars
+      ?'<div class="admin-avatar-stack">'+avatars+'</div>'
+      :'<span style="font-size:10px;color:var(--hint);text-transform:uppercase;letter-spacing:.05em">Ninguém atribuído</span>';
+    return'<div class="admin-role-card'+(userCount===0?' empty-card':'')+'">'+
+      '<div>'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'+
+          '<span style="font-size:13px;font-weight:500;color:var(--text)">'+escHtml(r.label||r.nome)+'</span>'+
+          '<span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;'+badgeCss+'">'+userCount+' usuário'+(userCount!==1?'s':'')+'</span>'+
+        '</div>'+
+        '<div style="font-size:11px;color:var(--hint);line-height:1.5;min-height:32px">'+escHtml(r.descricao||'')+'</div>'+
       '</div>'+
-      '<div id="roles-card-body-'+r.id+'" style="display:none;padding-top:12px;border-top:1px solid var(--border);margin-top:12px">'+
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
-          '<div>'+
-            '<div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Menus</div>'+
-            mkCheckbox(r.id,'menus.boletim',!!(p.menus&&p.menus.boletim))+
-            mkCheckbox(r.id,'menus.ponto',!!(p.menus&&p.menus.ponto))+
-            mkCheckbox(r.id,'menus.preferencias',!!(p.menus&&p.menus.preferencias))+
-          '</div>'+
-          '<div>'+
-            '<div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Ações</div>'+
-            mkCheckbox(r.id,'acoes.os_criar',!!(p.acoes&&p.acoes.os_criar))+
-            mkCheckbox(r.id,'acoes.os_editar',!!(p.acoes&&p.acoes.os_editar))+
-            mkCheckbox(r.id,'acoes.os_deletar_propria',!!(p.acoes&&p.acoes.os_deletar_propria))+
-            mkCheckbox(r.id,'acoes.boletim_editar',!!(p.acoes&&p.acoes.boletim_editar))+
-            mkCheckbox(r.id,'acoes.agenda_editar',!!(p.acoes&&p.acoes.agenda_editar))+
-            mkCheckbox(r.id,'acoes.preferencias_admin',!!(p.acoes&&p.acoes.preferencias_admin))+
-          '</div>'+
-        '</div>'+
-        '<div style="display:flex;justify-content:flex-end">'+
-          '<button class="btn btn-primary btn-sm" onclick="rolesSalvar(\''+r.id+'\')">Salvar</button>'+
-        '</div>'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px">'+
+        avatarZone+
+        '<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;color:var(--muted);border:none" onclick="openGerenciarRole(\''+r.id+'\')">Gerenciar</button>'+
       '</div>'+
     '</div>';
   }
 
   sec.innerHTML=
-    '<div class="pref-section-title">Perfis de Acesso</div>'+
-    S_ROLES.map(mkRoleCard).join('')+
-    '<button class="btn btn-sm btn-ghost" onclick="rolesNovoModal()" style="margin-top:4px">+ Novo perfil de acesso</button>'+
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">'+
+      '<div>'+
+        '<div class="pref-section-title" style="margin-bottom:2px">Perfis de Acesso</div>'+
+        '<div style="font-size:12px;color:var(--hint)">Defina o que cada colaborador pode visualizar e editar dentro do ecossistema.</div>'+
+      '</div>'+
+      '<button class="btn btn-ghost" style="font-size:11px;white-space:nowrap;color:var(--accent)" onclick="rolesNovoModal()">+ Novo perfil</button>'+
+    '</div>'+
+    '<div class="admin-roles-grid">'+S_ROLES.map(mkRoleCard).join('')+'</div>'+
     '<div id="modal-novo-role" class="modal-overlay">'+
       '<div class="modal">'+
         '<div class="modal-title">Novo Perfil de Acesso</div>'+
@@ -1591,16 +1617,18 @@ async function renderRolesPrefs(){
           '<button class="btn btn-primary" onclick="rolesCriar()">Criar perfil</button>'+
         '</div>'+
       '</div>'+
+    '</div>'+
+    '<div id="modal-gerenciar-role" class="modal-overlay">'+
+      '<div class="modal" style="max-width:480px">'+
+        '<div class="modal-title" id="mgr-role-title"></div>'+
+        '<input type="hidden" id="mgr-role-id">'+
+        '<div id="mgr-role-perms" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0"></div>'+
+        '<div class="modal-footer">'+
+          '<button class="btn" onclick="closeModal(\'modal-gerenciar-role\')">Cancelar</button>'+
+          '<button class="btn btn-primary" onclick="rolesSalvarModal()">Salvar</button>'+
+        '</div>'+
+      '</div>'+
     '</div>';
-}
-
-function rolesToggleCard(id){
-  var body=document.getElementById('roles-card-body-'+id);
-  var arrow=document.getElementById('roles-card-arrow-'+id);
-  if(!body)return;
-  var open=body.style.display==='block';
-  body.style.display=open?'none':'block';
-  if(arrow)arrow.style.transform=open?'':'rotate(180deg)';
 }
 
 function rolesPermToggle(roleId,key,val){
@@ -1622,6 +1650,48 @@ async function rolesSalvar(roleId){
 }
 
 function rolesNovoModal(){openModal('modal-novo-role');}
+
+function openGerenciarRole(roleId){
+  var r=S_ROLES.find(function(x){return x.id===roleId});if(!r)return;
+  var title=document.getElementById('mgr-role-title');
+  var idInput=document.getElementById('mgr-role-id');
+  var permsDiv=document.getElementById('mgr-role-perms');
+  if(!permsDiv)return;
+  if(title)title.textContent=(r.label||r.nome)+' — Permissões';
+  if(idInput)idInput.value=roleId;
+  var p=r.permissoes||{acoes:{},menus:{}};
+  function mkChk(key,lbl,checked){
+    return'<label class="form-check" style="margin-bottom:4px">'+
+      '<input type="checkbox" '+(checked?'checked':'')+' onchange="rolesPermToggle(\''+roleId+'\',\''+key+'\',this.checked)" style="width:15px;height:15px;accent-color:var(--accent);cursor:pointer">'+
+      '<span class="form-check-label">'+lbl+'</span>'+
+    '</label>';
+  }
+  permsDiv.innerHTML=
+    '<div>'+
+      '<div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Menus</div>'+
+      mkChk('menus.boletim','Boletim',!!(p.menus&&p.menus.boletim))+
+      mkChk('menus.ponto','Ponto',!!(p.menus&&p.menus.ponto))+
+      mkChk('menus.preferencias','Preferências',!!(p.menus&&p.menus.preferencias))+
+    '</div>'+
+    '<div>'+
+      '<div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Ações</div>'+
+      mkChk('acoes.os_criar','Criar OS',!!(p.acoes&&p.acoes.os_criar))+
+      mkChk('acoes.os_editar','Editar OS',!!(p.acoes&&p.acoes.os_editar))+
+      mkChk('acoes.os_deletar_propria','Deletar próprias OSs',!!(p.acoes&&p.acoes.os_deletar_propria))+
+      mkChk('acoes.boletim_editar','Editar Boletim',!!(p.acoes&&p.acoes.boletim_editar))+
+      mkChk('acoes.agenda_editar','Editar Agenda',!!(p.acoes&&p.acoes.agenda_editar))+
+      mkChk('acoes.preferencias_admin','Administrar Preferências',!!(p.acoes&&p.acoes.preferencias_admin))+
+      mkChk('acoes.dashboard_equipe','Dashboard: ver equipe própria',!!(p.acoes&&p.acoes.dashboard_equipe))+
+      mkChk('acoes.dashboard_todas_equipes','Dashboard: ver todas as equipes',!!(p.acoes&&p.acoes.dashboard_todas_equipes))+
+    '</div>';
+  openModal('modal-gerenciar-role');
+}
+
+async function rolesSalvarModal(){
+  var roleId=document.getElementById('mgr-role-id').value;
+  await rolesSalvar(roleId);
+  closeModal('modal-gerenciar-role');
+}
 
 async function rolesCriar(){
   var nome=document.getElementById('new-role-nome').value.trim().toLowerCase().replace(/\s+/g,'-');
