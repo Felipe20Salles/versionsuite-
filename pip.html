@@ -106,7 +106,7 @@ function _update() {
     kb.innerHTML = '⊞ Ir ao Kanban';
     kb.title = 'Ir ao Kanban';
     kb.addEventListener('click', function() {
-      try { window.opener.goScreen('kanban'); window.opener.focus(); window.opener._pipClose(); } catch(e) {}
+      try { window.opener.goScreen('kanban'); window.opener.focus(); window.opener._pipMinimize(); } catch(e) {}
       window.close();
     });
     acEl.appendChild(kb);

@@ -364,11 +364,11 @@ textarea.form-input{resize:vertical;min-height:70px}
 .light-mode .foco-pill{box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .light-mode .bell-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.15)}
 /* ── KANBAN FOCO AURA ── */
-@keyframes foco-col-pulse{
-  0%,100%{box-shadow:0 0 0 1.5px rgba(239,68,68,.35),0 0 24px rgba(249,115,22,.1)}
-  50%{box-shadow:0 0 0 1.5px rgba(249,115,22,.55),0 0 36px rgba(239,68,68,.18)}
+@keyframes foco-pulse{
+  0%,100%{box-shadow:0 0 0 1.5px rgba(239,68,68,.45),0 0 16px rgba(249,115,22,.15)}
+  50%{box-shadow:0 0 0 1.5px rgba(249,115,22,.7),0 0 28px rgba(239,68,68,.28)}
 }
-.kanban-col-andamento{border-radius:10px;animation:foco-col-pulse 2.4s ease infinite}
+.os-card-foco{animation:foco-pulse 2.4s ease infinite}
 .os-foco-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#f97316;padding:5px 12px;background:rgba(239,68,68,.07);border-bottom:1px solid rgba(239,68,68,.14);letter-spacing:.02em}
 /* ── FOCO PiP SIDEBAR ── */
 #foco-pip{position:fixed;top:0;right:0;height:100vh;width:14px;z-index:9000;overflow:hidden;transition:width .22s cubic-bezier(.4,0,.2,1);display:flex;pointer-events:auto}
@@ -884,6 +884,10 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div class="pref-flow-row">
               <div><div class="pref-flow-label">Carga diária (h)</div><div class="pref-flow-sub">Horas de trabalho esperadas por dia</div></div>
               <input class="pref-time-input" id="pref-carga-diaria" type="number" min="1" max="24" value="8" style="width:60px" onchange="saveSchedule()">
+            </div>
+            <div class="pref-flow-row">
+              <div><div class="pref-flow-label">WIP Limit</div><div class="pref-flow-sub">Máx. de OSs simultâneas em "Em andamento"</div></div>
+              <input class="pref-time-input" id="pref-wip-limit" type="number" min="1" max="20" value="5" style="width:60px" onchange="saveSchedule()">
             </div>
           </div>
         </div>
@@ -2208,7 +2212,7 @@ function renderKanban(){
       var clf=getOSClassificacao(os);
       var canEd=can('os_editar');
       var canDel=can('os_deletar_propria')&&os.createdBy===CURRENT_USER.id;
-      return'<div class="os-card'+(isIncompleta?' os-incompleta':'')+'">'+
+      return'<div class="os-card'+(isFoco?' os-card-foco':'')+(isIncompleta?' os-incompleta':'')+'">'+
         (isFoco?'<div class="os-foco-badge" id="kanban-foco-timer" style="display:flex;align-items:center;justify-content:space-between">'+
           '<span>🔥 Em foco · '+formatFocusTime(focoAcc)+'</span>'+
           '<button onclick="event.stopPropagation();trocarFoco()" style="background:none;border:none;cursor:pointer;font-size:10px;font-weight:600;color:#f97316;padding:0 0 0 8px;letter-spacing:.02em">↻ Trocar</button>'+
@@ -2240,10 +2244,7 @@ function renderKanban(){
         '</div>'+
       '</div>';
     }).join(''):'<div class="empty-col">Nenhum card</div>';
-    return'<div'+(k==='andamento'?' class="kanban-col-andamento"':'')+'>'+
-      '<div class="kanban-col-header"><span class="kanban-col-title">'+statusLabel(k)+'</span><span class="kanban-col-count">'+items.length+'</span></div>'+
-      '<div class="kanban-col-body">'+cards+'</div>'+
-    '</div>';
+    return'<div><div class="kanban-col-header"><span class="kanban-col-title">'+statusLabel(k)+'</span><span class="kanban-col-count">'+items.length+'</span></div><div class="kanban-col-body">'+cards+'</div></div>';
   }).join('');
 }
 
@@ -4707,16 +4708,18 @@ function deleteOS(osId){
 function moveOS(osId,newStatus){
   var os=S.oss.find(function(o){return o.id===osId});if(!os)return;
   if(newStatus==='andamento'){
-    // Single-slot: move qualquer OS em andamento de volta para afazer primeiro
-    var current=S.oss.find(function(o){return o.status==='andamento'&&o.id!==osId;});
-    if(current){
-      dbMoverOS(current.id,'afazer').then(function(){current.status='afazer';}).catch(function(){});
-    }
+    var wip=getSchedule().wipLimit||5;
+    var count=S.oss.filter(function(o){return o.status==='andamento'&&o.id!==osId;}).length;
+    if(count>=wip){toast('WIP limit atingido ('+wip+'). Conclua ou mova uma OS antes.','err');return;}
   }
-  // Se a OS focal sai de "andamento", limpa o estado de foco
+  // Se a OS focal sai de "andamento", transfere foco para próxima em andamento
   if(newStatus!=='andamento'){
     var st=getFocusState();
-    if(st&&st.osId===osId){saveFocusState(null);updateFocusUI();updatePipUI();}
+    if(st&&st.osId===osId){
+      var next=S.oss.find(function(o){return o.status==='andamento'&&o.id!==osId;});
+      if(next){startFocus(next.id);}
+      else{saveFocusState(null);updateFocusUI();updatePipUI();}
+    }
   }
   _doMoveOS(osId,newStatus);
 }
@@ -4860,6 +4863,7 @@ function saveSchedule(){
     retorno:document.getElementById('pref-hora-retorno').value||'13:00',
     saida:document.getElementById('pref-hora-saida').value||'17:00',
     cargaDiaria:parseFloat(document.getElementById('pref-carga-diaria').value)||8,
+    wipLimit:parseInt(document.getElementById('pref-wip-limit').value)||5,
   };
   localStorage.setItem('vs_schedule',JSON.stringify(s));
 }
@@ -4871,6 +4875,7 @@ function loadSchedulePrefs(){
   if(el('pref-hora-retorno'))el('pref-hora-retorno').value=s.retorno||'13:00';
   if(el('pref-hora-saida'))el('pref-hora-saida').value=s.saida||'17:00';
   if(el('pref-carga-diaria'))el('pref-carga-diaria').value=s.cargaDiaria||8;
+  if(el('pref-wip-limit'))el('pref-wip-limit').value=s.wipLimit||5;
 }
 
 // ── PESO INTELIGENTE ─────────────────────────────────────────────────────────
@@ -4993,19 +4998,38 @@ function updateDayPlanTotal(){
 }
 
 function confirmDayPlan(){
-  var andamento=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer'});
+  var all=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer'});
+  var selectedIds=[];
   var entries=[];
-  andamento.forEach(function(os){
+  all.forEach(function(os){
     var chk=document.getElementById('dayplan-chk-'+os.id);
     var inp=document.getElementById('dayplan-h-'+os.id);
     if(chk&&chk.checked){
+      selectedIds.push(os.id);
       entries.push({osId:os.id,osTitle:'#'+os.num+' · '+os.titulo,plannedHours:parseFloat(inp.value)||0,actualHours:0,status:'pendente'});
+    }
+  });
+  var wip=getSchedule().wipLimit||5;
+  if(selectedIds.length>wip){
+    toast('Selecionadas '+selectedIds.length+' OSs mas o WIP limit é '+wip+'. Reduza a seleção ou aumente o WIP limit.','err');
+    return;
+  }
+  // Move selecionadas para andamento; devolve as não-selecionadas que estavam em andamento
+  all.forEach(function(os){
+    if(selectedIds.indexOf(os.id)!==-1){
+      if(os.status!=='andamento'){os.status='andamento';dbMoverOS(os.id,'andamento').catch(function(){});}
+    } else {
+      if(os.status==='andamento'){os.status='afazer';dbMoverOS(os.id,'afazer').catch(function(){});}
     }
   });
   var plan={createdAt:new Date().toISOString(),confirmedAt:new Date().toISOString(),entries:entries};
   localStorage.setItem(getDayKey(),JSON.stringify(plan));
   closeModal('modal-dayplan');
-  toast('Planejamento salvo — bom trabalho!');
+  renderKanban();renderDash();
+  // Auto-inicia foco na primeira OS em andamento se ainda não há foco
+  var firstAndamento=S.oss.find(function(o){return o.status==='andamento';});
+  if(firstAndamento&&!getFocusState())startFocus(firstAndamento.id);
+  toast('Planejamento salvo — fila do dia definida!');
 }
 
 function recalcVelocityFactor(){
@@ -5409,15 +5433,6 @@ function startFocus(osId){
   var st=getFocusState();
   if(st&&st.osId===osId&&!st.pausedAt)return;
   if(st&&!st.pausedAt)closeFocusSession(st);
-  // Single-slot: move qualquer andamento atual de volta para afazer
-  var cur=S.oss.find(function(o){return o.status==='andamento'&&o.id!==osId;});
-  if(cur){dbMoverOS(cur.id,'afazer').then(function(){cur.status='afazer';}).catch(function(){});}
-  // Promove OS de "afazer" para "andamento" via DB
-  var os=S.oss.find(function(o){return o.id===osId;});
-  if(os&&os.status==='afazer'){
-    os.status='andamento';
-    dbMoverOS(osId,'andamento').catch(function(){});
-  }
   var now=Date.now();
   var accumulated=focusAccumulatedToday(osId);
   var newSt={osId:osId,startedAt:now,pausedAt:null,accumulated:accumulated};
@@ -5459,20 +5474,9 @@ function concludeOS(osId){
   if(st&&st.osId===osId&&!st.pausedAt)closeFocusSession(st);
   saveFocusState(null);
   moveOS(osId,'concluido');
-  // Auto-switch: tenta plano do dia, fallback para próxima de "afazer"
-  var nextId=null;
-  var plan=getDayPlan();
-  if(plan&&plan.entries){
-    var pe=plan.entries.find(function(e){
-      return e.osId!==osId&&S.oss.find(function(o){return o.id===e.osId&&o.status!=='concluido'});
-    });
-    if(pe)nextId=pe.osId;
-  }
-  if(!nextId){
-    var nxt=S.oss.find(function(o){return o.id!==osId&&(o.status==='afazer'||o.status==='andamento')&&o.versaoId===S.versaoK;});
-    if(nxt)nextId=nxt.id;
-  }
-  if(nextId)startFocus(nextId);
+  // Auto-switch: próxima OS em andamento (a fila do dia)
+  var nxt=S.oss.find(function(o){return o.id!==osId&&o.status==='andamento';});
+  if(nxt)startFocus(nxt.id);
   updateFocusUI();
   renderKanban();
   closeFocoDropdown();
@@ -5480,16 +5484,13 @@ function concludeOS(osId){
 
 function trocarFoco(){
   var st=getFocusState();if(!st)return;
+  // Encontra próxima em andamento ANTES de mover a atual
+  var next=S.oss.find(function(o){return o.status==='andamento'&&o.id!==st.osId;});
   // Devolve OS atual para "afazer"
   var os=S.oss.find(function(o){return o.id===st.osId;});
-  if(os){
-    dbMoverOS(os.id,'afazer').then(function(){os.status='afazer';}).catch(function(){});
-  }
-  saveFocusState(null);
-  // Busca próxima de "afazer" na versão atual (excluindo a que acabou de sair)
-  var next=S.oss.find(function(o){return o.status==='afazer'&&o.id!==st.osId&&o.versaoId===S.versaoK;});
+  if(os){os.status='afazer';dbMoverOS(os.id,'afazer').catch(function(){});}
   if(next){startFocus(next.id);}
-  else{updateFocusUI();renderKanban();updatePipUI();toast('Fila vazia — sem mais OSs a fazer');}
+  else{saveFocusState(null);updateFocusUI();renderKanban();updatePipUI();toast('Fila de andamento vazia');}
 }
 
 function alternarFoco(){
