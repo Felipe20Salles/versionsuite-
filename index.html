@@ -50,11 +50,11 @@ input,select,textarea{font-family:var(--font);outline:none;color:var(--text)}
 .screen{display:none}.screen.active{display:block}
 
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;font-size:13px;border-radius:var(--radius);border:1px solid var(--border2);background:transparent;color:var(--text);transition:all .15s;cursor:pointer;font-family:var(--font)}
-.btn:hover{background:var(--card2)}
+.btn:hover{background:var(--card2);border-color:var(--border2)}
 .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn-primary:hover{background:var(--accent2);border-color:var(--accent2)}
 .btn-sm{padding:5px 10px;font-size:12px}.btn-xs{padding:3px 8px;font-size:11px}
-.btn-ghost{border-color:transparent}.btn-ghost:hover{background:var(--card2);border-color:var(--border)}
+.btn-ghost{border-color:transparent}.btn-ghost:hover{background:var(--card2);border-color:var(--border2)}
 .btn-danger{color:var(--red-text);border-color:transparent}.btn-danger:hover{background:var(--red-dim)}
 .btn-amber{color:var(--amber-text);border-color:var(--amber-text);background:var(--amber-dim)}
 .btn-amber:hover{filter:brightness(1.1)}
@@ -232,14 +232,14 @@ textarea.form-input{resize:vertical;min-height:70px}
 /* Admin redesign */
 .admin-roles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:4px}
 .admin-role-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;display:flex;flex-direction:column;justify-content:space-between;min-height:160px;transition:border-color .15s}
-.admin-role-card:hover{border-color:var(--border2)}
+.admin-role-card:hover{border-color:rgba(var(--accent-rgb),.4);box-shadow:0 0 0 1px rgba(var(--accent-rgb),.15),0 4px 16px rgba(0,0,0,.2)}
 .admin-role-card.empty-card{opacity:.45}
 .admin-avatar-stack{display:flex;align-items:center}
 .admin-av{width:22px;height:22px;border-radius:50%;border:2px solid var(--surface);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff}
 .admin-av+.admin-av{margin-left:-6px}
 .admin-equipe-rows{display:flex;flex-direction:column;gap:10px}
 .admin-equipe-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);transition:border-color .15s}
-.admin-equipe-row:hover{border-color:var(--border2)}
+.admin-equipe-row:hover{border-color:rgba(var(--accent-rgb),.4);box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .admin-col-lbl{font-size:9px;font-weight:600;color:var(--hint);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
 .role-badge-admin{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)}
 .role-badge-membro{background:rgba(99,102,241,.15);color:#6366f1;border:1px solid rgba(99,102,241,.3)}
@@ -348,6 +348,18 @@ textarea.form-input{resize:vertical;min-height:70px}
 .foco-dd-btn{flex:1;font-size:11px;padding:6px;border-radius:6px;cursor:pointer;font-weight:500;border:1px solid var(--border2);background:none;color:var(--muted);font-family:var(--font)}
 .foco-dd-btn:hover{background:var(--card2)}
 .foco-dd-btn.success{color:#10b981;border-color:rgba(16,185,129,.3)}
+/* ── LIGHT MODE OVERRIDES ── */
+.light-mode .resume-cell{background:var(--card2)}
+.light-mode .resume-stat-box{background:var(--card2)}
+.light-mode .peso-badge-epico{background:rgba(167,139,250,.2);color:#5b21b6;border:1px solid rgba(167,139,250,.35)}
+.light-mode .peso-badge-grande{background:rgba(245,158,11,.18);color:#92400e;border:1px solid rgba(245,158,11,.35)}
+.light-mode .peso-badge-normal{background:rgba(96,165,250,.18);color:#1d4ed8;border:1px solid rgba(96,165,250,.35)}
+.light-mode .peso-badge-rapida{background:rgba(16,185,129,.18);color:#065f46;border:1px solid rgba(16,185,129,.35)}
+.light-mode .admin-role-card:hover{box-shadow:0 0 0 1px rgba(var(--accent-rgb),.25),0 4px 16px rgba(0,0,0,.1)}
+.light-mode .admin-equipe-row:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.light-mode .dayplan-h-input{background:var(--surface);border-color:var(--border2)}
+.light-mode .foco-pill{box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.light-mode .bell-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.15)}
 </style>
 </head>
 <body>
@@ -1571,8 +1583,12 @@ async function renderRolesPrefs(){
       ?'background:rgba(124,111,247,.15);color:var(--accent);border:1px solid rgba(124,111,247,.25)'
       :'background:rgba(255,255,255,.05);color:var(--muted);border:1px solid rgba(255,255,255,.1)';
     var avatars=users.slice(0,4).map(function(u,i){
-      var letter=u.displayName?u.displayName[0].toUpperCase():'?';
-      return'<div class="admin-av" style="background:'+COLORS[i%COLORS.length]+'" title="'+escHtml(u.displayName)+'">'+letter+'</div>';
+      var letter=(u.displayName||'?')[0].toUpperCase();
+      var bg=COLORS[i%COLORS.length];
+      if(u.avatar){
+        return'<div class="admin-av" style="background-color:'+bg+';background-image:url(\''+escHtml(u.avatar)+'\');background-size:cover;background-position:center" title="'+escHtml(u.displayName)+'"></div>';
+      }
+      return'<div class="admin-av" style="background:'+bg+'" title="'+escHtml(u.displayName)+'">'+letter+'</div>';
     }).join('');
     var avatarZone=avatars
       ?'<div class="admin-avatar-stack">'+avatars+'</div>'
