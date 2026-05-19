@@ -487,6 +487,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           </div>
           <div class="foco-dropdown" id="foco-dropdown" style="display:none"></div>
         </div>
+        <button class="btn btn-sm btn-ghost" id="btn-revisar-plano" onclick="openDayPlanModal(true)" style="font-size:11px;padding:4px 10px;white-space:nowrap">📋 Revisar plano</button>
         <div style="position:relative" id="bell-container">
           <div class="bell-wrap" onclick="toggleBellDropdown()">
             <span class="bell-icon" id="bell-icon">🔔</span>
@@ -1989,7 +1990,7 @@ function goScreen(name){
   var titles={dashboard:'Dashboard',kanban:'Kanban',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda de Publicações'};
   var isVisitor=CURRENT_USER&&CURRENT_USER.isVisitor;
   var acts={
-    dashboard:isVisitor?'':'<button class="btn btn-sm btn-ghost" onclick="openDayPlanModal(true)" style="margin-right:4px">📋 Revisar plano</button><button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
+    dashboard:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
     kanban:(!isVisitor&&can('os_criar'))?'<button class="btn btn-primary btn-sm" onclick="openNovaOS()">+ Nova OS</button>':'',
     boletim:'',
     ponto:(!isVisitor&&canMenu('ponto'))?'<button class="btn btn-primary btn-sm" onclick="openNovoRegistro()">+ Adicionar dia</button>':'',
@@ -4887,7 +4888,7 @@ function openDayPlanModal(force){
   if(dateEl)dateEl.textContent=dias[now.getDay()]+', '+now.getDate()+' de '+meses[now.getMonth()]+' de '+now.getFullYear();
 
   var vf=getVelocityFactor();
-  var andamento=S.oss.filter(function(o){return o.status==='andamento'||o.status==='a_fazer'});
+  var andamento=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer'});
   // Prioridade: andamento primeiro, depois porte (epico > grande > normal > rapida)
   var ordemPorte={epico:0,grande:1,normal:2,rapida:3};
   andamento.sort(function(a,b){
