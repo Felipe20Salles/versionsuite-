@@ -1857,7 +1857,7 @@ var SEG_COLORS=['#6366f1','#3b82f6','#10b981','#f59e0b','#ec4899','#ef4444','#a8
 var CANAL_LABELS={inline:'Inline/Banner',email:'E-mail',entregate:'Entre a Gente',webinar:'Webinar',teams:'Teams'};
 var CANAL_COLORS={inline:'#6366f1',email:'#3b82f6',entregate:'#10b981',webinar:'#f59e0b',teams:'#7c3aed'};
 
-var S={versoes:[],oss:[],pontos:[],pontosEquipe:[],publicacoes:[],filtro:'todos',filtroAtrib:'todos',filtroAtribuicao:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
+var S={versoes:[],oss:[],pontos:[],pontosEquipe:[],publicacoes:[],filtro:'todos',filtroAtrib:'todos',filtroAtribuicao:null,bolFiltro:'todos',editOS:null,versaoK:null,
   prefs:{accent:'#7c6ff7',accentRgb:'124,111,247',lightMode:false,produtos:PROD_SEG.slice()}};
 
 var _agendaMes=new Date().getMonth(),_agendaAno=new Date().getFullYear(),_agendaFiltro='todos';
@@ -2172,6 +2172,13 @@ function renderKanban(){
     var nomesSel=typeof S_USERS!=='undefined'&&S_USERS.length
       ?S_USERS.map(function(u){return u.displayName}).filter(Boolean).sort()
       :[...new Set(S.oss.map(function(o){return(o.atribuicao||'').trim()}).filter(Boolean))].sort();
+    // Auto-default para o usuário atual na primeira carga
+    if(S.filtroAtribuicao===null){
+      var _me=typeof S_USERS!=='undefined'&&CURRENT_USER?S_USERS.find(function(u){return u.id===CURRENT_USER.id}):null;
+      var _myName=_me&&_me.displayName;
+      if(!_myName&&CURRENT_USER){var _m=CURRENT_USER.user_metadata||{};_myName=_m.full_name||_m.name||null;}
+      S.filtroAtribuicao=_myName&&nomesSel.indexOf(_myName)!==-1?_myName:'todos';
+    }
     var curVal=S.filtroAtribuicao||'todos';
     atribSel.innerHTML='<option value="todos">Todos</option>'+nomesSel.map(function(n){
       return'<option value="'+n+'"'+(n===curVal?' selected':'')+'>'+n+'</option>';
@@ -5133,18 +5140,40 @@ function updateResumeTotal(){
 
 function toggleResumeAddOS(){
   var panel=document.getElementById('resume-add-panel');
-  if(panel)panel.style.display=panel.style.display==='none'?'block':'none';
+  var visible=panel.style.display==='none';
+  panel.style.display=visible?'block':'none';
+  if(visible){document.getElementById('resume-add-search').value='';searchResumeOS('');}
 }
 
 function searchResumeOS(q){
   q=(q||'').toLowerCase().trim();
   var results=document.getElementById('resume-add-results');if(!results)return;
-  if(!q){results.innerHTML='';return}
+  // Descobre o nome do usuário atual
+  var myName=null;
+  if(typeof S_USERS!=='undefined'&&CURRENT_USER){
+    var _me=S_USERS.find(function(u){return u.id===CURRENT_USER.id});
+    myName=_me&&_me.displayName;
+  }
+  if(!myName&&CURRENT_USER){var _m=CURRENT_USER.user_metadata||{};myName=_m.full_name||_m.name||null;}
+  var statusOrder={andamento:0,afazer:1,concluido:2};
   var matches=S.oss.filter(function(o){
+    // Filtra por atribuição ao usuário atual
+    if(myName&&(o.atribuicao||'').trim()!==myName)return false;
+    // Sem texto: mostra apenas ativas (não concluídas)
+    if(!q)return o.status!=='concluido';
     return(o.num&&String(o.num).toLowerCase().includes(q))||(o.titulo&&o.titulo.toLowerCase().includes(q));
-  }).slice(0,6);
+  });
+  matches.sort(function(a,b){return(statusOrder[a.status]||1)-(statusOrder[b.status]||1);});
+  matches=matches.slice(0,12);
+  if(!matches.length){results.innerHTML='<div style="padding:8px;font-size:12px;color:var(--hint)">Nenhuma OS encontrada.</div>';return;}
+  var dotColor={andamento:'#10b981',afazer:'var(--muted)',concluido:'var(--hint)'};
   results.innerHTML=matches.map(function(os){
-    return'<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:var(--radius);font-size:12px" onclick="addResumeOS(\''+os.id+'\',\'#'+os.num+' · '+encodeURIComponent(os.titulo)+'\')" onmouseover="this.style.background=\'var(--card2)\'" onmouseout="this.style.background=\'\'"><span style="font-family:var(--mono);color:var(--muted)">#'+escHtml(String(os.num))+'</span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(os.titulo)+'</span></div>';
+    var dot='<span style="width:6px;height:6px;border-radius:50%;background:'+(dotColor[os.status]||'var(--muted)')+';flex-shrink:0;display:inline-block"></span>';
+    return'<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:var(--radius);font-size:12px" onclick="addResumeOS(\''+os.id+'\',\'#'+os.num+' · '+encodeURIComponent(os.titulo)+'\')" onmouseover="this.style.background=\'var(--card2)\'" onmouseout="this.style.background=\'\'">'+
+      dot+
+      '<span style="font-family:var(--mono);color:var(--muted);flex-shrink:0">#'+escHtml(String(os.num))+'</span>'+
+      '<span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(os.titulo)+'</span>'+
+    '</div>';
   }).join('');
 }
 
@@ -6642,7 +6671,7 @@ var __paralelo_config = {
     <div style="margin-top:12px">
       <button class="btn btn-sm btn-ghost" onclick="toggleResumeAddOS()" id="resume-add-btn">+ Adicionar OS que esqueci de rastrear</button>
       <div id="resume-add-panel" style="display:none;margin-top:8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Buscar OS pelo número ou título</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Suas OSs — digite para filtrar</div>
         <div style="display:flex;gap:8px;align-items:center">
           <input class="resume-search-input" id="resume-add-search" placeholder="#número ou título..." oninput="searchResumeOS(this.value)">
           <input type="number" id="resume-add-h" min="0.5" step="0.5" value="1" style="width:70px;padding:6px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);text-align:center">
