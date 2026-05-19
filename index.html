@@ -6318,6 +6318,13 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     updateFocusUI();
     setInterval(checkAlerts,60000);
     renderDash();
+    // Abrir modal de planejamento se ainda não confirmado hoje
+    setTimeout(function(){
+      if(typeof openDayPlanModal==='function'){
+        var _p=getDayPlan();
+        if(!_p||!_p.confirmedAt)openDayPlanModal();
+      }
+    },1500);
     // ── Paralelo ──────────────────────────────────────────
     if (typeof Paralelo !== 'undefined') {
   Paralelo.identify({ userId: session.user.id, email: session.user.email })
