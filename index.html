@@ -279,7 +279,10 @@ textarea.form-input{resize:vertical;min-height:70px}
 .peso-slider-wrap{display:flex;flex-direction:column;gap:10px}
 .peso-slider{-webkit-appearance:none;width:100%;height:4px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer}
 .peso-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}
-.peso-markers{display:flex;justify-content:space-between;font-size:10px;color:var(--hint);font-family:var(--mono)}
+.peso-markers{position:relative;height:14px;font-size:10px;color:var(--hint);font-family:var(--mono)}
+.peso-markers span{position:absolute;transform:translateX(-50%)}
+.peso-markers span:first-child{transform:none}
+.peso-markers span:last-child{right:0;transform:none;left:auto!important}
 .peso-badge-epico{background:rgba(167,139,250,.15);color:#a78bfa;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
 .peso-badge-grande{background:rgba(245,158,11,.15);color:#f59e0b;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
 .peso-badge-normal{background:rgba(96,165,250,.15);color:#60a5fa;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
@@ -360,6 +363,35 @@ textarea.form-input{resize:vertical;min-height:70px}
 .light-mode .dayplan-h-input{background:var(--surface);border-color:var(--border2)}
 .light-mode .foco-pill{box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .light-mode .bell-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.15)}
+/* ── KANBAN FOCO AURA ── */
+@keyframes foco-pulse{0%,100%{box-shadow:0 0 0 2px #10b981,0 0 14px rgba(16,185,129,.25)}50%{box-shadow:0 0 0 2px #10b981,0 0 24px rgba(16,185,129,.45)}}
+.os-card-foco{animation:foco-pulse 2.4s ease infinite}
+.os-foco-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#10b981;padding:5px 12px;background:rgba(16,185,129,.08);border-bottom:1px solid rgba(16,185,129,.12);letter-spacing:.02em}
+/* ── FOCO PiP SIDEBAR ── */
+#foco-pip{position:fixed;top:0;right:0;height:100vh;width:14px;z-index:9000;overflow:hidden;transition:width .22s cubic-bezier(.4,0,.2,1);display:flex;pointer-events:auto}
+#foco-pip:hover{width:228px}
+.pip-strip{position:absolute;right:0;top:0;bottom:0;width:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;z-index:1}
+.pip-strip-dot{width:5px;height:5px;border-radius:50%;background:rgba(16,185,129,.5);transition:background .2s}
+.pip-strip-dot.paused{background:rgba(245,158,11,.5)}
+.pip-strip-dot.idle{background:rgba(255,255,255,.08)}
+.pip-panel{position:absolute;left:0;top:0;bottom:0;width:228px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;opacity:0;transition:opacity .15s .06s;pointer-events:none;overflow:hidden;box-shadow:-6px 0 24px rgba(0,0,0,.35)}
+#foco-pip:hover .pip-panel{opacity:1;pointer-events:auto}
+.pip-header{padding:16px 14px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.pip-badge-row{margin-bottom:6px}
+.pip-os-title{font-size:12px;font-weight:500;color:var(--text);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:6px;line-height:1.4}
+.pip-timer{font-size:22px;font-weight:700;font-family:var(--mono);color:#10b981;letter-spacing:-1px}
+.pip-timer.paused{color:#f59e0b}
+.pip-timer.idle{color:var(--hint);font-size:13px;font-weight:400;letter-spacing:0}
+.pip-actions{display:flex;flex-direction:column;gap:6px;padding:12px 14px;flex:1}
+.pip-btn{width:100%;padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:none;color:var(--muted);font-size:11px;font-weight:500;cursor:pointer;font-family:var(--font);text-align:left;transition:background .12s;display:flex;align-items:center;gap:7px}
+.pip-btn:hover{background:var(--card2)}
+.pip-btn.pip-success{color:#10b981;border-color:rgba(16,185,129,.3)}
+.pip-btn.pip-primary{background:var(--accent);color:#fff;border-color:transparent}
+.pip-btn.pip-primary:hover{opacity:.88}
+.pip-footer{padding:10px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--hint);cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;transition:color .12s}
+.pip-footer:hover{color:var(--accent)}
+.light-mode #foco-pip .pip-panel{box-shadow:-4px 0 16px rgba(0,0,0,.12)}
+.light-mode .pip-strip-dot.idle{background:rgba(0,0,0,.1)}
 </style>
 </head>
 <body>
@@ -477,7 +509,7 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div><div class="topbar-title" id="topbar-title">Dashboard</div><div class="topbar-sub" id="topbar-sub"></div></div>
       <div style="display:flex;align-items:center;gap:12px">
         <div class="topbar-actions" id="topbar-actions"></div>
-        <div style="position:relative;flex:1;max-width:300px" id="foco-container">
+        <div style="display:none" id="foco-container">
           <div class="foco-pill" id="foco-pill" onclick="toggleFocoDropdown()">
             <div class="foco-dot idle" id="foco-dot"></div>
             <div class="foco-info">
@@ -1116,7 +1148,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           <input type="number" id="os-horas-input" min="0.5" step="0.5" value="4" style="width:70px;padding:5px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text);text-align:center" oninput="onPesoInputChange(this.value)">
           <span style="font-size:12px;color:var(--muted)">h</span>
         </div>
-        <div class="peso-markers"><span>1h</span><span>2h</span><span>6h</span><span>14h</span><span>24h</span></div>
+        <div class="peso-markers"><span>1h</span><span style="left:4.35%">2h</span><span style="left:21.74%">6h</span><span style="left:56.52%">14h</span><span>24h</span></div>
       </div>
       <div style="font-size:11px;color:var(--hint);margin-top:6px" id="os-velocity-hint"></div>
     </div>
@@ -1828,6 +1860,7 @@ var _agendaMes=new Date().getMonth(),_agendaAno=new Date().getFullYear(),_agenda
 var _dashEquipe={periodoOffset:0,equipeId:'todas',pessoaId:'todas'};
 var _editingPub=null,_editingVersao=null,_xlsxData=null,_apropState={};
 var _focusInterval=null;
+var _pipInterval=null;
 
 function uid(){
   return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){
@@ -2154,20 +2187,30 @@ function renderKanban(){
     oss=oss.filter(function(o){return(o.atribuicao||'').trim()===S.filtroAtribuicao});
   }
   var cols=['afazer','andamento','concluido'];
+  var focusSt=getFocusState();
   document.getElementById('kanban-board').innerHTML=cols.map(function(k){
     var items=oss.filter(function(o){return o.status===k});
+    // Foco card primeiro na coluna "andamento"
+    if(k==='andamento'&&focusSt){
+      var fi=items.findIndex(function(o){return o.id===focusSt.osId});
+      if(fi>0){var fi2=items.splice(fi,1)[0];items.unshift(fi2);}
+    }
     var cards=items.length?items.map(function(os){
       var linha=PLINHA[os.produto]||'';
       var pips=Object.entries(os.entregas).filter(function(e){return e[1].aplicavel}).map(function(e){return'<div class="check-pip'+(e[1].feito?' done':'')+'" title="'+ELABELS[e[0]]+'"></div>'}).join('');
       var h=horasOS(os.id);
       var prevK=statusPrev(k),nextK=statusNext(k);
       var isIncompleta=isEncerrada&&k!=='concluido';
+      var isFoco=focusSt&&focusSt.osId===os.id;
+      var focoAcc=isFoco?focusAccumulatedToday(os.id):0;
       var prevBtn=prevK&&!isEncerrada?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+prevK+'\')">← '+statusLabel(prevK)+'</button>':'';
       var nextBtn=nextK?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+nextK+'\')">'+(nextK==='concluido'?'✓ ':'')+statusLabel(nextK)+' →</button>':'';
+      var focarBtn=k==='andamento'&&!isFoco?'<button class="os-action-btn" style="color:#10b981;border-color:rgba(16,185,129,.25)" onclick="event.stopPropagation();startFocus(\''+os.id+'\')">▶ Focar</button>':'';
       var clf=getOSClassificacao(os);
       var canEd=can('os_editar');
       var canDel=can('os_deletar_propria')&&os.createdBy===CURRENT_USER.id;
-      return'<div class="os-card'+(isIncompleta?' os-incompleta':'')+'">'+
+      return'<div class="os-card'+(isFoco?' os-card-foco':'')+(isIncompleta?' os-incompleta':'')+'">'+
+        (isFoco?'<div class="os-foco-badge" id="kanban-foco-timer">🔥 Em foco · '+formatFocusTime(focoAcc)+'</div>':'')+
         '<div class="os-card-body">'+
           '<div class="os-num">Card '+os.num+
             ' <span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.08);color:'+clf.color+'" title="'+clf.title+'">'+clf.label+'</span>'+
@@ -2190,6 +2233,7 @@ function renderKanban(){
             (canEd?'<button class="os-action-btn edit" onclick="event.stopPropagation();openEditOS(\''+os.id+'\')">✏ Editar</button>':'')+
             (canDel?'<button class="os-action-btn del" onclick="event.stopPropagation();deleteOS(\''+os.id+'\')">✕ Deletar</button>':'')+
             '<button class="os-action-btn aprop" onclick="event.stopPropagation();goAprop(\''+os.id+'\')">⏱ Apropriar</button>'+
+            focarBtn+
           '</div>'+
           (prevBtn||nextBtn?'<div class="os-action-row">'+prevBtn+nextBtn+'</div>':'')+
         '</div>'+
@@ -4900,21 +4944,30 @@ function openDayPlanModal(force){
   });
 
   var savedEntries=(plan&&plan.entries)||[];
+  var cargaDiaria=getSchedule().cargaDiaria||8;
+  // Pré-distribuição proporcional: distribui cargaDiaria pelo estimatedHours de cada OS
+  var totalEst=andamento.reduce(function(s,o){return s+(o.estimatedHours||2);},0);
   var list=document.getElementById('dayplan-os-list');
   if(!list)return;
   list.innerHTML=andamento.length===0
     ?'<div style="text-align:center;padding:24px;font-size:12px;color:var(--hint)">Nenhuma OS em andamento ou a fazer. Adicione OSs no Kanban primeiro.</div>'
     :andamento.map(function(os){
       var saved=savedEntries.find(function(e){return e.osId===os.id});
-      var suggestedH=saved?saved.plannedHours:Math.round(((os.estimatedHours||2)/vf)*2)/2;
-      var checked=saved?true:false;
+      var suggestedH,checked;
+      if(saved){
+        suggestedH=saved.plannedHours;checked=true;
+      }else{
+        var rawH=totalEst>0?(cargaDiaria*(os.estimatedHours||2)/totalEst):(cargaDiaria/andamento.length);
+        suggestedH=Math.max(0.5,Math.round(rawH*2)/2);
+        checked=true;
+      }
       var porte=osPorteFromHours(os.estimatedHours||0);
       return'<div class="dayplan-os-row" id="dayplan-row-'+os.id+'">'
         +'<input type="checkbox" class="dayplan-os-check" id="dayplan-chk-'+os.id+'" '+(checked?'checked':'')
         +' onchange="updateDayPlanTotal()">'
         +'<div class="dayplan-os-info">'
         +'<div class="dayplan-os-title"><span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px;margin-right:6px">'+porte.label+'</span>#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)+'</div>'
-        +'<div class="dayplan-os-sub">Estimativa: '+os.estimatedHours+'h</div>'
+        +'<div class="dayplan-os-sub">Estimativa: '+(os.estimatedHours||0)+'h</div>'
         +'</div>'
         +'<input class="dayplan-h-input" type="number" min="0.5" step="0.5" value="'+suggestedH
         +'" id="dayplan-h-'+os.id+'" oninput="updateDayPlanTotal()">'
@@ -4928,7 +4981,7 @@ function openDayPlanModal(force){
 
 function updateDayPlanTotal(){
   var total=0;
-  var andamento=S.oss.filter(function(o){return o.status==='andamento'});
+  var andamento=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer'});
   andamento.forEach(function(os){
     var chk=document.getElementById('dayplan-chk-'+os.id);
     var inp=document.getElementById('dayplan-h-'+os.id);
@@ -4948,7 +5001,7 @@ function updateDayPlanTotal(){
 }
 
 function confirmDayPlan(){
-  var andamento=S.oss.filter(function(o){return o.status==='andamento'});
+  var andamento=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer'});
   var entries=[];
   andamento.forEach(function(os){
     var chk=document.getElementById('dayplan-chk-'+os.id);
@@ -5364,11 +5417,15 @@ function startFocus(osId){
   var st=getFocusState();
   if(st&&st.osId===osId&&!st.pausedAt)return;
   if(st&&!st.pausedAt)closeFocusSession(st);
+  // Promove OS de "afazer" para "andamento" automaticamente
+  var os=S.oss.find(function(o){return o.id===osId;});
+  if(os&&os.status==='afazer'){os.status='andamento';save();}
   var now=Date.now();
   var accumulated=focusAccumulatedToday(osId);
   var newSt={osId:osId,startedAt:now,pausedAt:null,accumulated:accumulated};
   saveFocusState(newSt);
   updateFocusUI();
+  renderKanban();
   closeFocoDropdown();
 }
 
@@ -5404,8 +5461,83 @@ function concludeOS(osId){
   if(st&&st.osId===osId&&!st.pausedAt)closeFocusSession(st);
   saveFocusState(null);
   moveOS(osId,'concluido');
+  // Auto-switch para próxima OS do plano do dia
+  var plan=getDayPlan();
+  if(plan&&plan.entries&&plan.entries.length){
+    var next=plan.entries.find(function(e){
+      return e.osId!==osId&&S.oss.find(function(o){return o.id===e.osId&&o.status!=='concluido'});
+    });
+    if(next)startFocus(next.osId);
+  }
   updateFocusUI();
+  renderKanban();
   closeFocoDropdown();
+}
+
+function alternarFoco(){
+  var st=getFocusState();
+  var plan=getDayPlan();
+  var ordered=[];
+  if(plan&&plan.entries&&plan.entries.length){
+    plan.entries.forEach(function(e){
+      var o=S.oss.find(function(x){return x.id===e.osId&&x.status!=='concluido'});
+      if(o)ordered.push(o);
+    });
+  }
+  // Adiciona OSs em andamento não cobertas pelo plano
+  S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer';}).forEach(function(o){
+    if(!ordered.find(function(x){return x.id===o.id;}))ordered.push(o);
+  });
+  if(!ordered.length)return;
+  if(!st){startFocus(ordered[0].id);return;}
+  var idx=ordered.findIndex(function(o){return o.id===st.osId;});
+  startFocus(ordered[(idx+1)%ordered.length].id);
+}
+
+function updatePipUI(){
+  var st=getFocusState();
+  var dots=[document.getElementById('pip-dot-1'),document.getElementById('pip-dot-2'),document.getElementById('pip-dot-3')];
+  var titleEl=document.getElementById('pip-os-title');
+  var timerEl=document.getElementById('pip-timer');
+  var badgeEl=document.getElementById('pip-badge-row');
+  var actionsEl=document.getElementById('pip-actions');
+  if(!timerEl||!actionsEl)return;
+  clearInterval(_pipInterval);_pipInterval=null;
+  if(!st){
+    dots.forEach(function(d){if(d)d.className='pip-strip-dot idle';});
+    if(titleEl)titleEl.textContent='Nenhuma OS em foco';
+    timerEl.className='pip-timer idle';timerEl.textContent='sem foco ativo';
+    if(badgeEl)badgeEl.innerHTML='';
+    actionsEl.innerHTML='<button class="pip-btn pip-primary" onclick="goScreen(\'kanban\')">↗ Abrir Kanban</button>';
+    return;
+  }
+  var os=S.oss.find(function(o){return o.id===st.osId;});
+  var porte=os?osPorteFromHours(os.estimatedHours||0):{key:'normal',label:'Normal',cls:'peso-badge-normal'};
+  if(titleEl)titleEl.textContent=os?('#'+os.num+' · '+os.titulo):'OS desconhecida';
+  if(badgeEl)badgeEl.innerHTML='<span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px">'+porte.label+'</span>';
+  var dotCls=st.pausedAt?'pip-strip-dot paused':'pip-strip-dot';
+  dots.forEach(function(d){if(d)d.className=dotCls;});
+  var acc=focusAccumulatedToday(st.osId);
+  if(st.pausedAt){
+    timerEl.className='pip-timer paused';
+    timerEl.textContent=formatFocusTime(acc)+' · pausado';
+  }else{
+    timerEl.className='pip-timer';
+    timerEl.textContent=formatFocusTime(acc);
+    _pipInterval=setInterval(function(){
+      var el=document.getElementById('pip-timer');
+      if(el&&st.startedAt){
+        var elapsed=Math.floor((Date.now()-st.startedAt)/1000);
+        el.textContent=formatFocusTime(st.accumulated+elapsed);
+      }
+    },1000);
+  }
+  actionsEl.innerHTML=
+    (st.pausedAt
+      ?'<button class="pip-btn pip-success" onclick="resumeFocus()">▶ Retomar</button>'
+      :'<button class="pip-btn" onclick="pauseFocus()">⏸ Pausar</button>')
+    +'<button class="pip-btn pip-success" onclick="concludeOS(\''+st.osId+'\')">✓ Concluir OS</button>'
+    +'<button class="pip-btn" onclick="alternarFoco()">↻ Próxima OS</button>';
 }
 
 function formatFocusTime(seconds){
@@ -5447,11 +5579,14 @@ function updateFocusUI(){
       var acc=st.accumulated+elapsed;
       var timerEl=label.querySelector('.foco-timer-label');
       if(timerEl)timerEl.textContent=formatFocusTime(acc)+' nesta sessão';
+      var kbadge=document.getElementById('kanban-foco-timer');
+      if(kbadge)kbadge.textContent='🔥 Em foco · '+formatFocusTime(acc);
     },1000);
     var initAcc=st.accumulated;
     label.innerHTML='<div class="foco-os-label">'+osTitle+'</div>'
       +'<div class="foco-timer-label">'+formatFocusTime(initAcc)+'</div>';
   }
+  updatePipUI();
 }
 
 function toggleFocoDropdown(){
@@ -6593,6 +6728,25 @@ var __paralelo_config = {
       <button class="btn" onclick="closeModal('modal-export-redmine')">Fechar</button>
       <button class="btn btn-primary" onclick="downloadExportCSV()">⬇ Baixar CSV</button>
     </div>
+  </div>
+</div>
+<!-- FOCO PiP SIDEBAR -->
+<div id="foco-pip">
+  <div class="pip-strip">
+    <div class="pip-strip-dot idle" id="pip-dot-1"></div>
+    <div class="pip-strip-dot idle" id="pip-dot-2"></div>
+    <div class="pip-strip-dot idle" id="pip-dot-3"></div>
+  </div>
+  <div class="pip-panel">
+    <div class="pip-header">
+      <div class="pip-badge-row" id="pip-badge-row"></div>
+      <div class="pip-os-title" id="pip-os-title">Nenhuma OS em foco</div>
+      <div class="pip-timer idle" id="pip-timer">sem foco ativo</div>
+    </div>
+    <div class="pip-actions" id="pip-actions">
+      <button class="pip-btn pip-primary" onclick="goScreen('kanban')">↗ Abrir Kanban</button>
+    </div>
+    <div class="pip-footer" onclick="goScreen('kanban')">⬡ Version Suite · Kanban</div>
   </div>
 </div>
 </body>
