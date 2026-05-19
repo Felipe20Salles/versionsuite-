@@ -4711,6 +4711,7 @@ function moveOS(osId,newStatus){
     var wip=getSchedule().wipLimit||5;
     var count=S.oss.filter(function(o){return o.status==='andamento'&&o.id!==osId;}).length;
     if(count>=wip){toast('WIP limit atingido ('+wip+'). Conclua ou mova uma OS antes.','err');return;}
+    if(!getFocusState())setTimeout(function(){startFocus(osId);},80);
   }
   // Se a OS focal sai de "andamento", transfere foco para próxima em andamento
   if(newStatus!=='andamento'){
