@@ -5696,13 +5696,25 @@ function toggleBellDropdown(){
   }
 }
 
+function fireAlertAction(action){
+  if(!action)return;
+  document.getElementById('bell-dropdown').style.display='none';
+  if(action==='open-dayplan'){goScreen('kanban');setTimeout(function(){openDayPlanModal(true);},120);}
+}
+
 function renderBellDropdown(){
   var alerts=getAlerts();
   var body=document.getElementById('bell-dd-body');
   if(!body)return;
   if(alerts.length===0){body.innerHTML='<div class="bell-dd-empty">Nenhuma notificação hoje.</div>';return}
   body.innerHTML=alerts.slice().reverse().map(function(a){
-    return'<div class="bell-dd-item"><div>'+escHtml(a.message)+'</div><div class="bell-dd-time">'+escHtml(a.firedAt.slice(11,16))+'</div></div>';
+    var clickable=!!a.action;
+    var style=clickable?'cursor:pointer':'';
+    var hint=clickable?'<div style="font-size:10px;color:var(--accent);margin-top:2px">Clique para abrir →</div>':'';
+    return'<div class="bell-dd-item" style="'+style+'"'+(clickable?' onclick="fireAlertAction(\''+a.action+'\')"':'')+'>'+
+      '<div>'+escHtml(a.message)+'</div>'+hint+
+      '<div class="bell-dd-time">'+escHtml(a.firedAt.slice(11,16))+'</div>'+
+    '</div>';
   }).join('');
 }
 
@@ -5730,10 +5742,10 @@ function updateBellUI(){
   }
 }
 
-function fireAlert(type,message){
+function fireAlert(type,message,action){
   var alerts=getAlerts();
   if(alerts.some(function(a){return a.type===type}))return; // already fired today
-  alerts.push({type:type,message:message,firedAt:new Date().toISOString(),readAt:null});
+  alerts.push({type:type,message:message,action:action||null,firedAt:new Date().toISOString(),readAt:null});
   saveAlerts(alerts);
   updateBellUI();
 }
@@ -5764,7 +5776,7 @@ function checkAlerts(){
   var pausaMin=(Date.now()-_lastActivityAt)/60000;
   if(pausaMin<2)touchActivity();
   if(s.retorno&&hhmm>=s.retorno&&pausaMin>30){
-    fireAlert('retorno','Bem-vindo de volta! Reveja o planejamento — o que ainda falta para hoje?');
+    fireAlert('retorno','Bem-vindo de volta! Que tal rever o planejamento do dia?','open-dayplan');
     _lastActivityAt=Date.now();
   }
 
