@@ -390,8 +390,9 @@ textarea.form-input{resize:vertical;min-height:70px}
 .pip-btn.pip-primary:hover{opacity:.88}
 .pip-footer{padding:10px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--hint);cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;transition:color .12s}
 .pip-footer:hover{color:var(--accent)}
-.light-mode #foco-pip .pip-panel{box-shadow:-4px 0 16px rgba(0,0,0,.12)}
-.light-mode .pip-strip-dot.idle{background:rgba(0,0,0,.1)}
+#pip-strip-indicator:hover{background:rgba(16,185,129,.55)!important}
+#pip-strip-indicator.pip-paused{background:rgba(245,158,11,.35)!important}
+#pip-strip-indicator.pip-paused:hover{background:rgba(245,158,11,.55)!important}
 </style>
 </head>
 <body>
@@ -880,10 +881,6 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div class="pref-flow-row">
               <div><div class="pref-flow-label">Carga diária (h)</div><div class="pref-flow-sub">Horas de trabalho esperadas por dia</div></div>
               <input class="pref-time-input" id="pref-carga-diaria" type="number" min="1" max="24" value="8" style="width:60px" onchange="saveSchedule()">
-            </div>
-            <div class="pref-flow-row">
-              <div><div class="pref-flow-label">WIP Limit</div><div class="pref-flow-sub">Máx. de OSs em andamento ao mesmo tempo</div></div>
-              <input class="pref-time-input" id="pref-wip-limit" type="number" min="1" max="10" value="3" style="width:60px" onchange="saveSchedule()">
             </div>
           </div>
         </div>
@@ -2203,14 +2200,17 @@ function renderKanban(){
       var isIncompleta=isEncerrada&&k!=='concluido';
       var isFoco=focusSt&&focusSt.osId===os.id;
       var focoAcc=isFoco?focusAccumulatedToday(os.id):0;
-      var prevBtn=prevK&&!isEncerrada?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+prevK+'\')">← '+statusLabel(prevK)+'</button>':'';
+      // "Em andamento" não tem botão "← A fazer" (Trocar faz isso)
+      var prevBtn=prevK&&!isEncerrada&&k!=='andamento'?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+prevK+'\')">← '+statusLabel(prevK)+'</button>':'';
       var nextBtn=nextK?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+nextK+'\')">'+(nextK==='concluido'?'✓ ':'')+statusLabel(nextK)+' →</button>':'';
-      var focarBtn=k==='andamento'&&!isFoco?'<button class="os-action-btn" style="color:#10b981;border-color:rgba(16,185,129,.25)" onclick="event.stopPropagation();startFocus(\''+os.id+'\')">▶ Focar</button>':'';
       var clf=getOSClassificacao(os);
       var canEd=can('os_editar');
       var canDel=can('os_deletar_propria')&&os.createdBy===CURRENT_USER.id;
       return'<div class="os-card'+(isFoco?' os-card-foco':'')+(isIncompleta?' os-incompleta':'')+'">'+
-        (isFoco?'<div class="os-foco-badge" id="kanban-foco-timer">🔥 Em foco · '+formatFocusTime(focoAcc)+'</div>':'')+
+        (isFoco?'<div class="os-foco-badge" id="kanban-foco-timer" style="display:flex;align-items:center;justify-content:space-between">'+
+          '<span>🔥 Em foco · '+formatFocusTime(focoAcc)+'</span>'+
+          '<button onclick="event.stopPropagation();trocarFoco()" style="background:none;border:none;cursor:pointer;font-size:10px;font-weight:600;color:#10b981;padding:0 0 0 8px;letter-spacing:.02em">↻ Trocar</button>'+
+        '</div>':'')+
         '<div class="os-card-body">'+
           '<div class="os-num">Card '+os.num+
             ' <span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.08);color:'+clf.color+'" title="'+clf.title+'">'+clf.label+'</span>'+
@@ -2233,7 +2233,6 @@ function renderKanban(){
             (canEd?'<button class="os-action-btn edit" onclick="event.stopPropagation();openEditOS(\''+os.id+'\')">✏ Editar</button>':'')+
             (canDel?'<button class="os-action-btn del" onclick="event.stopPropagation();deleteOS(\''+os.id+'\')">✕ Deletar</button>':'')+
             '<button class="os-action-btn aprop" onclick="event.stopPropagation();goAprop(\''+os.id+'\')">⏱ Apropriar</button>'+
-            focarBtn+
           '</div>'+
           (prevBtn||nextBtn?'<div class="os-action-row">'+prevBtn+nextBtn+'</div>':'')+
         '</div>'+
@@ -4703,10 +4702,11 @@ function deleteOS(osId){
 function moveOS(osId,newStatus){
   var os=S.oss.find(function(o){return o.id===osId});if(!os)return;
   if(newStatus==='andamento'){
-    var s=getSchedule();
-    var wipLimit=s.wipLimit||3;
-    var emAndamento=S.oss.filter(function(o){return o.status==='andamento'&&o.id!==osId});
-    if(emAndamento.length>=wipLimit){showWipModal(osId,newStatus,emAndamento,wipLimit);return;}
+    // Single-slot: move qualquer OS em andamento de volta para afazer primeiro
+    var current=S.oss.find(function(o){return o.status==='andamento'&&o.id!==osId;});
+    if(current){
+      dbMoverOS(current.id,'afazer').then(function(){current.status='afazer';}).catch(function(){});
+    }
   }
   _doMoveOS(osId,newStatus);
 }
@@ -4719,22 +4719,6 @@ function _doMoveOS(osId,newStatus){
   }).catch(function(e){toast('Erro: '+e.message,'err')});
 }
 
-function showWipModal(osId,newStatus,emAndamento,wipLimit){
-  var msg=document.getElementById('wip-message');
-  var list=document.getElementById('wip-list');
-  var forceBtn=document.getElementById('wip-force-btn');
-  if(msg)msg.innerHTML='Você já tem <strong style="color:var(--red-text)">'+emAndamento.length+' OSs em andamento</strong>. Conclua uma antes de iniciar outra — ou force o movimento se for urgente.';
-  if(list)list.innerHTML=emAndamento.map(function(o){
-    var porte=osPorteFromHours(o.estimatedHours||0);
-    return'<div style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:9px 12px">'
-      +'<span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px">'+porte.label+'</span>'
-      +'<div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#'+escHtml(String(o.num))+' · '+escHtml(o.titulo)+'</div></div>'
-      +'<button onclick="closeModal(\'modal-wip\');_doMoveOS(\''+o.id+'\',\'concluido\')" style="font-size:11px;padding:4px 10px;background:rgba(16,185,129,.1);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:5px;cursor:pointer">Concluir</button>'
-      +'</div>';
-  }).join('');
-  if(forceBtn)forceBtn.onclick=function(){closeModal('modal-wip');_doMoveOS(osId,newStatus)};
-  openModal('modal-wip');
-}
 
 function toggleE(osId,key){
   var os=S.oss.find(function(o){return o.id===osId});
@@ -4866,7 +4850,6 @@ function saveSchedule(){
     retorno:document.getElementById('pref-hora-retorno').value||'13:00',
     saida:document.getElementById('pref-hora-saida').value||'17:00',
     cargaDiaria:parseFloat(document.getElementById('pref-carga-diaria').value)||8,
-    wipLimit:parseInt(document.getElementById('pref-wip-limit').value)||3
   };
   localStorage.setItem('vs_schedule',JSON.stringify(s));
 }
@@ -4878,7 +4861,6 @@ function loadSchedulePrefs(){
   if(el('pref-hora-retorno'))el('pref-hora-retorno').value=s.retorno||'13:00';
   if(el('pref-hora-saida'))el('pref-hora-saida').value=s.saida||'17:00';
   if(el('pref-carga-diaria'))el('pref-carga-diaria').value=s.cargaDiaria||8;
-  if(el('pref-wip-limit'))el('pref-wip-limit').value=s.wipLimit||3;
 }
 
 // ── PESO INTELIGENTE ─────────────────────────────────────────────────────────
@@ -5417,9 +5399,15 @@ function startFocus(osId){
   var st=getFocusState();
   if(st&&st.osId===osId&&!st.pausedAt)return;
   if(st&&!st.pausedAt)closeFocusSession(st);
-  // Promove OS de "afazer" para "andamento" automaticamente
+  // Single-slot: move qualquer andamento atual de volta para afazer
+  var cur=S.oss.find(function(o){return o.status==='andamento'&&o.id!==osId;});
+  if(cur){dbMoverOS(cur.id,'afazer').then(function(){cur.status='afazer';}).catch(function(){});}
+  // Promove OS de "afazer" para "andamento" via DB
   var os=S.oss.find(function(o){return o.id===osId;});
-  if(os&&os.status==='afazer'){os.status='andamento';save();}
+  if(os&&os.status==='afazer'){
+    os.status='andamento';
+    dbMoverOS(osId,'andamento').catch(function(){});
+  }
   var now=Date.now();
   var accumulated=focusAccumulatedToday(osId);
   var newSt={osId:osId,startedAt:now,pausedAt:null,accumulated:accumulated};
@@ -5461,17 +5449,37 @@ function concludeOS(osId){
   if(st&&st.osId===osId&&!st.pausedAt)closeFocusSession(st);
   saveFocusState(null);
   moveOS(osId,'concluido');
-  // Auto-switch para próxima OS do plano do dia
+  // Auto-switch: tenta plano do dia, fallback para próxima de "afazer"
+  var nextId=null;
   var plan=getDayPlan();
-  if(plan&&plan.entries&&plan.entries.length){
-    var next=plan.entries.find(function(e){
+  if(plan&&plan.entries){
+    var pe=plan.entries.find(function(e){
       return e.osId!==osId&&S.oss.find(function(o){return o.id===e.osId&&o.status!=='concluido'});
     });
-    if(next)startFocus(next.osId);
+    if(pe)nextId=pe.osId;
   }
+  if(!nextId){
+    var nxt=S.oss.find(function(o){return o.id!==osId&&(o.status==='afazer'||o.status==='andamento');});
+    if(nxt)nextId=nxt.id;
+  }
+  if(nextId)startFocus(nextId);
   updateFocusUI();
   renderKanban();
   closeFocoDropdown();
+}
+
+function trocarFoco(){
+  var st=getFocusState();if(!st)return;
+  // Devolve OS atual para "afazer"
+  var os=S.oss.find(function(o){return o.id===st.osId;});
+  if(os){
+    dbMoverOS(os.id,'afazer').then(function(){os.status='afazer';}).catch(function(){});
+  }
+  saveFocusState(null);
+  // Busca próxima de "afazer" (excluindo a que acabou de sair)
+  var next=S.oss.find(function(o){return o.status==='afazer'&&o.id!==st.osId;});
+  if(next){startFocus(next.id);}
+  else{updateFocusUI();renderKanban();updatePipUI();toast('Fila vazia — sem mais OSs a fazer');}
 }
 
 function alternarFoco(){
@@ -5494,50 +5502,113 @@ function alternarFoco(){
   startFocus(ordered[(idx+1)%ordered.length].id);
 }
 
+var _pipWindow=null;
+
 function updatePipUI(){
   var st=getFocusState();
-  var dots=[document.getElementById('pip-dot-1'),document.getElementById('pip-dot-2'),document.getElementById('pip-dot-3')];
-  var titleEl=document.getElementById('pip-os-title');
-  var timerEl=document.getElementById('pip-timer');
-  var badgeEl=document.getElementById('pip-badge-row');
-  var actionsEl=document.getElementById('pip-actions');
-  if(!timerEl||!actionsEl)return;
-  clearInterval(_pipInterval);_pipInterval=null;
+  var strip=document.getElementById('pip-strip-indicator');
+  var dot=document.getElementById('pip-si-dot');
+  if(!strip)return;
   if(!st){
-    dots.forEach(function(d){if(d)d.className='pip-strip-dot idle';});
-    if(titleEl)titleEl.textContent='Nenhuma OS em foco';
-    timerEl.className='pip-timer idle';timerEl.textContent='sem foco ativo';
-    if(badgeEl)badgeEl.innerHTML='';
-    actionsEl.innerHTML='<button class="pip-btn pip-primary" onclick="goScreen(\'kanban\')">↗ Abrir Kanban</button>';
-    return;
-  }
-  var os=S.oss.find(function(o){return o.id===st.osId;});
-  var porte=os?osPorteFromHours(os.estimatedHours||0):{key:'normal',label:'Normal',cls:'peso-badge-normal'};
-  if(titleEl)titleEl.textContent=os?('#'+os.num+' · '+os.titulo):'OS desconhecida';
-  if(badgeEl)badgeEl.innerHTML='<span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px">'+porte.label+'</span>';
-  var dotCls=st.pausedAt?'pip-strip-dot paused':'pip-strip-dot';
-  dots.forEach(function(d){if(d)d.className=dotCls;});
-  var acc=focusAccumulatedToday(st.osId);
-  if(st.pausedAt){
-    timerEl.className='pip-timer paused';
-    timerEl.textContent=formatFocusTime(acc)+' · pausado';
+    strip.style.display='none';
+    strip.classList.remove('pip-paused');
+    if(dot){dot.style.background='rgba(255,255,255,.2)';}
   }else{
-    timerEl.className='pip-timer';
-    timerEl.textContent=formatFocusTime(acc);
-    _pipInterval=setInterval(function(){
-      var el=document.getElementById('pip-timer');
-      if(el&&st.startedAt){
-        var elapsed=Math.floor((Date.now()-st.startedAt)/1000);
-        el.textContent=formatFocusTime(st.accumulated+elapsed);
-      }
-    },1000);
+    strip.style.display='flex';
+    if(st.pausedAt){
+      strip.classList.add('pip-paused');
+      if(dot)dot.style.background='#f59e0b';
+    }else{
+      strip.classList.remove('pip-paused');
+      if(dot)dot.style.background='#10b981';
+    }
   }
-  actionsEl.innerHTML=
-    (st.pausedAt
-      ?'<button class="pip-btn pip-success" onclick="resumeFocus()">▶ Retomar</button>'
-      :'<button class="pip-btn" onclick="pauseFocus()">⏸ Pausar</button>')
-    +'<button class="pip-btn pip-success" onclick="concludeOS(\''+st.osId+'\')">✓ Concluir OS</button>'
-    +'<button class="pip-btn" onclick="alternarFoco()">↻ Próxima OS</button>';
+  // Atualiza popup se estiver aberto
+  if(_pipWindow&&!_pipWindow.closed&&_pipWindow._update)_pipWindow._update();
+}
+
+function openPipWindow(){
+  if(_pipWindow&&!_pipWindow.closed){_pipWindow.focus();return;}
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Em Foco</title><style>'
+    +'*{box-sizing:border-box;margin:0;padding:0}'
+    +'body{background:#16162a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;user-select:none;overflow:hidden}'
+    +'.bar{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.07);-webkit-app-region:drag}'
+    +'.bar-title{font-size:9px;font-weight:600;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px}'
+    +'.bar-btns{display:flex;gap:4px;-webkit-app-region:no-drag}'
+    +'.hbtn{background:none;border:1px solid rgba(255,255,255,.1);border-radius:4px;color:rgba(255,255,255,.35);font-size:10px;padding:2px 7px;cursor:pointer;font-family:inherit}'
+    +'.hbtn:hover{background:rgba(255,255,255,.07);color:#fff}'
+    +'.body{padding:12px 12px 8px}'
+    +'.os-name{font-size:11px;font-weight:500;color:#e2e8f0;line-height:1.4;min-height:28px;margin-bottom:8px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}'
+    +'.timer{font-size:26px;font-weight:700;font-family:monospace;color:#10b981;letter-spacing:-1px;margin-bottom:2px}'
+    +'.timer.paused{color:#f59e0b}.timer.idle{color:rgba(255,255,255,.25);font-size:13px;font-weight:400;letter-spacing:0}'
+    +'.sub{font-size:10px;color:rgba(255,255,255,.3);margin-bottom:10px}'
+    +'.acts{display:flex;flex-direction:column;gap:4px}'
+    +'.btn{width:100%;padding:6px 10px;border-radius:5px;border:1px solid rgba(255,255,255,.1);background:none;color:rgba(255,255,255,.45);font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;gap:6px}'
+    +'.btn:hover{background:rgba(255,255,255,.06)}'
+    +'.btn.g{color:#10b981;border-color:rgba(16,185,129,.3)}'
+    +'.btn.p{background:#7c6ff7;color:#fff;border-color:transparent}'
+    +'.btn.p:hover{opacity:.88}'
+    +'.footer{padding:7px 12px;border-top:1px solid rgba(255,255,255,.05);font-size:10px;color:rgba(255,255,255,.2);cursor:pointer}'
+    +'.footer:hover{color:rgba(255,255,255,.45)}'
+    +'</style></head><body>'
+    +'<div class="bar"><span class="bar-title">⬡ Em Foco</span><div class="bar-btns">'
+    +'<button class="hbtn" onclick="minimize()">← Min</button>'
+    +'<button class="hbtn" onclick="closeAll()">×</button>'
+    +'</div></div>'
+    +'<div class="body">'
+    +'<div class="os-name" id="t">Nenhuma OS em foco</div>'
+    +'<div class="timer idle" id="tm">—</div>'
+    +'<div class="sub" id="sb"></div>'
+    +'<div class="acts" id="ac"><button class="btn p" onclick="call(\'goScreen\',\'kanban\')">↗ Ir ao Kanban</button></div>'
+    +'</div>'
+    +'<div class="footer" onclick="call(\'goScreen\',\'kanban\')">Version Suite · Kanban</div>'
+    +'<script>'
+    +'var _iv=null;'
+    +'function fmt(s){var h=Math.floor(s/3600),m=Math.floor((s%3600)/60);return h>0?(h+"h"+String(m).padStart(2,"0")+"m"):(m+"m")}'
+    +'function st(){try{return window.opener&&window.opener.getFocusState?window.opener.getFocusState():null}catch(e){return null}}'
+    +'function oss(){try{return window.opener&&window.opener.S?window.opener.S.oss:[]}catch(e){return[]}}'
+    +'function acc(focusSt){try{return window.opener.focusAccumulatedToday(focusSt.osId)}catch(e){return 0}}'
+    +'function call(fn,arg){try{if(window.opener&&window.opener[fn])window.opener[fn](arg);setTimeout(_update,400)}catch(e){}}'
+    +'function minimize(){try{if(window.opener)window.opener._pipMinimize();}catch(e){} window.close();}'
+    +'function closeAll(){try{if(window.opener)window.opener._pipClose();}catch(e){} window.close();}'
+    +'function _update(){'
+    +'  var s=st();var tEl=document.getElementById("t");var tmEl=document.getElementById("tm");'
+    +'  var sbEl=document.getElementById("sb");var acEl=document.getElementById("ac");'
+    +'  if(!s){if(tEl)tEl.textContent="Nenhuma OS em foco";'
+    +'    if(tmEl){tmEl.className="timer idle";tmEl.textContent="—";}if(sbEl)sbEl.textContent="";'
+    +'    if(acEl)acEl.innerHTML=\'<button class="btn p" onclick="call(\'goScreen\',\'kanban\')">↗ Ir ao Kanban</button>\';return;}'
+    +'  var os=oss().find(function(o){return o.id===s.osId;});'
+    +'  if(tEl)tEl.textContent=os?("#"+os.num+" · "+os.titulo):"OS desconhecida";'
+    +'  var a=acc(s);if(s.startedAt&&!s.pausedAt)a+=Math.floor((Date.now()-s.startedAt)/1000);'
+    +'  if(tmEl){tmEl.className="timer"+(s.pausedAt?" paused":"");tmEl.textContent=fmt(a);}'
+    +'  if(sbEl)sbEl.textContent=s.pausedAt?"pausado":"nesta sessão";'
+    +'  var osId=s.osId;'
+    +'  if(acEl)acEl.innerHTML='
+    +'    (s.pausedAt?\'<button class="btn g" onclick="call(\'resumeFocus\')">▶ Retomar</button>\':\'<button class="btn" onclick="call(\'pauseFocus\')">⏸ Pausar</button>\')'
+    +'    +\'<button class="btn g" onclick="call(\'concludeOS\',\\'\'+osId+\\'\')">✓ Concluir OS</button>\''
+    +'    +\'<button class="btn" onclick="call(\'trocarFoco\')">↻ Trocar OS</button>\';'
+    +'}'
+    +'window._update=_update;'
+    +'clearInterval(_iv);_iv=setInterval(_update,1000);_update();'
+    +'<\/script></body></html>';
+  var w=window.open('','foco_pip','width=280,height=240,resizable=yes,location=no,menubar=no,toolbar=no,status=no');
+  if(!w)return;
+  w.document.write(html);w.document.close();
+  _pipWindow=w;
+  // Esconde o strip enquanto o popup está aberto
+  var strip=document.getElementById('pip-strip-indicator');
+  if(strip)strip.style.display='none';
+}
+
+function _pipMinimize(){
+  _pipWindow=null;
+  updatePipUI(); // reexibe strip se há foco ativo
+}
+
+function _pipClose(){
+  _pipWindow=null;
+  var strip=document.getElementById('pip-strip-indicator');
+  if(strip)strip.style.display='none';
 }
 
 function formatFocusTime(seconds){
@@ -6583,24 +6654,6 @@ var __paralelo_config = {
     </div>
   </div>
 </div>
-<!-- MODAL WIP LIMIT -->
-<div class="modal-overlay" id="modal-wip" style="z-index:450">
-  <div class="modal" style="max-width:440px">
-    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px">
-      <span style="font-size:24px">⚠️</span>
-      <div>
-        <div style="font-size:15px;font-weight:600;margin-bottom:4px">Limite WIP atingido</div>
-        <div id="wip-message" style="font-size:12px;color:var(--muted);line-height:1.5"></div>
-      </div>
-    </div>
-    <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Em andamento agora</div>
-    <div id="wip-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn" onclick="closeModal('modal-wip')">Cancelar</button>
-      <button class="btn" style="color:var(--red-text);border-color:rgba(239,68,68,.3)" id="wip-force-btn">Forçar mesmo assim</button>
-    </div>
-  </div>
-</div>
 <!-- MODAL RESUMO DO DIA -->
 <div class="modal-overlay" id="modal-dayresume" style="z-index:400">
   <div class="modal" style="max-width:600px;max-height:90vh;overflow-y:auto">
@@ -6730,24 +6783,11 @@ var __paralelo_config = {
     </div>
   </div>
 </div>
-<!-- FOCO PiP SIDEBAR -->
-<div id="foco-pip">
-  <div class="pip-strip">
-    <div class="pip-strip-dot idle" id="pip-dot-1"></div>
-    <div class="pip-strip-dot idle" id="pip-dot-2"></div>
-    <div class="pip-strip-dot idle" id="pip-dot-3"></div>
-  </div>
-  <div class="pip-panel">
-    <div class="pip-header">
-      <div class="pip-badge-row" id="pip-badge-row"></div>
-      <div class="pip-os-title" id="pip-os-title">Nenhuma OS em foco</div>
-      <div class="pip-timer idle" id="pip-timer">sem foco ativo</div>
-    </div>
-    <div class="pip-actions" id="pip-actions">
-      <button class="pip-btn pip-primary" onclick="goScreen('kanban')">↗ Abrir Kanban</button>
-    </div>
-    <div class="pip-footer" onclick="goScreen('kanban')">⬡ Version Suite · Kanban</div>
-  </div>
+<!-- FOCO PiP STRIP (mini indicador borda direita) -->
+<div id="pip-strip-indicator" onclick="openPipWindow()" title="Abrir painel de foco" style="display:none;position:fixed;right:0;top:50%;transform:translateY(-50%);width:14px;height:56px;background:rgba(16,185,129,.35);border-radius:6px 0 0 6px;cursor:pointer;z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;transition:background .2s">
+  <div style="width:5px;height:5px;border-radius:50%;background:#10b981" id="pip-si-dot"></div>
+  <div style="width:3px;height:3px;border-radius:50%;background:#10b981;opacity:.5"></div>
+  <div style="width:3px;height:3px;border-radius:50%;background:#10b981;opacity:.5"></div>
 </div>
 </body>
 </html>
