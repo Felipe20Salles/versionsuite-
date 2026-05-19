@@ -4887,10 +4887,12 @@ function openDayPlanModal(){
   if(dateEl)dateEl.textContent=dias[now.getDay()]+', '+now.getDate()+' de '+meses[now.getMonth()]+' de '+now.getFullYear();
 
   var vf=getVelocityFactor();
-  var andamento=S.oss.filter(function(o){return o.status==='andamento'});
-  // Prioridade: porte (epico > grande > normal > rapida)
+  var andamento=S.oss.filter(function(o){return o.status==='andamento'||o.status==='a_fazer'});
+  // Prioridade: andamento primeiro, depois porte (epico > grande > normal > rapida)
   var ordemPorte={epico:0,grande:1,normal:2,rapida:3};
   andamento.sort(function(a,b){
+    if(a.status==='andamento'&&b.status!=='andamento')return-1;
+    if(b.status==='andamento'&&a.status!=='andamento')return 1;
     var pa=osPorteFromHours(a.estimatedHours||0).key;
     var pb=osPorteFromHours(b.estimatedHours||0).key;
     return(ordemPorte[pa]||2)-(ordemPorte[pb]||2);
@@ -4900,7 +4902,7 @@ function openDayPlanModal(){
   var list=document.getElementById('dayplan-os-list');
   if(!list)return;
   list.innerHTML=andamento.length===0
-    ?'<div style="text-align:center;padding:24px;font-size:12px;color:var(--hint)">Nenhuma OS em andamento. Inicie uma OS no Kanban primeiro.</div>'
+    ?'<div style="text-align:center;padding:24px;font-size:12px;color:var(--hint)">Nenhuma OS em andamento ou a fazer. Adicione OSs no Kanban primeiro.</div>'
     :andamento.map(function(os){
       var saved=savedEntries.find(function(e){return e.osId===os.id});
       var suggestedH=saved?saved.plannedHours:Math.round(((os.estimatedHours||2)/vf)*2)/2;
