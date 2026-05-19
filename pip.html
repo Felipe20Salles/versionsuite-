@@ -103,7 +103,7 @@ function _update() {
     sbEl.textContent = '';
     var kb = document.createElement('button');
     kb.className = 'kb';
-    kb.innerHTML = '⊞ Ir ao Kanban';
+    kb.innerHTML = '↗ Ir ao Kanban';
     kb.title = 'Ir ao Kanban';
     kb.addEventListener('click', function() {
       try { window.opener.goScreen('kanban'); window.opener.focus(); window.opener._pipMinimize(); } catch(e) {}
@@ -138,7 +138,7 @@ function _update() {
     op('trocarFoco');
   });
 
-  var b4 = mkBtn('', '⊞', 'Ir ao Kanban', function() {
+  var b4 = mkBtn('', '↗', 'Ir ao Kanban', function() {
     try { window.opener.goScreen('kanban'); window.opener.focus(); window.opener._pipMinimize(); } catch(e) {}
     window.close();
   });

@@ -532,7 +532,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div class="bell-dropdown" id="bell-dropdown" style="display:none">
             <div class="bell-dd-header">
               <span>Notificações</span>
-              <span style="cursor:pointer;font-size:10px;color:var(--accent)" onclick="markAllAlertsRead()">Marcar todas lidas</span>
+              <span style="cursor:pointer;font-size:10px;color:var(--accent)" onclick="clearAllAlerts()">Limpar tudo</span>
             </div>
             <div id="bell-dd-body"></div>
           </div>
@@ -5724,6 +5724,12 @@ function markAllAlertsRead(){
   alerts=alerts.map(function(a){return Object.assign({},a,{readAt:a.readAt||now})});
   saveAlerts(alerts);
   updateBellUI();
+}
+
+function clearAllAlerts(){
+  saveAlerts([]);
+  updateBellUI();
+  renderBellDropdown();
 }
 
 function updateBellUI(){
