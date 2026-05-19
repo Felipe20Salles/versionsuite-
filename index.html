@@ -2198,10 +2198,9 @@ function renderKanban(){
       var h=horasOS(os.id);
       var prevK=statusPrev(k),nextK=statusNext(k);
       var isIncompleta=isEncerrada&&k!=='concluido';
-      var isFoco=focusSt&&focusSt.osId===os.id;
+      var isFoco=focusSt&&focusSt.osId===os.id&&k==='andamento';
       var focoAcc=isFoco?focusAccumulatedToday(os.id):0;
-      // "Em andamento" não tem botão "← A fazer" (Trocar faz isso)
-      var prevBtn=prevK&&!isEncerrada&&k!=='andamento'?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+prevK+'\')">← '+statusLabel(prevK)+'</button>':'';
+      var prevBtn=prevK&&!isEncerrada?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+prevK+'\')">← '+statusLabel(prevK)+'</button>':'';
       var nextBtn=nextK?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+nextK+'\')">'+(nextK==='concluido'?'✓ ':'')+statusLabel(nextK)+' →</button>':'';
       var clf=getOSClassificacao(os);
       var canEd=can('os_editar');
@@ -4707,6 +4706,11 @@ function moveOS(osId,newStatus){
     if(current){
       dbMoverOS(current.id,'afazer').then(function(){current.status='afazer';}).catch(function(){});
     }
+  }
+  // Se a OS focal sai de "andamento", limpa o estado de foco
+  if(newStatus!=='andamento'){
+    var st=getFocusState();
+    if(st&&st.osId===osId){saveFocusState(null);updateFocusUI();updatePipUI();}
   }
   _doMoveOS(osId,newStatus);
 }
