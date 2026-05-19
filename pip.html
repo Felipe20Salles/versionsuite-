@@ -5,49 +5,51 @@
 <title>Em Foco</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#16162a;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:12px;user-select:none;overflow:hidden}
-.bar{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.07)}
-.bar-title{font-size:9px;font-weight:600;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px}
-.bar-btns{display:flex;gap:4px}
-.hbtn{background:none;border:1px solid rgba(255,255,255,.1);border-radius:4px;color:rgba(255,255,255,.35);font-size:10px;padding:2px 7px;cursor:pointer;font-family:inherit}
-.hbtn:hover{background:rgba(255,255,255,.07);color:#fff}
-.body{padding:12px 12px 8px}
-.os-name{font-size:11px;font-weight:500;color:#e2e8f0;line-height:1.4;min-height:28px;margin-bottom:8px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.timer{font-size:26px;font-weight:700;font-family:monospace;color:#10b981;letter-spacing:-1px;margin-bottom:2px}
+html,body{width:280px;height:220px;overflow:hidden}
+body{background:#0e0e1c;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;user-select:none;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.05)}
+.brand{font-size:9px;font-weight:700;color:rgba(255,255,255,.16);text-transform:uppercase;letter-spacing:.12em}
+.tbtn{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.22);font-size:13px;width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:all .12s;line-height:1;font-family:inherit}
+.tbtn:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.7)}
+.body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 16px 12px;gap:3px}
+.os-name{font-size:10px;color:rgba(255,255,255,.32);text-align:center;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.01em}
+.timer{font-size:36px;font-weight:700;font-family:monospace;color:#10b981;letter-spacing:-2px;line-height:1.05}
 .timer.paused{color:#f59e0b}
-.timer.idle{color:rgba(255,255,255,.25);font-size:13px;font-weight:400;letter-spacing:0}
-.sub{font-size:10px;color:rgba(255,255,255,.3);margin-bottom:10px}
-.acts{display:flex;flex-direction:column;gap:4px}
-.btn{width:100%;padding:6px 10px;border-radius:5px;border:1px solid rgba(255,255,255,.1);background:none;color:rgba(255,255,255,.45);font-size:11px;font-weight:500;cursor:pointer;font-family:inherit;text-align:left;display:flex;align-items:center;gap:6px}
-.btn:hover{background:rgba(255,255,255,.06)}
-.btn.g{color:#10b981;border-color:rgba(16,185,129,.3)}
-.btn.p{background:#7c6ff7;color:#fff;border-color:transparent}
-.btn.p:hover{opacity:.88}
-.footer{padding:7px 12px;border-top:1px solid rgba(255,255,255,.05);font-size:10px;color:rgba(255,255,255,.2);cursor:pointer}
-.footer:hover{color:rgba(255,255,255,.45)}
+.timer.idle{font-size:13px;font-weight:400;color:rgba(255,255,255,.18);letter-spacing:0}
+.sub{font-size:9px;color:rgba(255,255,255,.18);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.acts{display:flex;align-items:center;gap:5px}
+.ab{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:8px;cursor:pointer;font-size:15px;width:38px;height:34px;display:flex;align-items:center;justify-content:center;transition:all .12s;color:rgba(255,255,255,.4);font-family:inherit}
+.ab:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.13);color:#fff}
+.ab.g{color:#10b981;border-color:rgba(16,185,129,.22);background:rgba(16,185,129,.07)}
+.ab.g:hover{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.35)}
+.ab.w{color:rgba(255,255,255,.55)}
+.kb{display:flex;align-items:center;gap:6px;padding:7px 18px;background:rgba(124,111,247,.1);border:1px solid rgba(124,111,247,.2);border-radius:8px;color:#a89ef8;font-size:11px;font-weight:500;cursor:pointer;transition:all .12s;font-family:inherit}
+.kb:hover{background:rgba(124,111,247,.2);border-color:rgba(124,111,247,.35);color:#c4bcfc}
+.topbar-btns{display:flex;gap:2px}
 </style>
 </head>
 <body>
-<div class="bar">
-  <span class="bar-title">&#x2B21; Em Foco</span>
-  <div class="bar-btns">
-    <button class="hbtn" id="btn-min">&#8592; Min</button>
-    <button class="hbtn" id="btn-close">&#215;</button>
+<div class="topbar">
+  <span class="brand">⬡ Em Foco</span>
+  <div class="topbar-btns">
+    <button class="tbtn" id="btn-min" title="Minimizar">⊖</button>
+    <button class="tbtn" id="btn-close" title="Fechar">✕</button>
   </div>
 </div>
 <div class="body">
-  <div class="os-name" id="t">Nenhuma OS em foco</div>
-  <div class="timer idle" id="tm">&#8212;</div>
+  <div class="os-name" id="t"></div>
+  <div class="timer idle" id="tm">—</div>
   <div class="sub" id="sb"></div>
   <div class="acts" id="ac"></div>
 </div>
-<div class="footer" id="btn-kanban">Version Suite &middot; Kanban</div>
 <script>
 var _iv = null;
 
 function fmt(s) {
-  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
-  return h > 0 ? (h + 'h' + String(m).padStart(2, '0') + 'm') : (m + 'm');
+  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return h > 0
+    ? h + 'h' + String(m).padStart(2, '0') + 'm'
+    : m + 'm' + String(sec).padStart(2, '0') + 's';
 }
 
 function getSt() {
@@ -66,6 +68,15 @@ function op(fn, arg) {
   try { if (window.opener && window.opener[fn]) window.opener[fn](arg); setTimeout(_update, 400); } catch(e) {}
 }
 
+function mkBtn(cls, icon, title, fn) {
+  var b = document.createElement('button');
+  b.className = 'ab' + (cls ? ' ' + cls : '');
+  b.innerHTML = icon;
+  b.title = title;
+  b.addEventListener('click', fn);
+  return b;
+}
+
 document.getElementById('btn-min').addEventListener('click', function() {
   try { if (window.opener) window.opener._pipMinimize(); } catch(e) {}
   window.close();
@@ -76,11 +87,6 @@ document.getElementById('btn-close').addEventListener('click', function() {
   window.close();
 });
 
-document.getElementById('btn-kanban').addEventListener('click', function() {
-  op('goScreen', 'kanban');
-  try { window.opener.focus(); } catch(e) {}
-});
-
 function _update() {
   var s = getSt();
   var tEl = document.getElementById('t');
@@ -88,49 +94,59 @@ function _update() {
   var sbEl = document.getElementById('sb');
   var acEl = document.getElementById('ac');
 
+  acEl.innerHTML = '';
+
   if (!s) {
-    tEl.textContent = 'Nenhuma OS em foco';
+    tEl.textContent = 'nenhuma OS em foco';
     tmEl.className = 'timer idle';
-    tmEl.innerHTML = '&mdash;';
+    tmEl.textContent = '—';
     sbEl.textContent = '';
-    acEl.innerHTML = '';
     var kb = document.createElement('button');
-    kb.className = 'btn p';
-    kb.textContent = 'Ir ao Kanban';
-    kb.addEventListener('click', function() { op('goScreen', 'kanban'); });
+    kb.className = 'kb';
+    kb.innerHTML = '⊞ Ir ao Kanban';
+    kb.title = 'Ir ao Kanban';
+    kb.addEventListener('click', function() {
+      try { window.opener.goScreen('kanban'); window.opener.focus(); window.opener._pipClose(); } catch(e) {}
+      window.close();
+    });
     acEl.appendChild(kb);
     return;
   }
 
-  var os = getOss().find(function(o) { return o.id === s.osId; });
+  var oss = getOss();
+  var os = oss.find(function(o) { return o.id === s.osId; });
   tEl.textContent = os ? ('#' + os.num + ' · ' + os.titulo) : 'OS desconhecida';
 
   var a = getAcc(s);
   if (s.startedAt && !s.pausedAt) a += Math.floor((Date.now() - s.startedAt) / 1000);
   tmEl.className = 'timer' + (s.pausedAt ? ' paused' : '');
   tmEl.textContent = fmt(a);
-  sbEl.textContent = s.pausedAt ? 'pausado' : 'nesta sessão';
+  sbEl.textContent = s.pausedAt ? 'pausado' : 'em andamento';
 
-  acEl.innerHTML = '';
-  var b1 = document.createElement('button');
-  b1.className = 'btn' + (s.pausedAt ? ' g' : '');
-  b1.textContent = s.pausedAt ? '▶ Retomar' : '⏸ Pausar';
-  b1.addEventListener('click', function() { op(s.pausedAt ? 'resumeFocus' : 'pauseFocus'); });
-
-  var b2 = document.createElement('button');
-  b2.className = 'btn g';
-  b2.textContent = '✓ Concluir OS';
+  var isPaused = !!s.pausedAt;
   var oid = s.osId;
-  b2.addEventListener('click', function() { op('concludeOS', oid); });
 
-  var b3 = document.createElement('button');
-  b3.className = 'btn';
-  b3.textContent = '↻ Trocar OS';
-  b3.addEventListener('click', function() { op('trocarFoco'); });
+  var b1 = mkBtn(isPaused ? 'g' : 'w', isPaused ? '▶' : '⏸', isPaused ? 'Retomar' : 'Pausar', function() {
+    op(isPaused ? 'resumeFocus' : 'pauseFocus');
+  });
+
+  var b2 = mkBtn('g', '✓', 'Concluir OS', function() {
+    op('concludeOS', oid);
+  });
+
+  var b3 = mkBtn('', '↻', 'Trocar OS', function() {
+    op('trocarFoco');
+  });
+
+  var b4 = mkBtn('', '⊞', 'Ir ao Kanban', function() {
+    try { window.opener.goScreen('kanban'); window.opener.focus(); window.opener._pipMinimize(); } catch(e) {}
+    window.close();
+  });
 
   acEl.appendChild(b1);
   acEl.appendChild(b2);
   acEl.appendChild(b3);
+  acEl.appendChild(b4);
 }
 
 window._update = _update;

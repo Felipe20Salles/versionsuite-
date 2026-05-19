@@ -364,9 +364,12 @@ textarea.form-input{resize:vertical;min-height:70px}
 .light-mode .foco-pill{box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .light-mode .bell-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.15)}
 /* ── KANBAN FOCO AURA ── */
-@keyframes foco-pulse{0%,100%{box-shadow:0 0 0 2px #10b981,0 0 14px rgba(16,185,129,.25)}50%{box-shadow:0 0 0 2px #10b981,0 0 24px rgba(16,185,129,.45)}}
-.os-card-foco{animation:foco-pulse 2.4s ease infinite}
-.os-foco-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#10b981;padding:5px 12px;background:rgba(16,185,129,.08);border-bottom:1px solid rgba(16,185,129,.12);letter-spacing:.02em}
+@keyframes foco-col-pulse{
+  0%,100%{box-shadow:0 0 0 1.5px rgba(239,68,68,.35),0 0 24px rgba(249,115,22,.1)}
+  50%{box-shadow:0 0 0 1.5px rgba(249,115,22,.55),0 0 36px rgba(239,68,68,.18)}
+}
+.kanban-col-andamento{border-radius:10px;animation:foco-col-pulse 2.4s ease infinite}
+.os-foco-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#f97316;padding:5px 12px;background:rgba(239,68,68,.07);border-bottom:1px solid rgba(239,68,68,.14);letter-spacing:.02em}
 /* ── FOCO PiP SIDEBAR ── */
 #foco-pip{position:fixed;top:0;right:0;height:100vh;width:14px;z-index:9000;overflow:hidden;transition:width .22s cubic-bezier(.4,0,.2,1);display:flex;pointer-events:auto}
 #foco-pip:hover{width:228px}
@@ -2205,10 +2208,10 @@ function renderKanban(){
       var clf=getOSClassificacao(os);
       var canEd=can('os_editar');
       var canDel=can('os_deletar_propria')&&os.createdBy===CURRENT_USER.id;
-      return'<div class="os-card'+(isFoco?' os-card-foco':'')+(isIncompleta?' os-incompleta':'')+'">'+
+      return'<div class="os-card'+(isIncompleta?' os-incompleta':'')+'">'+
         (isFoco?'<div class="os-foco-badge" id="kanban-foco-timer" style="display:flex;align-items:center;justify-content:space-between">'+
           '<span>🔥 Em foco · '+formatFocusTime(focoAcc)+'</span>'+
-          '<button onclick="event.stopPropagation();trocarFoco()" style="background:none;border:none;cursor:pointer;font-size:10px;font-weight:600;color:#10b981;padding:0 0 0 8px;letter-spacing:.02em">↻ Trocar</button>'+
+          '<button onclick="event.stopPropagation();trocarFoco()" style="background:none;border:none;cursor:pointer;font-size:10px;font-weight:600;color:#f97316;padding:0 0 0 8px;letter-spacing:.02em">↻ Trocar</button>'+
         '</div>':'')+
         '<div class="os-card-body">'+
           '<div class="os-num">Card '+os.num+
@@ -2237,7 +2240,10 @@ function renderKanban(){
         '</div>'+
       '</div>';
     }).join(''):'<div class="empty-col">Nenhum card</div>';
-    return'<div><div class="kanban-col-header"><span class="kanban-col-title">'+statusLabel(k)+'</span><span class="kanban-col-count">'+items.length+'</span></div><div class="kanban-col-body">'+cards+'</div></div>';
+    return'<div'+(k==='andamento'?' class="kanban-col-andamento"':'')+'>'+
+      '<div class="kanban-col-header"><span class="kanban-col-title">'+statusLabel(k)+'</span><span class="kanban-col-count">'+items.length+'</span></div>'+
+      '<div class="kanban-col-body">'+cards+'</div>'+
+    '</div>';
   }).join('');
 }
 
@@ -5463,7 +5469,7 @@ function concludeOS(osId){
     if(pe)nextId=pe.osId;
   }
   if(!nextId){
-    var nxt=S.oss.find(function(o){return o.id!==osId&&(o.status==='afazer'||o.status==='andamento');});
+    var nxt=S.oss.find(function(o){return o.id!==osId&&(o.status==='afazer'||o.status==='andamento')&&o.versaoId===S.versaoK;});
     if(nxt)nextId=nxt.id;
   }
   if(nextId)startFocus(nextId);
@@ -5480,8 +5486,8 @@ function trocarFoco(){
     dbMoverOS(os.id,'afazer').then(function(){os.status='afazer';}).catch(function(){});
   }
   saveFocusState(null);
-  // Busca próxima de "afazer" (excluindo a que acabou de sair)
-  var next=S.oss.find(function(o){return o.status==='afazer'&&o.id!==st.osId;});
+  // Busca próxima de "afazer" na versão atual (excluindo a que acabou de sair)
+  var next=S.oss.find(function(o){return o.status==='afazer'&&o.id!==st.osId&&o.versaoId===S.versaoK;});
   if(next){startFocus(next.id);}
   else{updateFocusUI();renderKanban();updatePipUI();toast('Fila vazia — sem mais OSs a fazer');}
 }
