@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Em Foco</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:280px;height:220px;overflow:hidden}
+body{background:#0e0e1c;color:#e2e8f0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;user-select:none;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.05)}
+.brand{font-size:9px;font-weight:700;color:rgba(255,255,255,.16);text-transform:uppercase;letter-spacing:.12em}
+.tbtn{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.22);font-size:13px;width:22px;height:22px;border-radius:4px;display:flex;align-items:center;justify-content:center;transition:all .12s;line-height:1;font-family:inherit}
+.tbtn:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.7)}
+.body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 16px 12px;gap:3px}
+.os-name{font-size:10px;color:rgba(255,255,255,.32);text-align:center;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.01em}
+.timer{font-size:36px;font-weight:700;font-family:monospace;color:#10b981;letter-spacing:-2px;line-height:1.05}
+.timer.paused{color:#f59e0b}
+.timer.idle{font-size:13px;font-weight:400;color:rgba(255,255,255,.18);letter-spacing:0}
+.sub{font-size:9px;color:rgba(255,255,255,.18);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.acts{display:flex;align-items:center;gap:5px}
+.ab{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:8px;cursor:pointer;font-size:15px;width:38px;height:34px;display:flex;align-items:center;justify-content:center;transition:all .12s;color:rgba(255,255,255,.4);font-family:inherit}
+.ab:hover{background:rgba(255,255,255,.09);border-color:rgba(255,255,255,.13);color:#fff}
+.ab.g{color:#10b981;border-color:rgba(16,185,129,.22);background:rgba(16,185,129,.07)}
+.ab.g:hover{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.35)}
+.ab.w{color:rgba(255,255,255,.55)}
+.kb{display:flex;align-items:center;gap:6px;padding:7px 18px;background:rgba(124,111,247,.1);border:1px solid rgba(124,111,247,.2);border-radius:8px;color:#a89ef8;font-size:11px;font-weight:500;cursor:pointer;transition:all .12s;font-family:inherit}
+.kb:hover{background:rgba(124,111,247,.2);border-color:rgba(124,111,247,.35);color:#c4bcfc}
+.topbar-btns{display:flex;gap:2px}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <span class="brand">⬡ Em Foco</span>
+  <div class="topbar-btns">
+    <button class="tbtn" id="btn-min" title="Minimizar">⊖</button>
+    <button class="tbtn" id="btn-close" title="Fechar">✕</button>
+  </div>
+</div>
+<div class="body">
+  <div class="os-name" id="t"></div>
+  <div class="timer idle" id="tm">—</div>
+  <div class="sub" id="sb"></div>
+  <div class="acts" id="ac"></div>
+</div>
+<script>
+var _iv = null;
+
+function fmt(s) {
+  var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  return h > 0
+    ? h + 'h' + String(m).padStart(2, '0') + 'm'
+    : m + 'm' + String(sec).padStart(2, '0') + 's';
+}
+
+function getSt() {
+  try { return window.opener && window.opener.getFocusState ? window.opener.getFocusState() : null; } catch(e) { return null; }
+}
+
+function getOss() {
+  try { return window.opener && window.opener.S ? window.opener.S.oss : []; } catch(e) { return []; }
+}
+
+function getAcc(st) {
+  try { return window.opener.focusAccumulatedToday(st.osId); } catch(e) { return 0; }
+}
+
+function op(fn, arg) {
+  try { if (window.opener && window.opener[fn]) window.opener[fn](arg); setTimeout(_update, 400); } catch(e) {}
+}
+
+function mkBtn(cls, icon, title, fn) {
+  var b = document.createElement('button');
+  b.className = 'ab' + (cls ? ' ' + cls : '');
+  b.innerHTML = icon;
+  b.title = title;
+  b.addEventListener('click', fn);
+  return b;
+}
+
+document.getElementById('btn-min').addEventListener('click', function() {
+  try { if (window.opener) window.opener._pipMinimize(); } catch(e) {}
+  window.close();
+});
+
+document.getElementById('btn-close').addEventListener('click', function() {
+  try { if (window.opener) window.opener._pipClose(); } catch(e) {}
+  window.close();
+});
+
+function _update() {
+  var s = getSt();
+  var tEl = document.getElementById('t');
+  var tmEl = document.getElementById('tm');
+  var sbEl = document.getElementById('sb');
+  var acEl = document.getElementById('ac');
+
+  acEl.innerHTML = '';
+
+  if (!s) {
+    tEl.textContent = 'nenhuma OS em foco';
+    tmEl.className = 'timer idle';
+    tmEl.textContent = '—';
+    sbEl.textContent = '';
+    var kb = document.createElement('button');
+    kb.className = 'kb';
+    kb.innerHTML = '↗ Ir ao Kanban';
+    kb.title = 'Ir ao Kanban';
+    kb.addEventListener('click', function() {
+      try { window.opener.goScreen('kanban'); window.opener.focus(); window.opener._pipMinimize(); } catch(e) {}
+      window.close();
+    });
+    acEl.appendChild(kb);
+    return;
+  }
+
+  var oss = getOss();
+  var os = oss.find(function(o) { return o.id === s.osId; });
+  tEl.textContent = os ? ('#' + os.num + ' · ' + os.titulo) : 'OS desconhecida';
+
+  var a = getAcc(s);
+  if (s.startedAt && !s.pausedAt) a += Math.floor((Date.now() - s.startedAt) / 1000);
+  tmEl.className = 'timer' + (s.pausedAt ? ' paused' : '');
+  tmEl.textContent = fmt(a);
+  sbEl.textContent = s.pausedAt ? 'pausado' : 'em andamento';
+
+  var isPaused = !!s.pausedAt;
+  var oid = s.osId;
+
+  var b1 = mkBtn(isPaused ? 'g' : 'w', isPaused ? '▶' : '⏸', isPaused ? 'Retomar' : 'Pausar', function() {
+    op(isPaused ? 'resumeFocus' : 'pauseFocus');
+  });
+
+  var b2 = mkBtn('g', '✓', 'Concluir OS', function() {
+    op('concludeOS', oid);
+  });
+
+  var b3 = mkBtn('', '↻', 'Trocar OS', function() {
+    op('trocarFoco');
+  });
+
+  var b4 = mkBtn('', '↗', 'Ir ao Kanban', function() {
+    try { window.opener.goScreen('kanban'); window.opener.focus(); window.opener._pipMinimize(); } catch(e) {}
+    window.close();
+  });
+
+  acEl.appendChild(b1);
+  acEl.appendChild(b2);
+  acEl.appendChild(b3);
+  acEl.appendChild(b4);
+}
+
+window._update = _update;
+clearInterval(_iv);
+_iv = setInterval(_update, 1000);
+_update();
+</script>
+</body>
+</html>

@@ -279,7 +279,10 @@ textarea.form-input{resize:vertical;min-height:70px}
 .peso-slider-wrap{display:flex;flex-direction:column;gap:10px}
 .peso-slider{-webkit-appearance:none;width:100%;height:4px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer}
 .peso-slider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}
-.peso-markers{display:flex;justify-content:space-between;font-size:10px;color:var(--hint);font-family:var(--mono)}
+.peso-markers{position:relative;height:14px;font-size:10px;color:var(--hint);font-family:var(--mono)}
+.peso-markers span{position:absolute;transform:translateX(-50%)}
+.peso-markers span:first-child{transform:none}
+.peso-markers span:last-child{right:0;transform:none;left:auto!important}
 .peso-badge-epico{background:rgba(167,139,250,.15);color:#a78bfa;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
 .peso-badge-grande{background:rgba(245,158,11,.15);color:#f59e0b;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
 .peso-badge-normal{background:rgba(96,165,250,.15);color:#60a5fa;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
@@ -360,6 +363,39 @@ textarea.form-input{resize:vertical;min-height:70px}
 .light-mode .dayplan-h-input{background:var(--surface);border-color:var(--border2)}
 .light-mode .foco-pill{box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .light-mode .bell-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.15)}
+/* ── KANBAN FOCO AURA ── */
+@keyframes foco-pulse{
+  0%,100%{box-shadow:0 0 0 1.5px rgba(239,68,68,.45),0 0 16px rgba(249,115,22,.15)}
+  50%{box-shadow:0 0 0 1.5px rgba(249,115,22,.7),0 0 28px rgba(239,68,68,.28)}
+}
+.os-card-foco{animation:foco-pulse 2.4s ease infinite}
+.os-foco-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#f97316;padding:5px 12px;background:rgba(239,68,68,.07);border-bottom:1px solid rgba(239,68,68,.14);letter-spacing:.02em}
+/* ── FOCO PiP SIDEBAR ── */
+#foco-pip{position:fixed;top:0;right:0;height:100vh;width:14px;z-index:9000;overflow:hidden;transition:width .22s cubic-bezier(.4,0,.2,1);display:flex;pointer-events:auto}
+#foco-pip:hover{width:228px}
+.pip-strip{position:absolute;right:0;top:0;bottom:0;width:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;z-index:1}
+.pip-strip-dot{width:5px;height:5px;border-radius:50%;background:rgba(16,185,129,.5);transition:background .2s}
+.pip-strip-dot.paused{background:rgba(245,158,11,.5)}
+.pip-strip-dot.idle{background:rgba(255,255,255,.08)}
+.pip-panel{position:absolute;left:0;top:0;bottom:0;width:228px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;opacity:0;transition:opacity .15s .06s;pointer-events:none;overflow:hidden;box-shadow:-6px 0 24px rgba(0,0,0,.35)}
+#foco-pip:hover .pip-panel{opacity:1;pointer-events:auto}
+.pip-header{padding:16px 14px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
+.pip-badge-row{margin-bottom:6px}
+.pip-os-title{font-size:12px;font-weight:500;color:var(--text);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:6px;line-height:1.4}
+.pip-timer{font-size:22px;font-weight:700;font-family:var(--mono);color:#10b981;letter-spacing:-1px}
+.pip-timer.paused{color:#f59e0b}
+.pip-timer.idle{color:var(--hint);font-size:13px;font-weight:400;letter-spacing:0}
+.pip-actions{display:flex;flex-direction:column;gap:6px;padding:12px 14px;flex:1}
+.pip-btn{width:100%;padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:none;color:var(--muted);font-size:11px;font-weight:500;cursor:pointer;font-family:var(--font);text-align:left;transition:background .12s;display:flex;align-items:center;gap:7px}
+.pip-btn:hover{background:var(--card2)}
+.pip-btn.pip-success{color:#10b981;border-color:rgba(16,185,129,.3)}
+.pip-btn.pip-primary{background:var(--accent);color:#fff;border-color:transparent}
+.pip-btn.pip-primary:hover{opacity:.88}
+.pip-footer{padding:10px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--hint);cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;transition:color .12s}
+.pip-footer:hover{color:var(--accent)}
+#pip-strip-indicator:hover{background:rgba(16,185,129,.55)!important}
+#pip-strip-indicator.pip-paused{background:rgba(245,158,11,.35)!important}
+#pip-strip-indicator.pip-paused:hover{background:rgba(245,158,11,.55)!important}
 </style>
 </head>
 <body>
@@ -477,7 +513,7 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div><div class="topbar-title" id="topbar-title">Dashboard</div><div class="topbar-sub" id="topbar-sub"></div></div>
       <div style="display:flex;align-items:center;gap:12px">
         <div class="topbar-actions" id="topbar-actions"></div>
-        <div style="position:relative;flex:1;max-width:300px" id="foco-container">
+        <div style="display:none" id="foco-container">
           <div class="foco-pill" id="foco-pill" onclick="toggleFocoDropdown()">
             <div class="foco-dot idle" id="foco-dot"></div>
             <div class="foco-info">
@@ -487,6 +523,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           </div>
           <div class="foco-dropdown" id="foco-dropdown" style="display:none"></div>
         </div>
+        <button class="btn btn-sm btn-ghost" id="btn-revisar-plano" onclick="openDayPlanModal(true)" style="font-size:11px;padding:4px 10px;white-space:nowrap">📋 Revisar plano</button>
         <div style="position:relative" id="bell-container">
           <div class="bell-wrap" onclick="toggleBellDropdown()">
             <span class="bell-icon" id="bell-icon">🔔</span>
@@ -495,7 +532,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div class="bell-dropdown" id="bell-dropdown" style="display:none">
             <div class="bell-dd-header">
               <span>Notificações</span>
-              <span style="cursor:pointer;font-size:10px;color:var(--accent)" onclick="markAllAlertsRead()">Marcar todas lidas</span>
+              <span style="cursor:pointer;font-size:10px;color:var(--accent)" onclick="clearAllAlerts()">Limpar tudo</span>
             </div>
             <div id="bell-dd-body"></div>
           </div>
@@ -559,11 +596,11 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div id="screen-kanban" class="screen">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
           <select class="form-input" id="kanban-versao-sel" style="width:auto" onchange="onVersaoChange()"></select>
-          <div class="filter-bar" style="margin:0">
-            <button class="filter-chip active" onclick="setFiltro(this,'todos')">Todos</button>
-            <button class="filter-chip" onclick="setFiltro(this,'Gestão de Talentos')">GT</button>
-            <button class="filter-chip" onclick="setFiltro(this,'Pagadoria')">Pagadoria</button>
-          </div>
+          <select class="form-input" id="kanban-filtro-sel" style="width:auto" onchange="setFiltro(this.value)">
+            <option value="todos">Todos</option>
+            <option value="Gestão de Talentos">GT</option>
+            <option value="Pagadoria">Pagadoria</option>
+          </select>
           <div style="display:flex;align-items:center;gap:6px;border-left:1px solid var(--border);padding-left:8px">
             <span style="font-size:12px;color:var(--muted);white-space:nowrap">Atribuído a:</span>
             <select id="kanban-atrib-sel" class="form-input" style="padding:4px 8px;font-size:12px;height:auto" onchange="setFiltroAtribuicao(this.value)">
@@ -849,8 +886,8 @@ textarea.form-input{resize:vertical;min-height:70px}
               <input class="pref-time-input" id="pref-carga-diaria" type="number" min="1" max="24" value="8" style="width:60px" onchange="saveSchedule()">
             </div>
             <div class="pref-flow-row">
-              <div><div class="pref-flow-label">WIP Limit</div><div class="pref-flow-sub">Máx. de OSs em andamento ao mesmo tempo</div></div>
-              <input class="pref-time-input" id="pref-wip-limit" type="number" min="1" max="10" value="3" style="width:60px" onchange="saveSchedule()">
+              <div><div class="pref-flow-label">WIP Limit</div><div class="pref-flow-sub">Máx. de OSs simultâneas em "Em andamento"</div></div>
+              <input class="pref-time-input" id="pref-wip-limit" type="number" min="1" max="20" value="5" style="width:60px" onchange="saveSchedule()">
             </div>
           </div>
         </div>
@@ -1115,7 +1152,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           <input type="number" id="os-horas-input" min="0.5" step="0.5" value="4" style="width:70px;padding:5px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text);text-align:center" oninput="onPesoInputChange(this.value)">
           <span style="font-size:12px;color:var(--muted)">h</span>
         </div>
-        <div class="peso-markers"><span>1h</span><span>2h</span><span>6h</span><span>14h</span><span>24h</span></div>
+        <div class="peso-markers"><span>1h</span><span style="left:4.35%">2h</span><span style="left:21.74%">6h</span><span style="left:56.52%">14h</span><span>24h</span></div>
       </div>
       <div style="font-size:11px;color:var(--hint);margin-top:6px" id="os-velocity-hint"></div>
     </div>
@@ -1820,13 +1857,14 @@ var SEG_COLORS=['#6366f1','#3b82f6','#10b981','#f59e0b','#ec4899','#ef4444','#a8
 var CANAL_LABELS={inline:'Inline/Banner',email:'E-mail',entregate:'Entre a Gente',webinar:'Webinar',teams:'Teams'};
 var CANAL_COLORS={inline:'#6366f1',email:'#3b82f6',entregate:'#10b981',webinar:'#f59e0b',teams:'#7c3aed'};
 
-var S={versoes:[],oss:[],pontos:[],pontosEquipe:[],publicacoes:[],filtro:'todos',filtroAtrib:'todos',filtroAtribuicao:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
+var S={versoes:[],oss:[],pontos:[],pontosEquipe:[],publicacoes:[],filtro:'todos',filtroAtrib:'todos',filtroAtribuicao:null,bolFiltro:'todos',editOS:null,versaoK:null,
   prefs:{accent:'#7c6ff7',accentRgb:'124,111,247',lightMode:false,produtos:PROD_SEG.slice()}};
 
 var _agendaMes=new Date().getMonth(),_agendaAno=new Date().getFullYear(),_agendaFiltro='todos';
 var _dashEquipe={periodoOffset:0,equipeId:'todas',pessoaId:'todas'};
 var _editingPub=null,_editingVersao=null,_xlsxData=null,_apropState={};
 var _focusInterval=null;
+var _pipInterval=null;
 
 function uid(){
   return'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){
@@ -2111,7 +2149,7 @@ function salvarVersao(){
 
 // ── KANBAN ────────────────────────────────────────────────────────────────────
 function onVersaoChange(){S.versaoK=document.getElementById('kanban-versao-sel').value;renderKanban()}
-function setFiltro(btn,f){document.querySelectorAll('.filter-chip').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');S.filtro=f;renderKanban()}
+function setFiltro(f){S.filtro=f||'todos';renderKanban()}
 function statusLabel(k){return{afazer:'A fazer',andamento:'Em andamento',concluido:'Concluído'}[k]||k}
 function statusNext(k){return{afazer:'andamento',andamento:'concluido',concluido:null}[k]}
 function statusPrev(k){return{afazer:null,andamento:'afazer',concluido:'andamento'}[k]}
@@ -2134,12 +2172,21 @@ function renderKanban(){
     var nomesSel=typeof S_USERS!=='undefined'&&S_USERS.length
       ?S_USERS.map(function(u){return u.displayName}).filter(Boolean).sort()
       :[...new Set(S.oss.map(function(o){return(o.atribuicao||'').trim()}).filter(Boolean))].sort();
+    // Auto-default para o usuário atual na primeira carga
+    if(S.filtroAtribuicao===null){
+      var _me=typeof S_USERS!=='undefined'&&CURRENT_USER?S_USERS.find(function(u){return u.id===CURRENT_USER.id}):null;
+      var _myName=_me&&_me.displayName;
+      if(!_myName&&CURRENT_USER){var _m=CURRENT_USER.user_metadata||{};_myName=_m.full_name||_m.name||null;}
+      S.filtroAtribuicao=_myName&&nomesSel.indexOf(_myName)!==-1?_myName:'todos';
+    }
     var curVal=S.filtroAtribuicao||'todos';
     atribSel.innerHTML='<option value="todos">Todos</option>'+nomesSel.map(function(n){
       return'<option value="'+n+'"'+(n===curVal?' selected':'')+'>'+n+'</option>';
     }).join('');
     atribSel.value=curVal;
   }
+  var filtroSel=document.getElementById('kanban-filtro-sel');
+  if(filtroSel)filtroSel.value=S.filtro||'todos';
   var sel=document.getElementById('kanban-versao-sel');
   sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+(v.ativa?'':' ✓')+'</option>'}).join('');
   if(S.versaoK)sel.value=S.versaoK;
@@ -2153,20 +2200,32 @@ function renderKanban(){
     oss=oss.filter(function(o){return(o.atribuicao||'').trim()===S.filtroAtribuicao});
   }
   var cols=['afazer','andamento','concluido'];
+  var focusSt=getFocusState();
   document.getElementById('kanban-board').innerHTML=cols.map(function(k){
     var items=oss.filter(function(o){return o.status===k});
+    // Foco card primeiro na coluna "andamento"
+    if(k==='andamento'&&focusSt){
+      var fi=items.findIndex(function(o){return o.id===focusSt.osId});
+      if(fi>0){var fi2=items.splice(fi,1)[0];items.unshift(fi2);}
+    }
     var cards=items.length?items.map(function(os){
       var linha=PLINHA[os.produto]||'';
       var pips=Object.entries(os.entregas).filter(function(e){return e[1].aplicavel}).map(function(e){return'<div class="check-pip'+(e[1].feito?' done':'')+'" title="'+ELABELS[e[0]]+'"></div>'}).join('');
       var h=horasOS(os.id);
       var prevK=statusPrev(k),nextK=statusNext(k);
       var isIncompleta=isEncerrada&&k!=='concluido';
+      var isFoco=focusSt&&focusSt.osId===os.id&&k==='andamento';
+      var focoAcc=isFoco?focusAccumulatedToday(os.id):0;
       var prevBtn=prevK&&!isEncerrada?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+prevK+'\')">← '+statusLabel(prevK)+'</button>':'';
       var nextBtn=nextK?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+nextK+'\')">'+(nextK==='concluido'?'✓ ':'')+statusLabel(nextK)+' →</button>':'';
       var clf=getOSClassificacao(os);
       var canEd=can('os_editar');
       var canDel=can('os_deletar_propria')&&os.createdBy===CURRENT_USER.id;
-      return'<div class="os-card'+(isIncompleta?' os-incompleta':'')+'">'+
+      return'<div class="os-card'+(isFoco?' os-card-foco':'')+(isIncompleta?' os-incompleta':'')+'">'+
+        (isFoco?'<div class="os-foco-badge" id="kanban-foco-timer" style="display:flex;align-items:center;justify-content:space-between">'+
+          '<span>🔥 Em foco · '+formatFocusTime(focoAcc)+'</span>'+
+          '<button onclick="event.stopPropagation();trocarFoco()" style="background:none;border:none;cursor:pointer;font-size:10px;font-weight:600;color:#f97316;padding:0 0 0 8px;letter-spacing:.02em">↻ Trocar</button>'+
+        '</div>':'')+
         '<div class="os-card-body">'+
           '<div class="os-num">Card '+os.num+
             ' <span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.08);color:'+clf.color+'" title="'+clf.title+'">'+clf.label+'</span>'+
@@ -4658,10 +4717,19 @@ function deleteOS(osId){
 function moveOS(osId,newStatus){
   var os=S.oss.find(function(o){return o.id===osId});if(!os)return;
   if(newStatus==='andamento'){
-    var s=getSchedule();
-    var wipLimit=s.wipLimit||3;
-    var emAndamento=S.oss.filter(function(o){return o.status==='andamento'&&o.id!==osId});
-    if(emAndamento.length>=wipLimit){showWipModal(osId,newStatus,emAndamento,wipLimit);return;}
+    var wip=getSchedule().wipLimit||5;
+    var count=S.oss.filter(function(o){return o.status==='andamento'&&o.id!==osId;}).length;
+    if(count>=wip){toast('WIP limit atingido ('+wip+'). Conclua ou mova uma OS antes.','err');return;}
+    if(!getFocusState())setTimeout(function(){startFocus(osId);},80);
+  }
+  // Se a OS focal sai de "andamento", transfere foco para próxima em andamento
+  if(newStatus!=='andamento'){
+    var st=getFocusState();
+    if(st&&st.osId===osId){
+      var next=S.oss.find(function(o){return o.status==='andamento'&&o.id!==osId;});
+      if(next){startFocus(next.id);}
+      else{saveFocusState(null);updateFocusUI();updatePipUI();}
+    }
   }
   _doMoveOS(osId,newStatus);
 }
@@ -4674,22 +4742,6 @@ function _doMoveOS(osId,newStatus){
   }).catch(function(e){toast('Erro: '+e.message,'err')});
 }
 
-function showWipModal(osId,newStatus,emAndamento,wipLimit){
-  var msg=document.getElementById('wip-message');
-  var list=document.getElementById('wip-list');
-  var forceBtn=document.getElementById('wip-force-btn');
-  if(msg)msg.innerHTML='Você já tem <strong style="color:var(--red-text)">'+emAndamento.length+' OSs em andamento</strong>. Conclua uma antes de iniciar outra — ou force o movimento se for urgente.';
-  if(list)list.innerHTML=emAndamento.map(function(o){
-    var porte=osPorteFromHours(o.estimatedHours||0);
-    return'<div style="display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:7px;padding:9px 12px">'
-      +'<span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px">'+porte.label+'</span>'
-      +'<div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#'+escHtml(String(o.num))+' · '+escHtml(o.titulo)+'</div></div>'
-      +'<button onclick="closeModal(\'modal-wip\');_doMoveOS(\''+o.id+'\',\'concluido\')" style="font-size:11px;padding:4px 10px;background:rgba(16,185,129,.1);color:#10b981;border:1px solid rgba(16,185,129,.3);border-radius:5px;cursor:pointer">Concluir</button>'
-      +'</div>';
-  }).join('');
-  if(forceBtn)forceBtn.onclick=function(){closeModal('modal-wip');_doMoveOS(osId,newStatus)};
-  openModal('modal-wip');
-}
 
 function toggleE(osId,key){
   var os=S.oss.find(function(o){return o.id===osId});
@@ -4821,7 +4873,7 @@ function saveSchedule(){
     retorno:document.getElementById('pref-hora-retorno').value||'13:00',
     saida:document.getElementById('pref-hora-saida').value||'17:00',
     cargaDiaria:parseFloat(document.getElementById('pref-carga-diaria').value)||8,
-    wipLimit:parseInt(document.getElementById('pref-wip-limit').value)||3
+    wipLimit:parseInt(document.getElementById('pref-wip-limit').value)||5,
   };
   localStorage.setItem('vs_schedule',JSON.stringify(s));
 }
@@ -4833,7 +4885,7 @@ function loadSchedulePrefs(){
   if(el('pref-hora-retorno'))el('pref-hora-retorno').value=s.retorno||'13:00';
   if(el('pref-hora-saida'))el('pref-hora-saida').value=s.saida||'17:00';
   if(el('pref-carga-diaria'))el('pref-carga-diaria').value=s.cargaDiaria||8;
-  if(el('pref-wip-limit'))el('pref-wip-limit').value=s.wipLimit||3;
+  if(el('pref-wip-limit'))el('pref-wip-limit').value=s.wipLimit||5;
 }
 
 // ── PESO INTELIGENTE ─────────────────────────────────────────────────────────
@@ -4873,9 +4925,9 @@ function getDayPlan(){
   try{return JSON.parse(localStorage.getItem(getDayKey()))||null}catch(e){return null}
 }
 
-function openDayPlanModal(){
+function openDayPlanModal(force){
   var plan=getDayPlan();
-  if(plan&&plan.confirmedAt)return; // já confirmado hoje
+  if(!force&&plan&&plan.confirmedAt)return; // já confirmado hoje
   var now=new Date();
   var dias=['Domingo','Segunda-feira','Terça-feira','Quarta-feira','Quinta-feira','Sexta-feira','Sábado'];
   var meses=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -4887,31 +4939,42 @@ function openDayPlanModal(){
   if(dateEl)dateEl.textContent=dias[now.getDay()]+', '+now.getDate()+' de '+meses[now.getMonth()]+' de '+now.getFullYear();
 
   var vf=getVelocityFactor();
-  var andamento=S.oss.filter(function(o){return o.status==='andamento'});
-  // Prioridade: porte (epico > grande > normal > rapida)
+  var andamento=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer'});
+  // Prioridade: andamento primeiro, depois porte (epico > grande > normal > rapida)
   var ordemPorte={epico:0,grande:1,normal:2,rapida:3};
   andamento.sort(function(a,b){
+    if(a.status==='andamento'&&b.status!=='andamento')return-1;
+    if(b.status==='andamento'&&a.status!=='andamento')return 1;
     var pa=osPorteFromHours(a.estimatedHours||0).key;
     var pb=osPorteFromHours(b.estimatedHours||0).key;
     return(ordemPorte[pa]||2)-(ordemPorte[pb]||2);
   });
 
   var savedEntries=(plan&&plan.entries)||[];
+  var cargaDiaria=getSchedule().cargaDiaria||8;
+  // Pré-distribuição proporcional: distribui cargaDiaria pelo estimatedHours de cada OS
+  var totalEst=andamento.reduce(function(s,o){return s+(o.estimatedHours||2);},0);
   var list=document.getElementById('dayplan-os-list');
   if(!list)return;
   list.innerHTML=andamento.length===0
-    ?'<div style="text-align:center;padding:24px;font-size:12px;color:var(--hint)">Nenhuma OS em andamento. Inicie uma OS no Kanban primeiro.</div>'
+    ?'<div style="text-align:center;padding:24px;font-size:12px;color:var(--hint)">Nenhuma OS em andamento ou a fazer. Adicione OSs no Kanban primeiro.</div>'
     :andamento.map(function(os){
       var saved=savedEntries.find(function(e){return e.osId===os.id});
-      var suggestedH=saved?saved.plannedHours:Math.round(((os.estimatedHours||2)/vf)*2)/2;
-      var checked=saved?true:false;
+      var suggestedH,checked;
+      if(saved){
+        suggestedH=saved.plannedHours;checked=true;
+      }else{
+        var rawH=totalEst>0?(cargaDiaria*(os.estimatedHours||2)/totalEst):(cargaDiaria/andamento.length);
+        suggestedH=Math.max(0.5,Math.round(rawH*2)/2);
+        checked=true;
+      }
       var porte=osPorteFromHours(os.estimatedHours||0);
       return'<div class="dayplan-os-row" id="dayplan-row-'+os.id+'">'
         +'<input type="checkbox" class="dayplan-os-check" id="dayplan-chk-'+os.id+'" '+(checked?'checked':'')
         +' onchange="updateDayPlanTotal()">'
         +'<div class="dayplan-os-info">'
         +'<div class="dayplan-os-title"><span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px;margin-right:6px">'+porte.label+'</span>#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)+'</div>'
-        +'<div class="dayplan-os-sub">Estimativa: '+os.estimatedHours+'h</div>'
+        +'<div class="dayplan-os-sub">Estimativa: '+(os.estimatedHours||0)+'h</div>'
         +'</div>'
         +'<input class="dayplan-h-input" type="number" min="0.5" step="0.5" value="'+suggestedH
         +'" id="dayplan-h-'+os.id+'" oninput="updateDayPlanTotal()">'
@@ -4925,7 +4988,7 @@ function openDayPlanModal(){
 
 function updateDayPlanTotal(){
   var total=0;
-  var andamento=S.oss.filter(function(o){return o.status==='andamento'});
+  var andamento=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer'});
   andamento.forEach(function(os){
     var chk=document.getElementById('dayplan-chk-'+os.id);
     var inp=document.getElementById('dayplan-h-'+os.id);
@@ -4945,19 +5008,38 @@ function updateDayPlanTotal(){
 }
 
 function confirmDayPlan(){
-  var andamento=S.oss.filter(function(o){return o.status==='andamento'});
+  var all=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer'});
+  var selectedIds=[];
   var entries=[];
-  andamento.forEach(function(os){
+  all.forEach(function(os){
     var chk=document.getElementById('dayplan-chk-'+os.id);
     var inp=document.getElementById('dayplan-h-'+os.id);
     if(chk&&chk.checked){
+      selectedIds.push(os.id);
       entries.push({osId:os.id,osTitle:'#'+os.num+' · '+os.titulo,plannedHours:parseFloat(inp.value)||0,actualHours:0,status:'pendente'});
+    }
+  });
+  var wip=getSchedule().wipLimit||5;
+  if(selectedIds.length>wip){
+    toast('Selecionadas '+selectedIds.length+' OSs mas o WIP limit é '+wip+'. Reduza a seleção ou aumente o WIP limit.','err');
+    return;
+  }
+  // Move selecionadas para andamento; devolve as não-selecionadas que estavam em andamento
+  all.forEach(function(os){
+    if(selectedIds.indexOf(os.id)!==-1){
+      if(os.status!=='andamento'){os.status='andamento';dbMoverOS(os.id,'andamento').catch(function(){});}
+    } else {
+      if(os.status==='andamento'){os.status='afazer';dbMoverOS(os.id,'afazer').catch(function(){});}
     }
   });
   var plan={createdAt:new Date().toISOString(),confirmedAt:new Date().toISOString(),entries:entries};
   localStorage.setItem(getDayKey(),JSON.stringify(plan));
   closeModal('modal-dayplan');
-  toast('Planejamento salvo — bom trabalho!');
+  renderKanban();renderDash();
+  // Auto-inicia foco na primeira OS em andamento se ainda não há foco
+  var firstAndamento=S.oss.find(function(o){return o.status==='andamento';});
+  if(firstAndamento&&!getFocusState())startFocus(firstAndamento.id);
+  toast('Planejamento salvo — fila do dia definida!');
 }
 
 function recalcVelocityFactor(){
@@ -5060,18 +5142,40 @@ function updateResumeTotal(){
 
 function toggleResumeAddOS(){
   var panel=document.getElementById('resume-add-panel');
-  if(panel)panel.style.display=panel.style.display==='none'?'block':'none';
+  var visible=panel.style.display==='none';
+  panel.style.display=visible?'block':'none';
+  if(visible){document.getElementById('resume-add-search').value='';searchResumeOS('');}
 }
 
 function searchResumeOS(q){
   q=(q||'').toLowerCase().trim();
   var results=document.getElementById('resume-add-results');if(!results)return;
-  if(!q){results.innerHTML='';return}
+  // Descobre o nome do usuário atual
+  var myName=null;
+  if(typeof S_USERS!=='undefined'&&CURRENT_USER){
+    var _me=S_USERS.find(function(u){return u.id===CURRENT_USER.id});
+    myName=_me&&_me.displayName;
+  }
+  if(!myName&&CURRENT_USER){var _m=CURRENT_USER.user_metadata||{};myName=_m.full_name||_m.name||null;}
+  var statusOrder={andamento:0,afazer:1,concluido:2};
   var matches=S.oss.filter(function(o){
+    // Filtra por atribuição ao usuário atual
+    if(myName&&(o.atribuicao||'').trim()!==myName)return false;
+    // Sem texto: mostra apenas ativas (não concluídas)
+    if(!q)return o.status!=='concluido';
     return(o.num&&String(o.num).toLowerCase().includes(q))||(o.titulo&&o.titulo.toLowerCase().includes(q));
-  }).slice(0,6);
+  });
+  matches.sort(function(a,b){return(statusOrder[a.status]||1)-(statusOrder[b.status]||1);});
+  matches=matches.slice(0,12);
+  if(!matches.length){results.innerHTML='<div style="padding:8px;font-size:12px;color:var(--hint)">Nenhuma OS encontrada.</div>';return;}
+  var dotColor={andamento:'#10b981',afazer:'var(--muted)',concluido:'var(--hint)'};
   results.innerHTML=matches.map(function(os){
-    return'<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:var(--radius);font-size:12px" onclick="addResumeOS(\''+os.id+'\',\'#'+os.num+' · '+encodeURIComponent(os.titulo)+'\')" onmouseover="this.style.background=\'var(--card2)\'" onmouseout="this.style.background=\'\'"><span style="font-family:var(--mono);color:var(--muted)">#'+escHtml(String(os.num))+'</span><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(os.titulo)+'</span></div>';
+    var dot='<span style="width:6px;height:6px;border-radius:50%;background:'+(dotColor[os.status]||'var(--muted)')+';flex-shrink:0;display:inline-block"></span>';
+    return'<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;cursor:pointer;border-radius:var(--radius);font-size:12px" onclick="addResumeOS(\''+os.id+'\',\'#'+os.num+' · '+encodeURIComponent(os.titulo)+'\')" onmouseover="this.style.background=\'var(--card2)\'" onmouseout="this.style.background=\'\'">'+
+      dot+
+      '<span style="font-family:var(--mono);color:var(--muted);flex-shrink:0">#'+escHtml(String(os.num))+'</span>'+
+      '<span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(os.titulo)+'</span>'+
+    '</div>';
   }).join('');
 }
 
@@ -5366,6 +5470,7 @@ function startFocus(osId){
   var newSt={osId:osId,startedAt:now,pausedAt:null,accumulated:accumulated};
   saveFocusState(newSt);
   updateFocusUI();
+  renderKanban();
   closeFocoDropdown();
 }
 
@@ -5401,8 +5506,88 @@ function concludeOS(osId){
   if(st&&st.osId===osId&&!st.pausedAt)closeFocusSession(st);
   saveFocusState(null);
   moveOS(osId,'concluido');
+  // Auto-switch: próxima OS em andamento (a fila do dia)
+  var nxt=S.oss.find(function(o){return o.id!==osId&&o.status==='andamento';});
+  if(nxt)startFocus(nxt.id);
   updateFocusUI();
+  renderKanban();
   closeFocoDropdown();
+}
+
+function trocarFoco(){
+  var st=getFocusState();if(!st)return;
+  // Encontra próxima em andamento ANTES de mover a atual
+  var next=S.oss.find(function(o){return o.status==='andamento'&&o.id!==st.osId;});
+  // Devolve OS atual para "afazer"
+  var os=S.oss.find(function(o){return o.id===st.osId;});
+  if(os){os.status='afazer';dbMoverOS(os.id,'afazer').catch(function(){});}
+  if(next){startFocus(next.id);}
+  else{saveFocusState(null);updateFocusUI();renderKanban();updatePipUI();toast('Fila de andamento vazia');}
+}
+
+function alternarFoco(){
+  var st=getFocusState();
+  var plan=getDayPlan();
+  var ordered=[];
+  if(plan&&plan.entries&&plan.entries.length){
+    plan.entries.forEach(function(e){
+      var o=S.oss.find(function(x){return x.id===e.osId&&x.status!=='concluido'});
+      if(o)ordered.push(o);
+    });
+  }
+  // Adiciona OSs em andamento não cobertas pelo plano
+  S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer';}).forEach(function(o){
+    if(!ordered.find(function(x){return x.id===o.id;}))ordered.push(o);
+  });
+  if(!ordered.length)return;
+  if(!st){startFocus(ordered[0].id);return;}
+  var idx=ordered.findIndex(function(o){return o.id===st.osId;});
+  startFocus(ordered[(idx+1)%ordered.length].id);
+}
+
+var _pipWindow=null;
+
+function updatePipUI(){
+  var st=getFocusState();
+  var strip=document.getElementById('pip-strip-indicator');
+  var dot=document.getElementById('pip-si-dot');
+  if(!strip)return;
+  if(!st){
+    strip.style.display='none';
+    strip.classList.remove('pip-paused');
+    if(dot){dot.style.background='rgba(255,255,255,.2)';}
+  }else{
+    strip.style.display='flex';
+    if(st.pausedAt){
+      strip.classList.add('pip-paused');
+      if(dot)dot.style.background='#f59e0b';
+    }else{
+      strip.classList.remove('pip-paused');
+      if(dot)dot.style.background='#10b981';
+    }
+  }
+  // Atualiza popup se estiver aberto
+  if(_pipWindow&&!_pipWindow.closed&&_pipWindow._update)_pipWindow._update();
+}
+
+function openPipWindow(){
+  if(_pipWindow&&!_pipWindow.closed){_pipWindow.focus();return;}
+  var w=window.open('pip.html','foco_pip','width=280,height=240,resizable=yes,location=no,menubar=no,toolbar=no,status=no');
+  if(!w){toast('Popup bloqueado pelo browser. Libere popups para este site.','err');return;}
+  _pipWindow=w;
+  var strip=document.getElementById('pip-strip-indicator');
+  if(strip)strip.style.display='none';
+}
+
+function _pipMinimize(){
+  _pipWindow=null;
+  updatePipUI(); // reexibe strip se há foco ativo
+}
+
+function _pipClose(){
+  _pipWindow=null;
+  var strip=document.getElementById('pip-strip-indicator');
+  if(strip)strip.style.display='none';
 }
 
 function formatFocusTime(seconds){
@@ -5444,11 +5629,14 @@ function updateFocusUI(){
       var acc=st.accumulated+elapsed;
       var timerEl=label.querySelector('.foco-timer-label');
       if(timerEl)timerEl.textContent=formatFocusTime(acc)+' nesta sessão';
+      var kbadge=document.getElementById('kanban-foco-timer');
+      if(kbadge)kbadge.textContent='🔥 Em foco · '+formatFocusTime(acc);
     },1000);
     var initAcc=st.accumulated;
     label.innerHTML='<div class="foco-os-label">'+osTitle+'</div>'
       +'<div class="foco-timer-label">'+formatFocusTime(initAcc)+'</div>';
   }
+  updatePipUI();
 }
 
 function toggleFocoDropdown(){
@@ -5539,13 +5727,25 @@ function toggleBellDropdown(){
   }
 }
 
+function fireAlertAction(action){
+  if(!action)return;
+  document.getElementById('bell-dropdown').style.display='none';
+  if(action==='open-dayplan'){goScreen('kanban');setTimeout(function(){openDayPlanModal(true);},120);}
+}
+
 function renderBellDropdown(){
   var alerts=getAlerts();
   var body=document.getElementById('bell-dd-body');
   if(!body)return;
   if(alerts.length===0){body.innerHTML='<div class="bell-dd-empty">Nenhuma notificação hoje.</div>';return}
   body.innerHTML=alerts.slice().reverse().map(function(a){
-    return'<div class="bell-dd-item"><div>'+escHtml(a.message)+'</div><div class="bell-dd-time">'+escHtml(a.firedAt.slice(11,16))+'</div></div>';
+    var clickable=!!a.action;
+    var style=clickable?'cursor:pointer':'';
+    var hint=clickable?'<div style="font-size:10px;color:var(--accent);margin-top:2px">Clique para abrir →</div>':'';
+    return'<div class="bell-dd-item" style="'+style+'"'+(clickable?' onclick="fireAlertAction(\''+a.action+'\')"':'')+'>'+
+      '<div>'+escHtml(a.message)+'</div>'+hint+
+      '<div class="bell-dd-time">'+escHtml(a.firedAt.slice(11,16))+'</div>'+
+    '</div>';
   }).join('');
 }
 
@@ -5555,6 +5755,12 @@ function markAllAlertsRead(){
   alerts=alerts.map(function(a){return Object.assign({},a,{readAt:a.readAt||now})});
   saveAlerts(alerts);
   updateBellUI();
+}
+
+function clearAllAlerts(){
+  saveAlerts([]);
+  updateBellUI();
+  renderBellDropdown();
 }
 
 function updateBellUI(){
@@ -5573,10 +5779,10 @@ function updateBellUI(){
   }
 }
 
-function fireAlert(type,message){
+function fireAlert(type,message,action){
   var alerts=getAlerts();
   if(alerts.some(function(a){return a.type===type}))return; // already fired today
-  alerts.push({type:type,message:message,firedAt:new Date().toISOString(),readAt:null});
+  alerts.push({type:type,message:message,action:action||null,firedAt:new Date().toISOString(),readAt:null});
   saveAlerts(alerts);
   updateBellUI();
 }
@@ -5607,7 +5813,7 @@ function checkAlerts(){
   var pausaMin=(Date.now()-_lastActivityAt)/60000;
   if(pausaMin<2)touchActivity();
   if(s.retorno&&hhmm>=s.retorno&&pausaMin>30){
-    fireAlert('retorno','Bem-vindo de volta! Reveja o planejamento — o que ainda falta para hoje?');
+    fireAlert('retorno','Bem-vindo de volta! Que tal rever o planejamento do dia?','open-dayplan');
     _lastActivityAt=Date.now();
   }
 
@@ -6318,6 +6524,13 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     updateFocusUI();
     setInterval(checkAlerts,60000);
     renderDash();
+    // Abrir modal de planejamento se ainda não confirmado hoje
+    setTimeout(function(){
+      if(typeof openDayPlanModal==='function'){
+        var _p=getDayPlan();
+        if(!_p||!_p.confirmedAt)openDayPlanModal();
+      }
+    },1500);
     // ── Paralelo ──────────────────────────────────────────
     if (typeof Paralelo !== 'undefined') {
   Paralelo.identify({ userId: session.user.id, email: session.user.email })
@@ -6438,24 +6651,6 @@ var __paralelo_config = {
     </div>
   </div>
 </div>
-<!-- MODAL WIP LIMIT -->
-<div class="modal-overlay" id="modal-wip" style="z-index:450">
-  <div class="modal" style="max-width:440px">
-    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:16px">
-      <span style="font-size:24px">⚠️</span>
-      <div>
-        <div style="font-size:15px;font-weight:600;margin-bottom:4px">Limite WIP atingido</div>
-        <div id="wip-message" style="font-size:12px;color:var(--muted);line-height:1.5"></div>
-      </div>
-    </div>
-    <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">Em andamento agora</div>
-    <div id="wip-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"></div>
-    <div style="display:flex;gap:8px">
-      <button class="btn" onclick="closeModal('modal-wip')">Cancelar</button>
-      <button class="btn" style="color:var(--red-text);border-color:rgba(239,68,68,.3)" id="wip-force-btn">Forçar mesmo assim</button>
-    </div>
-  </div>
-</div>
 <!-- MODAL RESUMO DO DIA -->
 <div class="modal-overlay" id="modal-dayresume" style="z-index:400">
   <div class="modal" style="max-width:600px;max-height:90vh;overflow-y:auto">
@@ -6478,7 +6673,7 @@ var __paralelo_config = {
     <div style="margin-top:12px">
       <button class="btn btn-sm btn-ghost" onclick="toggleResumeAddOS()" id="resume-add-btn">+ Adicionar OS que esqueci de rastrear</button>
       <div id="resume-add-panel" style="display:none;margin-top:8px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px">
-        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Buscar OS pelo número ou título</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Suas OSs — digite para filtrar</div>
         <div style="display:flex;gap:8px;align-items:center">
           <input class="resume-search-input" id="resume-add-search" placeholder="#número ou título..." oninput="searchResumeOS(this.value)">
           <input type="number" id="resume-add-h" min="0.5" step="0.5" value="1" style="width:70px;padding:6px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text);text-align:center">
@@ -6584,6 +6779,12 @@ var __paralelo_config = {
       <button class="btn btn-primary" onclick="downloadExportCSV()">⬇ Baixar CSV</button>
     </div>
   </div>
+</div>
+<!-- FOCO PiP STRIP (mini indicador borda direita) -->
+<div id="pip-strip-indicator" onclick="openPipWindow()" title="Abrir painel de foco" style="display:none;position:fixed;right:0;top:50%;transform:translateY(-50%);width:14px;height:56px;background:rgba(16,185,129,.35);border-radius:6px 0 0 6px;cursor:pointer;z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;transition:background .2s">
+  <div style="width:5px;height:5px;border-radius:50%;background:#10b981" id="pip-si-dot"></div>
+  <div style="width:3px;height:3px;border-radius:50%;background:#10b981;opacity:.5"></div>
+  <div style="width:3px;height:3px;border-radius:50%;background:#10b981;opacity:.5"></div>
 </div>
 </body>
 </html>
