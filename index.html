@@ -6541,6 +6541,13 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     Paralelo.page('dashboard')
   })
 }
+    if (typeof ParaleloWidget !== 'undefined') {
+      ParaleloWidget.init({
+        widget_key: __paralelo_config.sdkKey,
+        apiUrl: __paralelo_config.apiUrl,
+        user: { id: session.user.id, name: session.user.email }
+      })
+    }
     // ──────────────────────────────────────────────────────
   }else{
     mostrarLogin();
@@ -6575,6 +6582,13 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     Paralelo.page('dashboard')
   })
 }
+      if (typeof ParaleloWidget !== 'undefined') {
+        ParaleloWidget.init({
+          widget_key: __paralelo_config.sdkKey,
+          apiUrl: __paralelo_config.apiUrl,
+          user: { id: session.user.id, name: session.user.email }
+        })
+      }
       // ────────────────────────────────────────────────────
       // Abrir modal de planejamento se ainda não confirmado hoje
       setTimeout(function(){
@@ -6616,8 +6630,7 @@ var __paralelo_config = {
 </script>
 <script>
 (function() {
-  fetch(__paralelo_config.apiUrl + '/paralelo.js', {
-  })
+  fetch(__paralelo_config.apiUrl + '/paralelo_sdk.js')
   .then(function(r) { return r.text() })
   .then(function(code) {
     var s = document.createElement('script')
@@ -6625,7 +6638,7 @@ var __paralelo_config = {
     document.head.appendChild(s)
     console.log('[Paralelo] SDK carregado')
   })
-  .catch(function(e) { console.error('[Paralelo] Falha', e) })
+  .catch(function(e) { console.error('[Paralelo] Falha ao carregar', e) })
 })()
 </script>
 <!-- MODAL PLANEJAMENTO DO DIA -->
