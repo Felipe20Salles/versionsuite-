@@ -5515,13 +5515,104 @@ function concludeOS(osId){
   var st=getFocusState();
   if(st&&st.osId===osId&&!st.pausedAt)closeFocusSession(st);
   saveFocusState(null);
-  moveOS(osId,'concluido');
+  var totalSeg=focusAccumulatedToday(osId);
+  if(totalSeg>=APROP_MIN_SECONDS){
+    _autoApropriar(osId,totalSeg);
+  }else{
+    moveOS(osId,'concluido');
+  }
   // Auto-switch: próxima OS em andamento (a fila do dia)
   var nxt=S.oss.find(function(o){return o.id!==osId&&o.status==='andamento';});
   if(nxt)startFocus(nxt.id);
   updateFocusUI();
   renderKanban();
   closeFocoDropdown();
+}
+
+function _autoApropriar(osId,totalSeg){
+  var horas=parseFloat((totalSeg/3600).toFixed(2));
+  var hoje=new Date().toISOString().slice(0,10);
+  var diaSem=DIAS_SEMANA[new Date().getDay()];
+  var versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
+
+  // Snapshot do log para possível undo
+  var logSnap=getTodayLog().filter(function(s){return s.osId===osId});
+
+  // Encontra ou cria ponto de hoje em S.pontos
+  var ponto=S.pontos.find(function(p){return p.data===hoje});
+  var isNovo=!ponto;
+  if(isNovo){
+    ponto={id:uid(),data:hoje,dia:diaSem,marcacoes:'',horasTrabalhadas:0,versaoId:versaoId,apropriacoes:[]};
+    S.pontos.push(ponto);
+  }
+
+  // Soma horas na entrada de apropriacoes
+  var aprop=ponto.apropriacoes.find(function(a){return a.osId===osId});
+  if(aprop){aprop.horas=parseFloat((aprop.horas+horas).toFixed(2));}
+  else{ponto.apropriacoes.push({osId:osId,horas:horas});}
+
+  // Grava entrada auto no dayresume ANTES de limpar o log
+  var dr=getDayResume();
+  dr.entries=dr.entries.filter(function(e){return e.osId!==osId||!e.auto});
+  dr.entries.push({osId:osId,approvedHours:horas,auto:true});
+  saveDayResume(dr);
+
+  // Limpa log da OS (snapshot já salvo acima)
+  var logFull=getTodayLog().filter(function(s){return s.osId!==osId});
+  saveTodayLog(logFull);
+
+  // Persiste ponto no Supabase
+  dbSalvarPonto(ponto).then(function(saved){
+    if(isNovo)ponto.id=saved.id;
+  }).catch(function(e){toast('Erro ao apropriar: '+e.message,'err')});
+
+  // Move OS
+  moveOS(osId,'concluido');
+
+  // Prepara undo state
+  if(_undoAprop&&_undoAprop.timeoutId)clearTimeout(_undoAprop.timeoutId);
+  var os=S.oss.find(function(o){return o.id===osId});
+  var osNum=os?os.num:osId;
+  var tid=setTimeout(function(){_undoAprop=null;},5000);
+  _undoAprop={osId:osId,horas:horas,pontoRef:ponto,logSnapshot:logSnap,timeoutId:tid};
+
+  // Toast com botão Desfazer (5s)
+  var el=document.getElementById('toast');
+  el.innerHTML=parseFloat(horas.toFixed(2))+'h apropriadas — OS #'+osNum+'&nbsp;<button onclick="_desfazerAprop()" style="background:none;border:1px solid rgba(255,255,255,.3);color:inherit;border-radius:4px;padding:1px 8px;cursor:pointer;font-size:11px">Desfazer</button>';
+  el.className='toast show';
+  clearTimeout(el._t);
+  el._t=setTimeout(function(){el.classList.remove('show')},5000);
+}
+
+function _desfazerAprop(){
+  if(!_undoAprop)return;
+  clearTimeout(_undoAprop.timeoutId);
+  var u=_undoAprop;_undoAprop=null;
+
+  // Remove ou subtrai da entrada de apropriacoes no ponto
+  var ponto=u.pontoRef;
+  var idx=ponto.apropriacoes.findIndex(function(a){return a.osId===u.osId});
+  if(idx>=0){
+    var novasH=parseFloat((ponto.apropriacoes[idx].horas-u.horas).toFixed(2));
+    if(novasH<=0)ponto.apropriacoes.splice(idx,1);
+    else ponto.apropriacoes[idx].horas=novasH;
+  }
+  dbSalvarApropriacao(ponto.id,ponto.apropriacoes).catch(function(){});
+
+  // Remove entrada auto do dayresume
+  var dr=getDayResume();
+  dr.entries=dr.entries.filter(function(e){return e.osId!==u.osId||!e.auto});
+  saveDayResume(dr);
+
+  // Restaura log
+  var logFull=getTodayLog().concat(u.logSnapshot);
+  saveTodayLog(logFull);
+
+  // Move OS de volta para andamento e reinicia foco
+  moveOS(u.osId,'andamento');
+  startFocus(u.osId);
+
+  document.getElementById('toast').classList.remove('show');
 }
 
 function trocarFoco(){
