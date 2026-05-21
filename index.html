@@ -5234,13 +5234,19 @@ function addResumeOS(osId,encodedTitle){
 }
 
 function confirmDayResume(){
+  // Preserva entradas auto-apropriadas já existentes
+  var autoEntries=(getDayResume().entries||[]).filter(function(e){return e.auto});
+  var autoOsIds=autoEntries.map(function(e){return e.osId});
+
+  // Coleta entradas manuais dos inputs (excluindo osIds já cobertos pelo auto)
   var inputs=document.querySelectorAll('.resume-h-input');
-  var entries=[];
+  var manualEntries=[];
   inputs.forEach(function(inp){
     var osId=inp.dataset.osid;var h=parseFloat(inp.value)||0;
-    if(h>0)entries.push({osId:osId,approvedHours:h});
+    if(h>0&&autoOsIds.indexOf(osId)<0)manualEntries.push({osId:osId,approvedHours:h});
   });
-  var resume={confirmedAt:new Date().toISOString(),entries:entries};
+
+  var resume={confirmedAt:new Date().toISOString(),entries:autoEntries.concat(manualEntries)};
   localStorage.setItem(getResumeKey(),JSON.stringify(resume));
   recalcVelocityFactor();
   saveFocusState(null);
