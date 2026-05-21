@@ -5071,8 +5071,12 @@ function recalcVelocityFactor(){
 
 // ── RESUMO DO DIA ─────────────────────────────────────────────────────────────
 var _resumeExtraEntries=[];
+var _undoAprop=null;
+var APROP_MIN_SECONDS=300;
 
 function getResumeKey(){return'vs_dayresume_'+new Date().toISOString().slice(0,10)}
+function getDayResume(){var k=getResumeKey();try{return JSON.parse(localStorage.getItem(k))||{entries:[]}}catch(e){return{entries:[]}}}
+function saveDayResume(r){localStorage.setItem(getResumeKey(),JSON.stringify(r))}
 
 function openDayResumeModal(){
   _resumeExtraEntries=[];
