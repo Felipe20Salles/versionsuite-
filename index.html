@@ -1797,13 +1797,19 @@ async function upsertCurrentUserProfile(){
   var displayName=meta.full_name||meta.name||CURRENT_USER.email||'Usuário';
   var avatar=meta.avatar_url||meta.picture||'';
   var email=CURRENT_USER.email||'';
-  // Busca profile existente
-  var {data:existing}=await sb.from('profiles').select('prefs').eq('id',CURRENT_USER.id).maybeSingle();
+  // Busca profile existente (inclui role para não sobrescrever)
+  var {data:existing}=await sb.from('profiles').select('prefs,role').eq('id',CURRENT_USER.id).maybeSingle();
   var existPrefs=parsePrefs(existing?existing.prefs:null);
   // Só sobrescreve displayName/avatar/email; preserva role e colorIdx
   var newPrefs=Object.assign({},existPrefs,{displayName:displayName,avatar:avatar,email:email});
   if(newPrefs.colorIdx===undefined)newPrefs.colorIdx=null; // será atribuído em loadUsers
-  await sb.from('profiles').upsert({id:CURRENT_USER.id,prefs:newPrefs},{onConflict:'id'});
+  if(!existing){
+    // Novo usuário: role=null garante fila de espera independente do DEFAULT do banco
+    await sb.from('profiles').insert({id:CURRENT_USER.id,prefs:newPrefs,role:null});
+  }else{
+    // Usuário existente: só atualiza prefs, nunca toca no role
+    await sb.from('profiles').update({prefs:newPrefs}).eq('id',CURRENT_USER.id);
+  }
 }
 
 
@@ -6532,21 +6538,20 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       }
     },1500);
     // ── Paralelo ──────────────────────────────────────────
-    if (typeof Paralelo !== 'undefined') {
-  Paralelo.identify({ userId: session.user.id, email: session.user.email })
-  Paralelo.page('dashboard')
-} else {
-  window.addEventListener('load', function() {
-    Paralelo.identify({ userId: session.user.id, email: session.user.email })
-    Paralelo.page('dashboard')
-  })
-}
-    if (typeof ParaleloWidget !== 'undefined') {
+    function _initParalelo() {
+      if (typeof Paralelo === 'undefined' || typeof ParaleloWidget === 'undefined') return false
+      Paralelo.config({ sdkKey: __paralelo_config.sdkKey, apiUrl: __paralelo_config.apiUrl })
+      Paralelo.identify({ userId: session.user.id, email: session.user.email })
+      Paralelo.page('dashboard')
       ParaleloWidget.init({
         widget_key: __paralelo_config.sdkKey,
         apiUrl: __paralelo_config.apiUrl,
         user: { id: session.user.id, name: session.user.email }
       })
+      return true
+    }
+    if (!_initParalelo()) {
+      var _pRetry = setInterval(function() { if (_initParalelo()) clearInterval(_pRetry) }, 200)
     }
     // ──────────────────────────────────────────────────────
   }else{
@@ -6573,21 +6578,20 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       updateFocusUI();
       renderDash();
       // ── Paralelo ────────────────────────────────────────
-      if (typeof Paralelo !== 'undefined') {
-  Paralelo.identify({ userId: session.user.id, email: session.user.email })
-  Paralelo.page('dashboard')
-} else {
-  window.addEventListener('load', function() {
-    Paralelo.identify({ userId: session.user.id, email: session.user.email })
-    Paralelo.page('dashboard')
-  })
-}
-      if (typeof ParaleloWidget !== 'undefined') {
+      function _initParalelo2() {
+        if (typeof Paralelo === 'undefined' || typeof ParaleloWidget === 'undefined') return false
+        Paralelo.config({ sdkKey: __paralelo_config.sdkKey, apiUrl: __paralelo_config.apiUrl })
+        Paralelo.identify({ userId: session.user.id, email: session.user.email })
+        Paralelo.page('dashboard')
         ParaleloWidget.init({
           widget_key: __paralelo_config.sdkKey,
           apiUrl: __paralelo_config.apiUrl,
           user: { id: session.user.id, name: session.user.email }
         })
+        return true
+      }
+      if (!_initParalelo2()) {
+        var _pRetry2 = setInterval(function() { if (_initParalelo2()) clearInterval(_pRetry2) }, 200)
       }
       // ────────────────────────────────────────────────────
       // Abrir modal de planejamento se ainda não confirmado hoje
@@ -6624,7 +6628,7 @@ document.addEventListener('keydown',function(){if(typeof touchActivity==='functi
 <!-- Paralelo SDK -->
 <script>
 var __paralelo_config = {
-  apiUrl: 'https://paralelo-api-production.up.railway.app',
+  apiUrl: 'http://localhost:3000',
   sdkKey: 'b5e61607853319386147b0894baf59aa9a231640fd7f1116'
 }
 </script>
@@ -6636,6 +6640,9 @@ var __paralelo_config = {
     var s = document.createElement('script')
     s.textContent = code
     document.head.appendChild(s)
+    if (typeof Paralelo !== 'undefined') {
+      Paralelo.config({ sdkKey: __paralelo_config.sdkKey, apiUrl: __paralelo_config.apiUrl })
+    }
     console.log('[Paralelo] SDK carregado')
   })
   .catch(function(e) { console.error('[Paralelo] Falha ao carregar', e) })
