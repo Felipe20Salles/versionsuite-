@@ -758,12 +758,14 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div class="tab" onclick="setPontoTab(this,'tab-exportar')">Exportar Horas</div>
         </div>
         <div id="tab-registro">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-            <span style="font-size:12px;color:var(--muted)">Período:</span>
-            <input type="date" id="ponto-filtro-de" class="form-input" style="width:140px" onchange="_pontoFiltro.de=this.value;renderPontoList()">
-            <span style="font-size:12px;color:var(--muted)">até</span>
-            <input type="date" id="ponto-filtro-ate" class="form-input" style="width:140px" onchange="_pontoFiltro.ate=this.value;renderPontoList()">
-            <button class="btn btn-xs btn-ghost" onclick="_pontoFiltro={de:'',ate:''};document.getElementById('ponto-filtro-de').value='';document.getElementById('ponto-filtro-ate').value='';renderPontoList()">Limpar</button>
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-ghost" title="Período anterior" onclick="_pontoFiltro.de='';_pontoFiltro.ate='';_pontoFiltro.offset--;renderPontoList()">←</button>
+            <span id="ponto-periodo-label" style="font-size:14px;font-weight:500;min-width:145px;text-align:center"></span>
+            <button class="btn btn-sm btn-ghost" title="Próximo período" onclick="_pontoFiltro.de='';_pontoFiltro.ate='';_pontoFiltro.offset++;renderPontoList()">→</button>
+            <span style="font-size:12px;color:var(--muted);margin-left:8px">De</span>
+            <input type="date" id="ponto-filtro-de" class="form-input" style="width:130px;font-size:12px" onchange="_pontoFiltro.de=this.value;renderPontoList()">
+            <span style="font-size:12px;color:var(--muted)">Até</span>
+            <input type="date" id="ponto-filtro-ate" class="form-input" style="width:130px;font-size:12px" onchange="_pontoFiltro.ate=this.value;renderPontoList()">
           </div>
           <div id="ponto-list"></div>
         </div>
@@ -773,10 +775,6 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div style="display:inline-flex;align-items:center;gap:6px;background:var(--accent-alpha,rgba(99,102,241,.12));border:1px solid var(--accent);border-radius:6px;padding:4px 10px;margin-bottom:10px;font-size:12px;color:var(--accent);font-weight:600">
               📋 O relatório importado deve ser o <strong>Excel Formatado</strong>
             </div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
-              Utilize o arquivo <strong>XLSX</strong> exportado pelo sistema LG (<em>RelatorioCartaoDePontoLayout</em>) no formato <strong>Excel Formatado</strong>. O XLSX é mais confiável que o CSV — sem problemas de encoding ou quebras de linha.
-            </div>
-
             <!-- Área principal: XLSX -->
             <div class="ponto-import-area" onclick="document.getElementById('ponto-xlsx-input').click()" style="margin-bottom:10px">
               <div style="font-size:28px;color:var(--hint);margin-bottom:8px">📊</div>
@@ -784,14 +782,6 @@ textarea.form-input{resize:vertical;min-height:70px}
               <div style="font-size:11px;color:var(--hint);margin-top:4px">RelatorioCartaoDePontoLayout · Excel (.xlsx)</div>
             </div>
             <input type="file" id="ponto-xlsx-input" accept=".xlsx" style="display:none" onchange="importPontoXLSX(this)">
-
-            <!-- Fallback CSV -->
-            <div style="font-size:11px;color:var(--hint);margin-bottom:6px;text-align:center">ou, se só tiver o CSV:</div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <button class="btn btn-sm btn-ghost" style="flex:1;font-size:11px" onclick="document.getElementById('csv-input').click()">
-                📄 Importar CSV (modo compatibilidade)
-              </button>
-            </div>
             <input type="file" id="csv-input" accept=".csv,.txt" style="display:none" onchange="importCSV(this)">
 
             <div id="import-preview"></div>
@@ -1220,13 +1210,13 @@ textarea.form-input{resize:vertical;min-height:70px}
     <div class="form-group">
       <label class="form-label">Marcações</label>
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:10px;color:var(--hint);margin-bottom:1px;text-align:center">Entrada</div><button class="btn btn-xs" onclick="adjustMarcacao('p-m1',15)" style="padding:1px 8px;font-size:11px">▲</button><input class="marcacao-input" id="p-m1" placeholder="08:00" maxlength="5" oninput="fmtTime(this);calcTotal()"><button class="btn btn-xs" onclick="adjustMarcacao('p-m1',-15)" style="padding:1px 8px;font-size:11px">▼</button></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:10px;color:var(--hint);margin-bottom:1px;text-align:center">Entrada</div><button class="btn btn-xs" onclick="adjustMarcacao('p-m1',1)" style="padding:1px 8px;font-size:11px">▲</button><input class="marcacao-input" id="p-m1" placeholder="08:00" maxlength="5" oninput="fmtTime(this);calcTotal()"><button class="btn btn-xs" onclick="adjustMarcacao('p-m1',-1)" style="padding:1px 8px;font-size:11px">▼</button></div>
         <div style="color:var(--hint);padding-bottom:8px">→</div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:10px;color:var(--hint);margin-bottom:1px;text-align:center">Almoço</div><button class="btn btn-xs" onclick="adjustMarcacao('p-m2',15)" style="padding:1px 8px;font-size:11px">▲</button><input class="marcacao-input" id="p-m2" placeholder="12:00" maxlength="5" oninput="fmtTime(this);calcTotal()"><button class="btn btn-xs" onclick="adjustMarcacao('p-m2',-15)" style="padding:1px 8px;font-size:11px">▼</button></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:10px;color:var(--hint);margin-bottom:1px;text-align:center">Almoço</div><button class="btn btn-xs" onclick="adjustMarcacao('p-m2',1)" style="padding:1px 8px;font-size:11px">▲</button><input class="marcacao-input" id="p-m2" placeholder="12:00" maxlength="5" oninput="fmtTime(this);calcTotal()"><button class="btn btn-xs" onclick="adjustMarcacao('p-m2',-1)" style="padding:1px 8px;font-size:11px">▼</button></div>
         <div style="color:var(--hint);padding-bottom:8px">→</div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:10px;color:var(--hint);margin-bottom:1px;text-align:center">Retorno</div><button class="btn btn-xs" onclick="adjustMarcacao('p-m3',15)" style="padding:1px 8px;font-size:11px">▲</button><input class="marcacao-input" id="p-m3" placeholder="13:00" maxlength="5" oninput="fmtTime(this);calcTotal()"><button class="btn btn-xs" onclick="adjustMarcacao('p-m3',-15)" style="padding:1px 8px;font-size:11px">▼</button></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:10px;color:var(--hint);margin-bottom:1px;text-align:center">Retorno</div><button class="btn btn-xs" onclick="adjustMarcacao('p-m3',1)" style="padding:1px 8px;font-size:11px">▲</button><input class="marcacao-input" id="p-m3" placeholder="13:00" maxlength="5" oninput="fmtTime(this);calcTotal()"><button class="btn btn-xs" onclick="adjustMarcacao('p-m3',-1)" style="padding:1px 8px;font-size:11px">▼</button></div>
         <div style="color:var(--hint);padding-bottom:8px">→</div>
-        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:10px;color:var(--hint);margin-bottom:1px;text-align:center">Saída</div><button class="btn btn-xs" onclick="adjustMarcacao('p-m4',15)" style="padding:1px 8px;font-size:11px">▲</button><input class="marcacao-input" id="p-m4" placeholder="17:00" maxlength="5" oninput="fmtTime(this);calcTotal()"><button class="btn btn-xs" onclick="adjustMarcacao('p-m4',-15)" style="padding:1px 8px;font-size:11px">▼</button></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:10px;color:var(--hint);margin-bottom:1px;text-align:center">Saída</div><button class="btn btn-xs" onclick="adjustMarcacao('p-m4',1)" style="padding:1px 8px;font-size:11px">▲</button><input class="marcacao-input" id="p-m4" placeholder="17:00" maxlength="5" oninput="fmtTime(this);calcTotal()"><button class="btn btn-xs" onclick="adjustMarcacao('p-m4',-1)" style="padding:1px 8px;font-size:11px">▼</button></div>
         <div><div style="font-size:10px;color:var(--hint);margin-bottom:3px">Total</div><div id="p-total" style="font-family:var(--mono);font-size:16px;font-weight:500;color:var(--green-text);padding:6px 0;min-width:48px">--</div></div>
       </div>
     </div>
@@ -1413,6 +1403,16 @@ async function loadEquipes(){
   }catch(e){console.warn('loadEquipes:',e);S_EQUIPES=[];}
 }
 
+async function refreshRoles(){
+  try{
+    var {data}=await sb.from('roles').select('*');
+    if(!data||!data.length)return;
+    S_ROLES=data;
+    S_ROLES.forEach(function(r){ROLE_LABELS[r.nome]=r.label||r.nome;});
+    if(CURRENT_ROLE_NAME){CURRENT_ROLE=S_ROLES.find(function(r){return r.nome===CURRENT_ROLE_NAME})||null;}
+    applyMenuPermissions();
+  }catch(e){}
+}
 async function saveUserRole(userId,newRole){
   var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
   var {data:prof}=await sb.from('profiles').select('prefs').eq('id',userId).single();
@@ -1973,7 +1973,7 @@ var S={versoes:[],oss:[],pontos:[],pontosEquipe:[],publicacoes:[],filtro:'todos'
 
 var _agendaMes=new Date().getMonth(),_agendaAno=new Date().getFullYear(),_agendaFiltro='todos';
 var _dashEquipe={periodoOffset:0,equipeId:'todas',pessoaId:'todas',periodoLivre:{de:'',ate:''}};
-var _pontoFiltro={de:'',ate:''};
+var _pontoFiltro={de:'',ate:'',offset:0};
 var _editingPub=null,_editingVersao=null,_xlsxData=null,_apropState={};
 var _focusInterval=null;
 var _pipInterval=null;
@@ -2157,6 +2157,7 @@ function goScreen(name){
   if(name==='ponto')renderPontoList();
   if(name==='historico')renderHist();
   if(name==='preferencias'){
+    refreshRoles();
     var adminTabBtn=document.getElementById('pref-tab-btn-admin');
     if(adminTabBtn)adminTabBtn.style.display=isAdmin()?'':'none';
     goPrefsTab('pessoal');
@@ -2187,9 +2188,9 @@ function renderDash(){
   }
   var filtroVid=vfEl?vfEl.value:'todas';
 
-  // OSs e pontos filtrados
+  // OSs filtradas por versão; pontos sempre totais (não são versão-específicos)
   var ossF=filtroVid==='todas'?S.oss:S.oss.filter(function(o){return o.versaoId===filtroVid});
-  var pontosF=filtroVid==='todas'?S.pontos:S.pontos.filter(function(p){return p.versaoId===filtroVid});
+  var pontosF=S.pontos;
   var conc=ossF.filter(function(o){return o.status==='concluido'}).length;
   var horasPonto=pontosF.reduce(function(a,p){return a+(p.horasTrabalhadas||0)},0);
   var horasAprop=pontosF.reduce(function(a,p){return a+((p.apropriacoes||[]).reduce(function(b,x){return b+x.horas},0))},0);
@@ -3545,8 +3546,12 @@ function salvarPonto(){
 function renderPontoList(){
   var el=document.getElementById('ponto-list');
   var pontosFiltrados=S.pontos;
-  if(_pontoFiltro.de)pontosFiltrados=pontosFiltrados.filter(function(p){return p.data>=_pontoFiltro.de;});
-  if(_pontoFiltro.ate)pontosFiltrados=pontosFiltrados.filter(function(p){return p.data<=_pontoFiltro.ate;});
+  var de=_pontoFiltro.de,ate=_pontoFiltro.ate;
+  if(!de&&!ate){var p=calcPeriodoEquipe(_pontoFiltro.offset||0);de=p.inicio;ate=p.fim;}
+  var lbl=document.getElementById('ponto-periodo-label');
+  if(lbl)lbl.textContent=(de&&ate&&!_pontoFiltro.de&&!_pontoFiltro.ate)?labelPeriodoEquipe(de,ate):(de?fmtDate(de):'')+' – '+(ate?fmtDate(ate):'');
+  if(de)pontosFiltrados=pontosFiltrados.filter(function(p){return p.data>=de;});
+  if(ate)pontosFiltrados=pontosFiltrados.filter(function(p){return p.data<=ate;});
   if(!pontosFiltrados.length){el.innerHTML='<div style="color:var(--hint);font-size:13px">Nenhum registro. Clique em "+ Registrar Ponto".</div>';return}
 
   // Toolbar de seleção múltipla
@@ -3644,14 +3649,9 @@ function excluirPonto(id){
 
 // ── APROPRIAÇÃO ───────────────────────────────────────────────────────────────
 function ossParaApropriar(){
-  // Versões ativas + encerradas nos últimos 30 dias
-  var limite=new Date();limite.setDate(limite.getDate()-30);
   return S.oss.filter(function(o){
     var v=S.versoes.find(function(x){return x.id===o.versaoId});
-    if(!v)return false;
-    if(v.ativa)return true;
-    if(v.encerradaEm&&new Date(v.encerradaEm)>=limite)return true;
-    return false;
+    return v&&v.ativa;
   });
 }
 
@@ -5129,25 +5129,14 @@ function openDayPlanModal(force){
   if(greetEl)greetEl.textContent=greeting+(CURRENT_USER&&CURRENT_USER.user_metadata&&CURRENT_USER.user_metadata.full_name?', '+(CURRENT_USER.user_metadata.full_name.split(' ')[0]):'')+'!';
   if(dateEl)dateEl.textContent=dias[now.getDay()]+', '+now.getDate()+' de '+meses[now.getMonth()]+' de '+now.getFullYear();
 
-  // Popula select de usuário atribuído, default = usuário logado
-  var sel=document.getElementById('dayplan-user-filtro');
-  if(sel){
-    var allOss=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer'});
-    var usuarios=[...new Set(allOss.map(function(o){return(o.atribuicao||'').trim()}).filter(Boolean))].sort();
-    var meuNome=getDisplayName().trim();
-    sel.innerHTML='<option value="">Todos</option>'+
-      usuarios.map(function(u){return'<option value="'+escHtml(u)+'"'+(u===meuNome?' selected':'')+'>'+escHtml(u)+'</option>';}).join('');
-  }
-
   renderDayPlanOsList();
   openModal('modal-dayplan');
 }
 function renderDayPlanOsList(){
   var plan=getDayPlan();
-  var sel=document.getElementById('dayplan-user-filtro');
-  var userFiltro=sel?sel.value:'';
+  var meuNome=getDisplayName().trim();
   var andamento=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer'});
-  if(userFiltro)andamento=andamento.filter(function(o){return(o.atribuicao||'').trim()===userFiltro;});
+  if(meuNome)andamento=andamento.filter(function(o){return(o.atribuicao||'').trim()===meuNome;});
   // Prioridade: andamento primeiro, depois porte (epico > grande > normal > rapida)
   var ordemPorte={epico:0,grande:1,normal:2,rapida:3};
   andamento.sort(function(a,b){
@@ -5856,9 +5845,12 @@ function trocarFoco(){
 }
 function voltarParaAfazer(){
   var st=getFocusState();if(!st)return;
+  var next=S.oss.find(function(o){return o.status==='andamento'&&o.id!==st.osId;});
   var os=S.oss.find(function(o){return o.id===st.osId;});
   if(os){os.status='afazer';dbMoverOS(os.id,'afazer').catch(function(){});}
-  saveFocusState(null);updateFocusUI();renderKanban();updatePipUI();toast('OS devolvida para A Fazer');
+  if(next){startFocus(next.id);}else{saveFocusState(null);updateFocusUI();updatePipUI();}
+  renderKanban();
+  toast('OS devolvida para A Fazer');
 }
 
 function alternarFoco(){
@@ -7018,10 +7010,6 @@ var __paralelo_config = {
     <div id="dayplan-greeting" style="font-size:18px;font-weight:600;margin-bottom:4px"></div>
     <div id="dayplan-date" style="font-size:12px;color:var(--muted);margin-bottom:20px"></div>
     <div class="modal-title" style="margin-bottom:12px">Planejamento do dia</div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <span style="font-size:12px;color:var(--muted)">Atribuído a:</span>
-      <select id="dayplan-user-filtro" class="form-input" style="width:auto;font-size:13px" onchange="renderDayPlanOsList()"></select>
-    </div>
     <div id="dayplan-os-list" style="max-height:300px;overflow-y:auto"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
       <div>
