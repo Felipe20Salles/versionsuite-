@@ -400,6 +400,15 @@ textarea.form-input{resize:vertical;min-height:70px}
 </head>
 <body>
 <!-- TELA DE LOGIN -->
+<div id="pending-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:450;align-items:center;justify-content:center;flex-direction:column">
+  <div style="text-align:center;max-width:400px;padding:40px 32px;background:var(--card);border:1px solid var(--border);border-radius:20px">
+    <div style="font-size:40px;margin-bottom:16px">⏳</div>
+    <div style="font-family:var(--mono);font-size:18px;font-weight:500;margin-bottom:8px">Acesso pendente</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:6px">Olá, <strong id="pending-user-name" style="color:var(--text)"></strong>!</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6">Sua conta está aguardando aprovação de um <strong style="color:var(--text)">Admin</strong>. Você receberá acesso assim que for aprovado.</div>
+    <button onclick="confirmarLogout()" style="width:100%;padding:11px 20px;background:var(--card2);border:1px solid var(--border);border-radius:10px;font-size:13px;color:var(--muted);cursor:pointer">Sair</button>
+  </div>
+</div>
 <div id="login-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;flex-direction:column">
   <div style="text-align:center;max-width:360px;padding:40px 32px;background:var(--card);border:1px solid var(--border);border-radius:20px">
     <div style="font-family:var(--mono);font-size:22px;font-weight:500;margin-bottom:6px">Version<span style="color:var(--accent)">Suite</span></div>
@@ -918,6 +927,10 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">
               Gerencie quem pode acessar a VersionSuite e seus níveis de permissão. Somente <strong>Admins</strong> podem alterar roles.
             </div>
+            <div id="pending-list" style="display:none;margin-bottom:16px">
+              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--amber-text,#f59e0b);margin-bottom:8px">⏳ Aguardando aprovação</div>
+              <div id="pending-list-inner" style="display:flex;flex-direction:column;gap:8px"></div>
+            </div>
             <div id="users-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
             <div id="users-list-hint" style="font-size:11px;color:var(--hint)">Usuários aparecem automaticamente após o primeiro login com Google.</div>
           </div>
@@ -1339,6 +1352,7 @@ async function loadUsers(){
         displayName:p.nome||prefs.displayName||prefs.email||p.email||'Usuário',
         avatar:p.avatar_url||prefs.avatar||'',
         role:p.role||prefs.role||'visualizador',
+        status:prefs.status||'active',
         colorIdx:prefs.colorIdx!==undefined?prefs.colorIdx:null,
         equipeId:p.equipe_id||null,
         gestorGeral:!!p.gestor_geral
@@ -1403,6 +1417,29 @@ async function saveUserGestorGeral(userId,checked){
   toast('Gestor geral '+(checked?'ativado':'desativado'));
 }
 
+async function approveUser(userId){
+  if(!isAdmin()){toast('Apenas admins podem aprovar usuários','err');return}
+  var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
+  var {data:p}=await sb.from('profiles').select('prefs').eq('id',userId).maybeSingle();
+  var prefs=Object.assign({},p?p.prefs||{}:{},{status:'active'});
+  var {error}=await sb.from('profiles').update({prefs:prefs}).eq('id',userId);
+  if(error){toast('Erro ao aprovar: '+error.message,'err');return}
+  u.status='active';
+  toast((u.displayName||u.email)+' aprovado ✓');
+  renderUsersPrefs();
+}
+async function rejectUser(userId){
+  if(!isAdmin()){toast('Apenas admins podem remover usuários','err');return}
+  var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
+  var ok=await modalConfirm('Remover acesso','Remover o acesso de <strong>'+escHtml(u.displayName||u.email)+'</strong>? O usuário não poderá mais entrar na plataforma.','Remover','btn-danger');
+  if(!ok)return;
+  var {error}=await sb.from('profiles').delete().eq('id',userId);
+  if(error){toast('Erro: '+error.message,'err');return}
+  S_USERS=S_USERS.filter(function(x){return x.id!==userId});
+  toast('Usuário removido');
+  renderUsersPrefs();
+}
+
 function renderUsersPrefs(){
   // Badge do role do usuário logado
   var myRole=currentUserRole();
@@ -1417,8 +1454,35 @@ function renderUsersPrefs(){
   var el=document.getElementById('users-list');if(!el)return;
   if(!S_USERS.length){el.innerHTML='<div style="font-size:12px;color:var(--hint)">Nenhum usuário registrado ainda.</div>';return;}
 
+  // Renderiza pendentes (apenas visível para admins)
+  var pendingEl=document.getElementById('pending-list');
+  var pendingInner=document.getElementById('pending-list-inner');
+  if(pendingEl&&pendingInner&&isAdmin()){
+    var pendingUsers=S_USERS.filter(function(u){return u.status==='pending'});
+    if(pendingUsers.length){
+      pendingEl.style.display='';
+      pendingInner.innerHTML=pendingUsers.map(function(u){
+        var initials=(u.displayName||'?').split(' ').slice(0,2).map(function(w){return w[0]}).join('').toUpperCase();
+        var avatarHtml=u.avatar?
+          '<img class="user-avatar-sm" src="'+u.avatar+'" alt="'+u.displayName+'" onerror="this.style.display=\'none\'">':
+          '<div class="user-avatar-initials" style="background:var(--border2)">'+initials+'</div>';
+        return'<div class="user-card">'+
+          avatarHtml+
+          '<div style="flex:1;min-width:0">'+
+            '<div style="font-size:13px;font-weight:500;color:var(--text)">'+escHtml(u.displayName)+'</div>'+
+            '<div style="font-size:11px;color:var(--hint)">'+escHtml(u.email)+'</div>'+
+          '</div>'+
+          '<button onclick="approveUser(\''+u.id+'\')" style="padding:5px 12px;font-size:12px;background:var(--green-dim,rgba(62,207,142,.15));color:var(--green,#3ecf8e);border:1px solid var(--green,#3ecf8e);border-radius:6px;cursor:pointer;margin-right:6px">✓ Aprovar</button>'+
+          '<button onclick="rejectUser(\''+u.id+'\')" style="padding:5px 10px;font-size:12px;background:none;color:var(--muted);border:1px solid var(--border2);border-radius:6px;cursor:pointer">✕</button>'+
+        '</div>';
+      }).join('');
+    }else{
+      pendingEl.style.display='none';
+    }
+  }
+
   // Ordena: admins primeiro, depois alfabético
-  var sorted=S_USERS.slice().sort(function(a,b){
+  var sorted=S_USERS.filter(function(u){return u.status!=='pending'}).sort(function(a,b){
     var rp=(ROLE_PRIORITY[a.role]||1)-(ROLE_PRIORITY[b.role]||1);
     if(rp!==0)return rp;
     return a.displayName.localeCompare(b.displayName);
@@ -1799,10 +1863,19 @@ async function upsertCurrentUserProfile(){
   var email=CURRENT_USER.email||'';
   // Busca profile existente (inclui role para não sobrescrever)
   var {data:existing}=await sb.from('profiles').select('prefs,role').eq('id',CURRENT_USER.id).maybeSingle();
+  var isNewUser=!existing;
   var existPrefs=parsePrefs(existing?existing.prefs:null);
-  // Só sobrescreve displayName/avatar/email; preserva role e colorIdx
+  // Verifica se é o primeiro usuário do sistema (vira admin automaticamente)
+  var isFirstUser=false;
+  if(isNewUser){
+    var {count}=await sb.from('profiles').select('id',{count:'exact',head:true});
+    isFirstUser=(count===0);
+  }
+  // Preserva role, colorIdx e status; só atualiza displayName/avatar/email
   var newPrefs=Object.assign({},existPrefs,{displayName:displayName,avatar:avatar,email:email});
   if(newPrefs.colorIdx===undefined)newPrefs.colorIdx=null; // será atribuído em loadUsers
+  // status: existente sem status → active (retrocompatibilidade); novo → pending (exceto primeiro)
+  if(!newPrefs.status)newPrefs.status=(isNewUser&&!isFirstUser)?'pending':'active';
   if(!existing){
     // Novo usuário: role=null garante fila de espera independente do DEFAULT do banco
     await sb.from('profiles').insert({id:CURRENT_USER.id,prefs:newPrefs,role:null});
@@ -1810,6 +1883,7 @@ async function upsertCurrentUserProfile(){
     // Usuário existente: só atualiza prefs, nunca toca no role
     await sb.from('profiles').update({prefs:newPrefs}).eq('id',CURRENT_USER.id);
   }
+  return newPrefs.status;
 }
 
 
@@ -4305,6 +4379,14 @@ function mostrarLogin(msg){
   var msgEl=document.getElementById('login-msg');
   if(msgEl){if(msg){msgEl.textContent=msg;msgEl.style.display='block'}else{msgEl.style.display='none'}}
 }
+function mostrarPendente(user){
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('pending-screen').style.display='flex';
+  document.querySelector('.app').style.display='none';
+  var nameEl=document.getElementById('pending-user-name');
+  if(nameEl){var meta=user.user_metadata||{};nameEl.textContent=meta.full_name||meta.name||user.email||'usuário';}
+}
 function mostrarApp(){
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('login-screen').style.display='none';
@@ -6650,7 +6732,8 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     CURRENT_USER=session.user;
     updateUserBadge(session.user);
     setLoadingMsg('Carregando dados...');
-    await upsertCurrentUserProfile();
+    var status=await upsertCurrentUserProfile();
+    if(status==='pending'){mostrarPendente(session.user);return;}
     await load();
     applyPrefs();
     if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
@@ -6698,7 +6781,8 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       document.getElementById('login-screen').style.display='none';
       document.getElementById('loading-screen').style.display='flex';
       setLoadingMsg('Carregando dados...');
-      await upsertCurrentUserProfile();
+      var status=await upsertCurrentUserProfile();
+      if(status==='pending'){mostrarPendente(session.user);return;}
       await load();
       applyPrefs();
       if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
