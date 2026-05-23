@@ -759,13 +759,9 @@ textarea.form-input{resize:vertical;min-height:70px}
         </div>
         <div id="tab-registro">
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-            <button class="btn btn-sm btn-ghost" title="Período anterior" onclick="_pontoFiltro.de='';_pontoFiltro.ate='';_pontoFiltro.offset--;renderPontoList()">←</button>
+            <button class="btn btn-sm btn-ghost" title="Período anterior" onclick="_pontoFiltro.offset--;renderPontoList()">←</button>
             <span id="ponto-periodo-label" style="font-size:14px;font-weight:500;min-width:145px;text-align:center"></span>
-            <button class="btn btn-sm btn-ghost" title="Próximo período" onclick="_pontoFiltro.de='';_pontoFiltro.ate='';_pontoFiltro.offset++;renderPontoList()">→</button>
-            <span style="font-size:12px;color:var(--muted);margin-left:8px">De</span>
-            <input type="date" id="ponto-filtro-de" class="form-input" style="width:130px;font-size:12px" onchange="_pontoFiltro.de=this.value;renderPontoList()">
-            <span style="font-size:12px;color:var(--muted)">Até</span>
-            <input type="date" id="ponto-filtro-ate" class="form-input" style="width:130px;font-size:12px" onchange="_pontoFiltro.ate=this.value;renderPontoList()">
+            <button class="btn btn-sm btn-ghost" title="Próximo período" onclick="_pontoFiltro.offset++;renderPontoList()">→</button>
           </div>
           <div id="ponto-list"></div>
         </div>
@@ -1909,10 +1905,10 @@ async function upsertCurrentUserProfile(){
   if(!newPrefs.status)newPrefs.status=(isNewUser&&!isFirstUser)?'pending':'active';
   if(!existing){
     // Novo usuário: role=null garante fila de espera independente do DEFAULT do banco
-    await sb.from('profiles').insert({id:CURRENT_USER.id,prefs:newPrefs,role:null});
+    await sb.from('profiles').insert({id:CURRENT_USER.id,prefs:newPrefs,role:null,avatar_url:avatar});
   }else{
-    // Usuário existente: só atualiza prefs, nunca toca no role
-    await sb.from('profiles').update({prefs:newPrefs}).eq('id',CURRENT_USER.id);
+    // Usuário existente: atualiza prefs e avatar_url, nunca toca no role
+    await sb.from('profiles').update({prefs:newPrefs,avatar_url:avatar}).eq('id',CURRENT_USER.id);
   }
   return newPrefs.status;
 }
@@ -1973,7 +1969,7 @@ var S={versoes:[],oss:[],pontos:[],pontosEquipe:[],publicacoes:[],filtro:'todos'
 
 var _agendaMes=new Date().getMonth(),_agendaAno=new Date().getFullYear(),_agendaFiltro='todos';
 var _dashEquipe={periodoOffset:0,equipeId:'todas',pessoaId:'todas',periodoLivre:{de:'',ate:''}};
-var _pontoFiltro={de:'',ate:'',offset:0};
+var _pontoFiltro={offset:0};
 var _editingPub=null,_editingVersao=null,_xlsxData=null,_apropState={};
 var _focusInterval=null;
 var _pipInterval=null;
@@ -2188,9 +2184,13 @@ function renderDash(){
   }
   var filtroVid=vfEl?vfEl.value:'todas';
 
-  // OSs filtradas por versão; pontos sempre totais (não são versão-específicos)
+  // OSs filtradas por versão; pontos filtrados pelo período da versão (16/mês-1 a 15/mês)
   var ossF=filtroVid==='todas'?S.oss:S.oss.filter(function(o){return o.versaoId===filtroVid});
   var pontosF=S.pontos;
+  if(filtroVid!=='todas'){
+    var vp=calcPeriodoVersao(S.versoes.find(function(v){return v.id===filtroVid}));
+    if(vp)pontosF=S.pontos.filter(function(p){return p.data>=vp.inicio&&p.data<=vp.fim;});
+  }
   var conc=ossF.filter(function(o){return o.status==='concluido'}).length;
   var horasPonto=pontosF.reduce(function(a,p){return a+(p.horasTrabalhadas||0)},0);
   var horasAprop=pontosF.reduce(function(a,p){return a+((p.apropriacoes||[]).reduce(function(b,x){return b+x.horas},0))},0);
@@ -2226,7 +2226,9 @@ function renderDash(){
   ativasEl.innerHTML=ativas.map(function(v){
     var voss=S.oss.filter(function(o){return o.versaoId===v.id});
     var tot=voss.length,cn=voss.filter(function(o){return o.status==='concluido'}).length,pct=tot?Math.round(cn/tot*100):0;
-    var hv=S.pontos.filter(function(p){return p.versaoId===v.id}).reduce(function(a,p){return a+(p.horasTrabalhadas||0)},0);
+    var vper=calcPeriodoVersao(v);
+    var pontosV=vper?S.pontos.filter(function(p){return p.data>=vper.inicio&&p.data<=vper.fim;}):[];
+    var hv=pontosV.reduce(function(a,p){return a+(p.horasTrabalhadas||0)},0);
     return'<div class="versao-card ativa-border" onclick="goKanban(\''+v.id+'\')">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
         '<div style="font-size:15px;font-weight:500">'+v.nome+'</div>'+
@@ -3546,12 +3548,11 @@ function salvarPonto(){
 function renderPontoList(){
   var el=document.getElementById('ponto-list');
   var pontosFiltrados=S.pontos;
-  var de=_pontoFiltro.de,ate=_pontoFiltro.ate;
-  if(!de&&!ate){var p=calcPeriodoEquipe(_pontoFiltro.offset||0);de=p.inicio;ate=p.fim;}
+  var per=calcPeriodoEquipe(_pontoFiltro.offset||0);
+  var de=per.inicio,ate=per.fim;
   var lbl=document.getElementById('ponto-periodo-label');
-  if(lbl)lbl.textContent=(de&&ate&&!_pontoFiltro.de&&!_pontoFiltro.ate)?labelPeriodoEquipe(de,ate):(de?fmtDate(de):'')+' – '+(ate?fmtDate(ate):'');
-  if(de)pontosFiltrados=pontosFiltrados.filter(function(p){return p.data>=de;});
-  if(ate)pontosFiltrados=pontosFiltrados.filter(function(p){return p.data<=ate;});
+  if(lbl)lbl.textContent=labelPeriodoEquipe(de,ate);
+  pontosFiltrados=pontosFiltrados.filter(function(p){return p.data>=de&&p.data<=ate;});
   if(!pontosFiltrados.length){el.innerHTML='<div style="color:var(--hint);font-size:13px">Nenhum registro. Clique em "+ Registrar Ponto".</div>';return}
 
   // Toolbar de seleção múltipla
@@ -5430,11 +5431,33 @@ function confirmDayResume(){
     if(h>0&&autoOsIds.indexOf(osId)<0)manualEntries.push({osId:osId,approvedHours:h});
   });
 
-  var resume={confirmedAt:new Date().toISOString(),entries:autoEntries.concat(manualEntries)};
+  var allEntries=autoEntries.concat(manualEntries);
+  var resume={confirmedAt:new Date().toISOString(),entries:allEntries};
   localStorage.setItem(getResumeKey(),JSON.stringify(resume));
+
+  // Aplica as apropriações no registro de ponto do dia
+  if(allEntries.length){
+    var hoje=new Date().toLocaleDateString('sv');
+    var ponto=S.pontos.find(function(p){return p.data===hoje;});
+    if(ponto){
+      allEntries.forEach(function(e){
+        var h=parseFloat((e.approvedHours||0).toFixed(2));
+        if(!h)return;
+        var idx=ponto.apropriacoes.findIndex(function(a){return a.osId===e.osId;});
+        if(idx>=0)ponto.apropriacoes[idx].horas=h;
+        else ponto.apropriacoes.push({osId:e.osId,horas:h});
+      });
+      dbSalvarApropriacao(ponto.id,ponto.apropriacoes).catch(function(err){
+        toast('Erro ao salvar apropriações: '+err.message,'err');
+      });
+      if(_apropState[ponto.id])delete _apropState[ponto.id];
+    }
+  }
+
   recalcVelocityFactor();
   saveFocusState(null);
   closeModal('modal-dayresume');
+  renderAprop();renderDash();
   toast('Horas apropriadas — até amanhã!');
 }
 
@@ -6421,6 +6444,15 @@ function setDashTab(tab){
   if(tab==='equipe')renderDashEquipe();
 }
 
+function calcPeriodoVersao(versao){
+  if(!versao||!versao.data)return null;
+  var fim=versao.data; // e.g. '2026-06-15'
+  var d=new Date(fim+'T12:00:00');
+  var prevMonth=d.getMonth()-1,prevYear=d.getFullYear();
+  if(prevMonth<0){prevMonth=11;prevYear--;}
+  var inicio=prevYear+'-'+String(prevMonth+1).padStart(2,'0')+'-16';
+  return{inicio:inicio,fim:fim};
+}
 function calcPeriodoEquipe(offset){
   var hoje=new Date();
   var day=hoje.getDate();
