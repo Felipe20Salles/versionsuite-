@@ -1905,11 +1905,13 @@ async function upsertCurrentUserProfile(){
   if(!newPrefs.status)newPrefs.status=(isNewUser&&!isFirstUser)?'pending':'active';
   if(!existing){
     // Novo usuário: role=null garante fila de espera independente do DEFAULT do banco
-    await sb.from('profiles').insert({id:CURRENT_USER.id,prefs:newPrefs,role:null,avatar_url:avatar});
+    await sb.from('profiles').insert({id:CURRENT_USER.id,prefs:newPrefs,role:null});
   }else{
-    // Usuário existente: atualiza prefs e avatar_url, nunca toca no role
-    await sb.from('profiles').update({prefs:newPrefs,avatar_url:avatar}).eq('id',CURRENT_USER.id);
+    // Usuário existente: só atualiza prefs, nunca toca no role
+    await sb.from('profiles').update({prefs:newPrefs}).eq('id',CURRENT_USER.id);
   }
+  // Tenta atualizar avatar_url separadamente (não bloqueia o fluxo se falhar)
+  if(avatar)sb.from('profiles').update({avatar_url:avatar}).eq('id',CURRENT_USER.id).then(function(){}).catch(function(){});
   return newPrefs.status;
 }
 
