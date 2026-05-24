@@ -134,8 +134,12 @@ function _update() {
     op('concludeOS', oid);
   });
 
-  var b3 = mkBtn('', '↻', 'Trocar OS', function() {
+  var b3 = mkBtn('', '↻', 'Trocar OS (vai para fim da fila Em Andamento)', function() {
     op('trocarFoco');
+  });
+
+  var b5 = mkBtn('', '←', 'Voltar para A Fazer', function() {
+    op('voltarParaAfazer');
   });
 
   var b4 = mkBtn('', '↗', 'Ir ao Kanban', function() {
@@ -146,6 +150,7 @@ function _update() {
   acEl.appendChild(b1);
   acEl.appendChild(b2);
   acEl.appendChild(b3);
+  acEl.appendChild(b5);
   acEl.appendChild(b4);
 }
 

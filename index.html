@@ -506,7 +506,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           <svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><polyline points="8,4 8,8 10,10"/></svg>Ponto &amp; Horas
         </div>
         <div class="nav-item" onclick="goScreen('agenda')">
-          <svg class="nav-icon" viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="12" rx="1.5"/><line x1="1" y1="6" x2="15" y2="6"/><line x1="5" y1="1" x2="5" y2="4"/><line x1="11" y1="1" x2="11" y2="4"/></svg>Agenda de Publicações
+          <svg class="nav-icon" viewBox="0 0 16 16"><rect x="1" y="2" width="14" height="12" rx="1.5"/><line x1="1" y1="6" x2="15" y2="6"/><line x1="5" y1="1" x2="5" y2="4"/><line x1="11" y1="1" x2="11" y2="4"/></svg>Agenda
         </div>
       </div>
     </nav>
@@ -757,14 +757,20 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div class="tab" onclick="setPontoTab(this,'tab-aprop')">Apropriação</div>
           <div class="tab" onclick="setPontoTab(this,'tab-exportar')">Exportar Horas</div>
         </div>
-        <div id="tab-registro"><div id="ponto-list"></div></div>
+        <div id="tab-registro">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-ghost" title="Período anterior" onclick="_pontoFiltro.offset--;renderPontoList()">←</button>
+            <span id="ponto-periodo-label" style="font-size:14px;font-weight:500;min-width:145px;text-align:center"></span>
+            <button class="btn btn-sm btn-ghost" title="Próximo período" onclick="_pontoFiltro.offset++;renderPontoList()">→</button>
+          </div>
+          <div id="ponto-list"></div>
+        </div>
         <div id="tab-importar" style="display:none">
           <div class="card">
             <div style="font-size:13px;font-weight:500;margin-bottom:4px">Importar relatório de ponto</div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
-              Utilize o arquivo <strong>XLSX</strong> exportado pelo sistema LG (<em>RelatorioCartaoDePontoLayout</em>). O XLSX é mais confiável que o CSV — sem problemas de encoding ou quebras de linha.
+            <div style="display:inline-flex;align-items:center;gap:6px;background:var(--accent-alpha,rgba(99,102,241,.12));border:1px solid var(--accent);border-radius:6px;padding:4px 10px;margin-bottom:10px;font-size:12px;color:var(--accent);font-weight:600">
+              📋 O relatório importado deve ser o <strong>Excel Formatado</strong>
             </div>
-
             <!-- Área principal: XLSX -->
             <div class="ponto-import-area" onclick="document.getElementById('ponto-xlsx-input').click()" style="margin-bottom:10px">
               <div style="font-size:28px;color:var(--hint);margin-bottom:8px">📊</div>
@@ -772,14 +778,6 @@ textarea.form-input{resize:vertical;min-height:70px}
               <div style="font-size:11px;color:var(--hint);margin-top:4px">RelatorioCartaoDePontoLayout · Excel (.xlsx)</div>
             </div>
             <input type="file" id="ponto-xlsx-input" accept=".xlsx" style="display:none" onchange="importPontoXLSX(this)">
-
-            <!-- Fallback CSV -->
-            <div style="font-size:11px;color:var(--hint);margin-bottom:6px;text-align:center">ou, se só tiver o CSV:</div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <button class="btn btn-sm btn-ghost" style="flex:1;font-size:11px" onclick="document.getElementById('csv-input').click()">
-                📄 Importar CSV (modo compatibilidade)
-              </button>
-            </div>
             <input type="file" id="csv-input" accept=".csv,.txt" style="display:none" onchange="importCSV(this)">
 
             <div id="import-preview"></div>
@@ -1200,6 +1198,7 @@ textarea.form-input{resize:vertical;min-height:70px}
 <div class="modal-overlay" id="modal-ponto">
   <div class="modal">
     <div class="modal-title" id="modal-ponto-title">Registrar dia de ponto</div>
+    <div id="ponto-modal-acumulado" style="display:none;font-size:12px;color:var(--muted);margin-bottom:10px;padding:6px 10px;background:var(--card2);border-radius:6px;border-left:3px solid var(--accent)"></div>
     <div class="form-row">
       <div class="form-group"><label class="form-label">Data</label><input type="date" class="form-input" id="p-data" onchange="onDataChange()"></div>
       <div class="form-group"><label class="form-label">Dia</label><input class="form-input" id="p-dia" readonly style="color:var(--muted)"></div>
@@ -1207,13 +1206,13 @@ textarea.form-input{resize:vertical;min-height:70px}
     <div class="form-group">
       <label class="form-label">Marcações</label>
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
-        <div><div style="font-size:10px;color:var(--hint);margin-bottom:3px;text-align:center">Entrada</div><input class="marcacao-input" id="p-m1" placeholder="08:00" maxlength="5" oninput="fmtTime(this);calcTotal()"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:10px;color:var(--hint);margin-bottom:1px;text-align:center">Entrada</div><button class="btn btn-xs" onclick="adjustMarcacao('p-m1',1)" style="padding:1px 8px;font-size:11px">▲</button><input class="marcacao-input" id="p-m1" placeholder="08:00" maxlength="5" oninput="fmtTime(this);calcTotal()"><button class="btn btn-xs" onclick="adjustMarcacao('p-m1',-1)" style="padding:1px 8px;font-size:11px">▼</button></div>
         <div style="color:var(--hint);padding-bottom:8px">→</div>
-        <div><div style="font-size:10px;color:var(--hint);margin-bottom:3px;text-align:center">Almoço</div><input class="marcacao-input" id="p-m2" placeholder="12:00" maxlength="5" oninput="fmtTime(this);calcTotal()"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:10px;color:var(--hint);margin-bottom:1px;text-align:center">Almoço</div><button class="btn btn-xs" onclick="adjustMarcacao('p-m2',1)" style="padding:1px 8px;font-size:11px">▲</button><input class="marcacao-input" id="p-m2" placeholder="12:00" maxlength="5" oninput="fmtTime(this);calcTotal()"><button class="btn btn-xs" onclick="adjustMarcacao('p-m2',-1)" style="padding:1px 8px;font-size:11px">▼</button></div>
         <div style="color:var(--hint);padding-bottom:8px">→</div>
-        <div><div style="font-size:10px;color:var(--hint);margin-bottom:3px;text-align:center">Retorno</div><input class="marcacao-input" id="p-m3" placeholder="13:00" maxlength="5" oninput="fmtTime(this);calcTotal()"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:10px;color:var(--hint);margin-bottom:1px;text-align:center">Retorno</div><button class="btn btn-xs" onclick="adjustMarcacao('p-m3',1)" style="padding:1px 8px;font-size:11px">▲</button><input class="marcacao-input" id="p-m3" placeholder="13:00" maxlength="5" oninput="fmtTime(this);calcTotal()"><button class="btn btn-xs" onclick="adjustMarcacao('p-m3',-1)" style="padding:1px 8px;font-size:11px">▼</button></div>
         <div style="color:var(--hint);padding-bottom:8px">→</div>
-        <div><div style="font-size:10px;color:var(--hint);margin-bottom:3px;text-align:center">Saída</div><input class="marcacao-input" id="p-m4" placeholder="17:00" maxlength="5" oninput="fmtTime(this);calcTotal()"></div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:2px"><div style="font-size:10px;color:var(--hint);margin-bottom:1px;text-align:center">Saída</div><button class="btn btn-xs" onclick="adjustMarcacao('p-m4',1)" style="padding:1px 8px;font-size:11px">▲</button><input class="marcacao-input" id="p-m4" placeholder="17:00" maxlength="5" oninput="fmtTime(this);calcTotal()"><button class="btn btn-xs" onclick="adjustMarcacao('p-m4',-1)" style="padding:1px 8px;font-size:11px">▼</button></div>
         <div><div style="font-size:10px;color:var(--hint);margin-bottom:3px">Total</div><div id="p-total" style="font-family:var(--mono);font-size:16px;font-weight:500;color:var(--green-text);padding:6px 0;min-width:48px">--</div></div>
       </div>
     </div>
@@ -1246,6 +1245,18 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div class="form-group"><label class="form-label">Produto</label><select class="form-input" id="pub-produto"></select></div>
     </div>
     <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-input" id="pub-desc" placeholder="Detalhes da publicação..."></textarea></div>
+    <div class="form-group">
+      <label class="form-label">Visibilidade</label>
+      <select class="form-input" id="pub-visibilidade" onchange="onPubVisibChange()">
+        <option value="todos">Todos — agenda pública</option>
+        <option value="equipe">Equipe — visível para sua equipe</option>
+        <option value="privado">Privado — somente você</option>
+      </select>
+    </div>
+    <div id="pub-excecoes-wrap" style="display:none">
+      <label class="form-label" style="margin-bottom:6px">Exceções — usuários externos que também veem</label>
+      <div id="pub-excecoes-list" style="display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow-y:auto;padding:6px;background:var(--card2);border-radius:6px;border:1px solid var(--border2)"></div>
+    </div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-pub')">Cancelar</button>
       <button class="btn btn-danger btn-sm" id="btn-del-pub" style="display:none;margin-right:auto" onclick="deletarPublicacao()">Remover</button>
@@ -1388,6 +1399,16 @@ async function loadEquipes(){
   }catch(e){console.warn('loadEquipes:',e);S_EQUIPES=[];}
 }
 
+async function refreshRoles(){
+  try{
+    var {data}=await sb.from('roles').select('*');
+    if(!data||!data.length)return;
+    S_ROLES=data;
+    S_ROLES.forEach(function(r){ROLE_LABELS[r.nome]=r.label||r.nome;});
+    if(CURRENT_ROLE_NAME){CURRENT_ROLE=S_ROLES.find(function(r){return r.nome===CURRENT_ROLE_NAME})||null;}
+    applyMenuPermissions();
+  }catch(e){}
+}
 async function saveUserRole(userId,newRole){
   var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
   var {data:prof}=await sb.from('profiles').select('prefs').eq('id',userId).single();
@@ -1396,6 +1417,12 @@ async function saveUserRole(userId,newRole){
   var {error}=await sb.from('profiles').update({prefs:prefs,role:newRole}).eq('id',userId);
   if(error){toast('Erro ao salvar role','err');return;}
   u.role=newRole;
+  // Se o usuário alterado é o próprio usuário logado, atualiza permissões imediatamente
+  if(CURRENT_USER&&userId===CURRENT_USER.id){
+    CURRENT_ROLE_NAME=newRole;
+    CURRENT_ROLE=S_ROLES.find(function(r){return r.nome===newRole;})||null;
+    applyMenuPermissions();
+  }
   renderUsersPrefs();
   toast('Role atualizado!');
 }
@@ -1759,9 +1786,10 @@ function rolesPermToggle(roleId,key,val){
 async function rolesSalvar(roleId){
   var r=S_ROLES.find(function(x){return x.id===roleId});
   if(!r)return;
-  var {error}=await sb.from('roles').update({permissoes:r.permissoes}).eq('id',roleId);
-  if(error){toast('Erro ao salvar permissões','err');return;}
-  if(CURRENT_ROLE&&CURRENT_ROLE.id===roleId)CURRENT_ROLE=r;
+  var {data,error}=await sb.from('roles').update({permissoes:r.permissoes}).eq('id',roleId).select();
+  if(error){toast('Erro ao salvar permissões: '+error.message,'err');return;}
+  if(!data||!data.length){toast('Permissões não salvas — adicione política UPDATE na tabela roles no Supabase','err');return;}
+  if(CURRENT_ROLE&&CURRENT_ROLE.id===roleId){CURRENT_ROLE=r;applyMenuPermissions();}
   toast('Permissões salvas!');
 }
 
@@ -1883,6 +1911,8 @@ async function upsertCurrentUserProfile(){
     // Usuário existente: só atualiza prefs, nunca toca no role
     await sb.from('profiles').update({prefs:newPrefs}).eq('id',CURRENT_USER.id);
   }
+  // Tenta atualizar avatar_url separadamente (não bloqueia o fluxo se falhar)
+  if(avatar)sb.from('profiles').update({avatar_url:avatar}).eq('id',CURRENT_USER.id).then(function(){}).catch(function(){});
   return newPrefs.status;
 }
 
@@ -1941,7 +1971,8 @@ var S={versoes:[],oss:[],pontos:[],pontosEquipe:[],publicacoes:[],filtro:'todos'
   prefs:{accent:'#7c6ff7',accentRgb:'124,111,247',lightMode:false,produtos:PROD_SEG.slice()}};
 
 var _agendaMes=new Date().getMonth(),_agendaAno=new Date().getFullYear(),_agendaFiltro='todos';
-var _dashEquipe={periodoOffset:0,equipeId:'todas',pessoaId:'todas'};
+var _dashEquipe={periodoOffset:0,equipeId:'todas',pessoaId:'todas',periodoLivre:{de:'',ate:''}};
+var _pontoFiltro={offset:0};
 var _editingPub=null,_editingVersao=null,_xlsxData=null,_apropState={};
 var _focusInterval=null;
 var _pipInterval=null;
@@ -2100,17 +2131,18 @@ function goScreen(name){
   if(CURRENT_USER&&CURRENT_USER.isVisitor&&telasBloqueadas.indexOf(name)>-1){
     toast('Acesso restrito para visitantes','err');return;
   }
+  refreshRoles(); // atualiza permissões silenciosamente a cada navegação
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
   document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active')});
   var el=document.getElementById('screen-'+name);if(el)el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(function(b){if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+name+"'"))b.classList.add('active')});
-  var titles={dashboard:'Dashboard',kanban:'Kanban',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda de Publicações'};
+  var titles={dashboard:'Dashboard',kanban:'Kanban',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda'};
   var isVisitor=CURRENT_USER&&CURRENT_USER.isVisitor;
   var acts={
     dashboard:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
     kanban:(!isVisitor&&can('os_criar'))?'<button class="btn btn-primary btn-sm" onclick="openNovaOS()">+ Nova OS</button>':'',
     boletim:'',
-    ponto:(!isVisitor&&canMenu('ponto'))?'<button class="btn btn-primary btn-sm" onclick="openNovoRegistro()">+ Adicionar dia</button>':'',
+    ponto:(!isVisitor&&canMenu('ponto'))?'<button class="btn btn-primary btn-sm" onclick="openNovoRegistro()">+ Registrar Ponto</button>':'',
     historico:'',preferencias:'',
     agenda:(!isVisitor&&can('agenda_editar'))?'<button class="btn btn-primary btn-sm" onclick="openNovaPublicacao()">+ Nova publicação</button> <button class="btn btn-sm btn-ghost" onclick="openNewAgendaEvent()">+ Evento pontual</button>':''
   };
@@ -2155,9 +2187,13 @@ function renderDash(){
   }
   var filtroVid=vfEl?vfEl.value:'todas';
 
-  // OSs e pontos filtrados
+  // OSs filtradas por versão; pontos filtrados pelo período da versão (16/mês-1 a 15/mês)
   var ossF=filtroVid==='todas'?S.oss:S.oss.filter(function(o){return o.versaoId===filtroVid});
-  var pontosF=filtroVid==='todas'?S.pontos:S.pontos.filter(function(p){return p.versaoId===filtroVid});
+  var pontosF=S.pontos;
+  if(filtroVid!=='todas'){
+    var vp=calcPeriodoVersao(S.versoes.find(function(v){return v.id===filtroVid}));
+    if(vp)pontosF=S.pontos.filter(function(p){return p.data>=vp.inicio&&p.data<=vp.fim;});
+  }
   var conc=ossF.filter(function(o){return o.status==='concluido'}).length;
   var horasPonto=pontosF.reduce(function(a,p){return a+(p.horasTrabalhadas||0)},0);
   var horasAprop=pontosF.reduce(function(a,p){return a+((p.apropriacoes||[]).reduce(function(b,x){return b+x.horas},0))},0);
@@ -2193,7 +2229,9 @@ function renderDash(){
   ativasEl.innerHTML=ativas.map(function(v){
     var voss=S.oss.filter(function(o){return o.versaoId===v.id});
     var tot=voss.length,cn=voss.filter(function(o){return o.status==='concluido'}).length,pct=tot?Math.round(cn/tot*100):0;
-    var hv=S.pontos.filter(function(p){return p.versaoId===v.id}).reduce(function(a,p){return a+(p.horasTrabalhadas||0)},0);
+    var vper=calcPeriodoVersao(v);
+    var pontosV=vper?S.pontos.filter(function(p){return p.data>=vper.inicio&&p.data<=vper.fim;}):[];
+    var hv=pontosV.reduce(function(a,p){return a+(p.horasTrabalhadas||0)},0);
     return'<div class="versao-card ativa-border" onclick="goKanban(\''+v.id+'\')">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
         '<div style="font-size:15px;font-weight:500">'+v.nome+'</div>'+
@@ -3454,11 +3492,34 @@ function setPontoTabById(tabId){
   if(tabId==='tab-aprop')renderAprop();
   if(tabId==='tab-exportar')renderExportarHoras();
 }
+function _horasHojeAcumuladas(){
+  var hoje=new Date().toLocaleDateString('sv');
+  return S.pontos.filter(function(p){return p.data===hoje;}).reduce(function(a,p){return a+(p.horasTrabalhadas||0);},0);
+}
+function adjustMarcacao(id,delta){
+  var el=document.getElementById(id);
+  var mins=/^\d{2}:\d{2}$/.test(el.value)?toMin(el.value):0;
+  mins=Math.max(0,Math.min(1439,mins+delta));
+  var h=Math.floor(mins/60),m=mins%60;
+  el.value=(h<10?'0':'')+h+':'+(m<10?'0':'')+m;
+  calcTotal();
+}
 function openNovoRegistro(){
   document.getElementById('modal-ponto-title').textContent='Registrar dia de ponto';
   document.getElementById('modal-ponto').dataset.editId='';
-  ['p-data','p-dia','p-m1','p-m2','p-m3','p-m4'].forEach(function(id){document.getElementById(id).value=''});
-  document.getElementById('p-total').textContent='--';openModal('modal-ponto');
+  var now=new Date();
+  var today=now.toLocaleDateString('sv'); // YYYY-MM-DD sem depender de ISO
+  var hh=String(now.getHours()).padStart(2,'0');
+  var mm=String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('p-data').value=today;
+  onDataChange();
+  document.getElementById('p-m1').value=hh+':'+mm;
+  ['p-m2','p-m3','p-m4'].forEach(function(id){document.getElementById(id).value=''});
+  document.getElementById('p-total').textContent='--';
+  var acum=_horasHojeAcumuladas();
+  var acumEl=document.getElementById('ponto-modal-acumulado');
+  if(acumEl){if(acum>0){acumEl.style.display='block';acumEl.textContent='⏱ Horas já registradas hoje: '+acum.toFixed(2)+'h';}else{acumEl.style.display='none';}}
+  openModal('modal-ponto');
 }
 function onDataChange(){var v=document.getElementById('p-data').value;if(!v)return;document.getElementById('p-dia').value=DIAS[new Date(v+'T12:00:00').getDay()]}
 function fmtTime(el){var v=el.value.replace(/\D/g,'');if(v.length>=3)v=v.slice(0,2)+':'+v.slice(2,4);el.value=v}
@@ -3489,7 +3550,13 @@ function salvarPonto(){
 }
 function renderPontoList(){
   var el=document.getElementById('ponto-list');
-  if(!S.pontos.length){el.innerHTML='<div style="color:var(--hint);font-size:13px">Nenhum registro. Clique em "+ Adicionar dia".</div>';return}
+  var pontosFiltrados=S.pontos;
+  var per=calcPeriodoEquipe(_pontoFiltro.offset||0);
+  var de=per.inicio,ate=per.fim;
+  var lbl=document.getElementById('ponto-periodo-label');
+  if(lbl)lbl.textContent=labelPeriodoEquipe(de,ate);
+  pontosFiltrados=pontosFiltrados.filter(function(p){return p.data>=de&&p.data<=ate;});
+  if(!pontosFiltrados.length){el.innerHTML='<div style="color:var(--hint);font-size:13px">Nenhum registro. Clique em "+ Registrar Ponto".</div>';return}
 
   // Toolbar de seleção múltipla
   var toolbar='<div id="ponto-sel-toolbar" style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
@@ -3499,7 +3566,7 @@ function renderPontoList(){
     '<button class="btn btn-xs btn-danger" id="ponto-del-sel" onclick="excluirSelecionados()" style="display:none">🗑 Excluir selecionados</button>'+
   '</div>';
 
-  el.innerHTML=toolbar+S.pontos.map(function(p){
+  el.innerHTML=toolbar+pontosFiltrados.map(function(p){
     var h=p.horasTrabalhadas||0,apTotal=(p.apropriacoes||[]).reduce(function(a,x){return a+x.horas},0);
     var diff=h-apTotal,pct=h>0?Math.min(100,Math.round(apTotal/h*100)):0;
     var barCls=Math.abs(diff)<0.1?'aprop-bar-ok':diff>0?'aprop-bar-under':'aprop-bar-over';
@@ -3586,14 +3653,9 @@ function excluirPonto(id){
 
 // ── APROPRIAÇÃO ───────────────────────────────────────────────────────────────
 function ossParaApropriar(){
-  // Versões ativas + encerradas nos últimos 30 dias
-  var limite=new Date();limite.setDate(limite.getDate()-30);
   return S.oss.filter(function(o){
     var v=S.versoes.find(function(x){return x.id===o.versaoId});
-    if(!v)return false;
-    if(v.ativa)return true;
-    if(v.encerradaEm&&new Date(v.encerradaEm)>=limite)return true;
-    return false;
+    return v&&v.ativa;
   });
 }
 
@@ -3701,10 +3763,16 @@ function autoApropDia(pid){
     setTimeout(function(){attachSlider(pid)},50);
   });
 }
+function ossParaApropriarMinha(){
+  var todas=ossParaApropriar();
+  var meuNome=getDisplayName().trim();
+  var minhas=meuNome?todas.filter(function(o){return(o.atribuicao||'').trim()===meuNome;}):[];
+  return minhas.length?minhas:todas;
+}
 function renderAprop(){
   var el=document.getElementById('aprop-list');
   if(!S.pontos.length){el.innerHTML='<div style="color:var(--hint);font-size:13px">Nenhum registro de ponto. Adicione dias no "Registro diário".</div>';return}
-  var ossDisp=ossParaApropriar();
+  var ossDisp=ossParaApropriarMinha();
   el.innerHTML=S.pontos.map(function(p){
     var st=getApropState(p);
     return'<div class="ponto-day" id="aprop-day-'+p.id+'">'+renderApropDay(p,st,ossDisp)+'</div>';
@@ -3805,7 +3873,7 @@ function attachSlider(pontoId){
           var hl=document.getElementById('h-'+pontoId+'-'+i);if(hl)hl.textContent=parseFloat((h*item.pct/100).toFixed(2))+'h';
         });
       }
-      function onUp(){document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp)}
+      function onUp(){document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);attachSlider(pontoId);}
       document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
     });
   });
@@ -4183,7 +4251,27 @@ function openNovaPublicacao(){
   ['pub-titulo','pub-desc'].forEach(function(id){document.getElementById(id).value=''});
   document.getElementById('pub-inicio').value='';document.getElementById('pub-fim').value='';
   document.getElementById('pub-tipo').value='inline';
+  var vsEl=document.getElementById('pub-visibilidade');if(vsEl)vsEl.value='todos';
+  onPubVisibChange();
   populateProdutoSel();openModal('modal-pub');
+}
+function onPubVisibChange(){
+  var vs=document.getElementById('pub-visibilidade');if(!vs)return;
+  var wrap=document.getElementById('pub-excecoes-wrap');if(wrap)wrap.style.display=vs.value==='equipe'?'block':'none';
+  if(vs.value==='equipe'){
+    var list=document.getElementById('pub-excecoes-list');if(!list)return;
+    var meuEquipeId=CURRENT_USER&&S_USERS.find(function(u){return u.id===CURRENT_USER.id})&&S_USERS.find(function(u){return u.id===CURRENT_USER.id}).equipeId;
+    var externos=S_USERS.filter(function(u){return u.id!==CURRENT_USER.id&&u.equipeId!==meuEquipeId;});
+    var currentExc=(list.dataset.excecoes?JSON.parse(list.dataset.excecoes):[]);
+    list.innerHTML=externos.length?externos.map(function(u){
+      return'<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;padding:3px 6px;border-radius:4px;background:var(--surface)">'+
+        '<input type="checkbox" value="'+u.id+'"'+(currentExc.indexOf(u.id)>-1?' checked':'')+' style="accent-color:var(--accent)">'+escHtml(u.displayName)+'</label>';
+    }).join(''):'<span style="font-size:12px;color:var(--muted)">Nenhum usuário externo à equipe.</span>';
+  }
+}
+function getPubExcecoes(){
+  var list=document.getElementById('pub-excecoes-list');if(!list)return[];
+  return Array.from(list.querySelectorAll('input[type=checkbox]:checked')).map(function(cb){return cb.value;});
 }
 function openEditPub(id){
   var pub=S.publicacoes.find(function(p){return p.id===id});if(!pub)return;
@@ -4195,6 +4283,9 @@ function openEditPub(id){
   document.getElementById('pub-fim').value=pub.fim;
   document.getElementById('pub-desc').value=pub.desc||'';
   document.getElementById('pub-tipo').value=pub.tipo||'inline';
+  var vsEl=document.getElementById('pub-visibilidade');if(vsEl)vsEl.value=pub.visibilidade||'todos';
+  var excList=document.getElementById('pub-excecoes-list');if(excList)excList.dataset.excecoes=JSON.stringify(pub.excecoes||[]);
+  onPubVisibChange();
   populateProdutoSel();
   setTimeout(function(){document.getElementById('pub-produto').value=pub.produto||'Todos'},50);
   openModal('modal-pub');
@@ -4203,7 +4294,8 @@ function salvarPublicacao(){
   var titulo=document.getElementById('pub-titulo').value.trim();
   var inicio=document.getElementById('pub-inicio').value;var fim=document.getElementById('pub-fim').value;
   if(!titulo||!inicio||!fim){toast('Preencha título, início e fim','err');return}
-  var data={titulo:titulo,inicio:inicio,fim:fim,produto:document.getElementById('pub-produto').value,tipo:document.getElementById('pub-tipo').value,desc:document.getElementById('pub-desc').value};
+  var visib=(document.getElementById('pub-visibilidade')&&document.getElementById('pub-visibilidade').value)||'todos';
+  var data={titulo:titulo,inicio:inicio,fim:fim,produto:document.getElementById('pub-produto').value,tipo:document.getElementById('pub-tipo').value,desc:document.getElementById('pub-desc').value,visibilidade:visib,excecoes:visib==='equipe'?getPubExcecoes():[],createdBy:CURRENT_USER&&CURRENT_USER.id};
   if(_editingPub){var i=S.publicacoes.findIndex(function(p){return p.id===_editingPub});if(i>-1)S.publicacoes[i]=Object.assign({},S.publicacoes[i],data)}
   else S.publicacoes.push(Object.assign({id:uid()},data));
   save();closeModal('modal-pub');renderAgenda();toast('Publicação salva');
@@ -4220,9 +4312,20 @@ function renderAgenda(){
   var mesInicio=new Date(_agendaAno,_agendaMes,1);
   var mesFim=new Date(_agendaAno,_agendaMes+1,0);
 
+  var meuId=CURRENT_USER&&CURRENT_USER.id;
+  var meuEquipeId=meuId&&S_USERS.find(function(u){return u.id===meuId})&&S_USERS.find(function(u){return u.id===meuId}).equipeId;
   var pubs=S.publicacoes.filter(function(p){
     if(_agendaFiltro!=='todos'&&p.tipo!==_agendaFiltro)return false;
-    return p.inicio<=mesFim.toISOString().slice(0,10)&&p.fim>=mesInicio.toISOString().slice(0,10);
+    if(!p.inicio||!p.fim)return false;
+    if(p.inicio>mesFim.toISOString().slice(0,10)||p.fim<mesInicio.toISOString().slice(0,10))return false;
+    var vis=p.visibilidade||'todos';
+    if(vis==='privado')return p.createdBy===meuId;
+    if(vis==='equipe'){
+      var pEquipeId=S_USERS.find(function(u){return u.id===p.createdBy;})&&S_USERS.find(function(u){return u.id===p.createdBy;}).equipeId;
+      if(pEquipeId===meuEquipeId)return true; // mesma equipe
+      return(p.excecoes||[]).indexOf(meuId)>-1; // exceção
+    }
+    return true; // todos
   });
 
   // Legenda: uma entrada por canal presente no mês (não por publicação)
@@ -4670,7 +4773,7 @@ async function dbSalvarPrefs(){
   // Preserva campos do profile (role, displayName, etc.) ao salvar preferências visuais
   var me=S_USERS.find(function(u){return u.id===CURRENT_USER.id});
   var meta=CURRENT_USER.user_metadata||{};
-  await sb.from('profiles').update({prefs:{
+  var {error}=await sb.from('profiles').update({prefs:{
     accent:S.prefs.accent,accentRgb:S.prefs.accentRgb,lightMode:S.prefs.lightMode,
     role:me?me.role:'visualizador',
     displayName:me?me.displayName:(meta.full_name||meta.name||''),
@@ -4678,6 +4781,7 @@ async function dbSalvarPrefs(){
     email:CURRENT_USER.email||'',
     colorIdx:me?me.colorIdx:null
   }}).eq('id',CURRENT_USER.id);
+  if(error)toast('Erro ao salvar preferências: '+error.message,'err');
 }
 
 // ── PATCH NAS FUNÇÕES EXISTENTES ──────────────────────────────────────────────
@@ -5030,8 +5134,14 @@ function openDayPlanModal(force){
   if(greetEl)greetEl.textContent=greeting+(CURRENT_USER&&CURRENT_USER.user_metadata&&CURRENT_USER.user_metadata.full_name?', '+(CURRENT_USER.user_metadata.full_name.split(' ')[0]):'')+'!';
   if(dateEl)dateEl.textContent=dias[now.getDay()]+', '+now.getDate()+' de '+meses[now.getMonth()]+' de '+now.getFullYear();
 
-  var vf=getVelocityFactor();
+  renderDayPlanOsList();
+  openModal('modal-dayplan');
+}
+function renderDayPlanOsList(){
+  var plan=getDayPlan();
+  var meuNome=getDisplayName().trim();
   var andamento=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer'});
+  if(meuNome)andamento=andamento.filter(function(o){return(o.atribuicao||'').trim()===meuNome;});
   // Prioridade: andamento primeiro, depois porte (epico > grande > normal > rapida)
   var ordemPorte={epico:0,grande:1,normal:2,rapida:3};
   andamento.sort(function(a,b){
@@ -5044,7 +5154,6 @@ function openDayPlanModal(force){
 
   var savedEntries=(plan&&plan.entries)||[];
   var cargaDiaria=getSchedule().cargaDiaria||8;
-  // Pré-distribuição proporcional: distribui cargaDiaria pelo estimatedHours de cada OS
   var totalEst=andamento.reduce(function(s,o){return s+(o.estimatedHours||2);},0);
   var list=document.getElementById('dayplan-os-list');
   if(!list)return;
@@ -5066,16 +5175,14 @@ function openDayPlanModal(force){
         +' onchange="updateDayPlanTotal()">'
         +'<div class="dayplan-os-info">'
         +'<div class="dayplan-os-title"><span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px;margin-right:6px">'+porte.label+'</span>#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)+'</div>'
-        +'<div class="dayplan-os-sub">Estimativa: '+(os.estimatedHours||0)+'h</div>'
+        +'<div class="dayplan-os-sub">'+(os.atribuicao?'<span style="font-size:11px;color:var(--accent)">'+escHtml(os.atribuicao)+'</span> · ':'')+'Estimativa: '+(os.estimatedHours||0)+'h</div>'
         +'</div>'
-        +'<input class="dayplan-h-input" type="number" min="0.5" step="0.5" value="'+suggestedH
-        +'" id="dayplan-h-'+os.id+'" oninput="updateDayPlanTotal()">'
++(function(){var opts=[0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8,9,10];var optHtml=opts.map(function(v){var sel=Math.abs(v-suggestedH)<0.01?' selected':'';return'<option value="'+v+'"'+sel+'>'+v+'h</option>';}).join('');return'<select class="dayplan-h-input" id="dayplan-h-'+os.id+'" onchange="updateDayPlanTotal()" style="width:72px;cursor:pointer">'+optHtml+'</select>';})()
         +'<span style="font-size:12px;color:var(--muted)">h</span>'
         +'</div>';
     }).join('');
 
   updateDayPlanTotal();
-  openModal('modal-dayplan');
 }
 
 function updateDayPlanTotal(){
@@ -5328,11 +5435,33 @@ function confirmDayResume(){
     if(h>0&&autoOsIds.indexOf(osId)<0)manualEntries.push({osId:osId,approvedHours:h});
   });
 
-  var resume={confirmedAt:new Date().toISOString(),entries:autoEntries.concat(manualEntries)};
+  var allEntries=autoEntries.concat(manualEntries);
+  var resume={confirmedAt:new Date().toISOString(),entries:allEntries};
   localStorage.setItem(getResumeKey(),JSON.stringify(resume));
+
+  // Aplica as apropriações no registro de ponto do dia
+  if(allEntries.length){
+    var hoje=new Date().toLocaleDateString('sv');
+    var ponto=S.pontos.find(function(p){return p.data===hoje;});
+    if(ponto){
+      allEntries.forEach(function(e){
+        var h=parseFloat((e.approvedHours||0).toFixed(2));
+        if(!h)return;
+        var idx=ponto.apropriacoes.findIndex(function(a){return a.osId===e.osId;});
+        if(idx>=0)ponto.apropriacoes[idx].horas=h;
+        else ponto.apropriacoes.push({osId:e.osId,horas:h});
+      });
+      dbSalvarApropriacao(ponto.id,ponto.apropriacoes).catch(function(err){
+        toast('Erro ao salvar apropriações: '+err.message,'err');
+      });
+      if(_apropState[ponto.id])delete _apropState[ponto.id];
+    }
+  }
+
   recalcVelocityFactor();
   saveFocusState(null);
   closeModal('modal-dayresume');
+  renderAprop();renderDash();
   toast('Horas apropriadas — até amanhã!');
 }
 
@@ -5413,7 +5542,7 @@ function populateEventAtividade(){
   var sel=document.getElementById('aev-atividade');if(!sel)return;
   var tipos=getTipoAtividades();
   sel.innerHTML='<option value="">Sem tipo</option>'+tipos.map(function(t){
-    return'<option value="'+t.id+'">'+escHtml(t.name)+'</option>';
+    return'<option value="'+escHtml(t)+'">'+escHtml(t)+'</option>';
   }).join('');
 }
 
@@ -5735,11 +5864,20 @@ function trocarFoco(){
   var st=getFocusState();if(!st)return;
   // Encontra próxima em andamento ANTES de mover a atual
   var next=S.oss.find(function(o){return o.status==='andamento'&&o.id!==st.osId;});
-  // Devolve OS atual para "afazer"
+  // Mantém a OS atual em "andamento" mas a move para o fim da fila (último no array)
   var os=S.oss.find(function(o){return o.id===st.osId;});
-  if(os){os.status='afazer';dbMoverOS(os.id,'afazer').catch(function(){});}
+  if(os){var idx=S.oss.indexOf(os);if(idx>-1){S.oss.splice(idx,1);S.oss.push(os);}}
   if(next){startFocus(next.id);}
   else{saveFocusState(null);updateFocusUI();renderKanban();updatePipUI();toast('Fila de andamento vazia');}
+}
+function voltarParaAfazer(){
+  var st=getFocusState();if(!st)return;
+  var next=S.oss.find(function(o){return o.status==='andamento'&&o.id!==st.osId;});
+  var os=S.oss.find(function(o){return o.id===st.osId;});
+  if(os){os.status='afazer';dbMoverOS(os.id,'afazer').catch(function(){});}
+  if(next){startFocus(next.id);}else{saveFocusState(null);updateFocusUI();updatePipUI();}
+  renderKanban();
+  toast('OS devolvida para A Fazer');
 }
 
 function alternarFoco(){
@@ -5929,7 +6067,7 @@ function setPesoValue(h){
 }
 
 // ── ALERTAS / SINO (vs_alerts_YYYY-MM-DD) ────────────────────────────────────
-var _alertsKey=function(){return'vs_alerts_'+new Date().toISOString().slice(0,10)};
+var _alertsKey=function(){return'vs_alerts_'+new Intl.DateTimeFormat('sv',{timeZone:'America/Sao_Paulo'}).format(new Date());};
 function getAlerts(){try{return JSON.parse(localStorage.getItem(_alertsKey()))||[]}catch(e){return[]}}
 function saveAlerts(arr){localStorage.setItem(_alertsKey(),JSON.stringify(arr))}
 
@@ -6007,16 +6145,24 @@ function fireAlert(type,message,action){
 var _lastActivityAt=Date.now();
 function touchActivity(){_lastActivityAt=Date.now()}
 
+function _nowBrasilia(){
+  var now=new Date();
+  var fmt=new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hour12:false});
+  return{hhmm:fmt.format(now).replace(',','').trim(),
+    min:parseInt(fmt.format(now).split(':')[0]||'0',10)*60+parseInt((fmt.format(now).split(':')[1]||'0'),10),
+    dateISO:new Intl.DateTimeFormat('sv',{timeZone:'America/Sao_Paulo'}).format(now)};
+}
 function checkAlerts(){
   var s=getSchedule();
+  var bsb=_nowBrasilia();
+  var hhmm=bsb.hhmm;
   var now=new Date();
-  var hhmm=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
 
   // Início do expediente
   if(hhmm===s.entrada){
     fireAlert('inicio','Bom dia! Hora de planejar seu dia — que tal começar pelo planejamento?');
     // If no day plan yet, open planning modal
-    var planKey='vs_dayplan_'+now.toISOString().slice(0,10);
+    var planKey='vs_dayplan_'+bsb.dateISO;
     var plan=null;try{plan=JSON.parse(localStorage.getItem(planKey))}catch(e){}
     if((!plan||!plan.confirmedAt)&&typeof openDayPlanModal==='function')setTimeout(openDayPlanModal,500);
   }
@@ -6036,7 +6182,7 @@ function checkAlerts(){
 
   // Fim do expediente (15 min antes)
   var saidaMin=toMin(s.saida||'17:00');
-  var nowMin=now.getHours()*60+now.getMinutes();
+  var nowMin=bsb.min;
   if(nowMin===saidaMin-15){
     fireAlert('fim','Expediente quase no fim. Hora de fechar as OSs do dia e apropriar as horas.');
   }
@@ -6044,6 +6190,18 @@ function checkAlerts(){
   // Hora extra (30 min após saída)
   if(nowMin===saidaMin+30){
     fireAlert('extra','Ainda por aqui? Você é muito dedicado! Não esqueça de registrar tudo antes de sair.');
+  }
+
+  // Eventos Pontuais da Agenda: alertar 15 min antes do início
+  if(typeof getEventsForDate==='function'){
+    var evsDia=getEventsForDate(bsb.dateISO);
+    evsDia.forEach(function(ev){
+      if(!ev.startTime)return;
+      var evMin=toMin(ev.startTime);
+      if(nowMin===evMin-15){
+        fireAlert('evento-'+ev.id+'-'+bsb.dateISO,'🗓 Evento em 15 min: '+(ev.title||'Sem título'));
+      }
+    });
   }
 
   updateBellUI();
@@ -6290,6 +6448,15 @@ function setDashTab(tab){
   if(tab==='equipe')renderDashEquipe();
 }
 
+function calcPeriodoVersao(versao){
+  if(!versao||!versao.data)return null;
+  var fim=versao.data; // e.g. '2026-06-15'
+  var d=new Date(fim+'T12:00:00');
+  var prevMonth=d.getMonth()-1,prevYear=d.getFullYear();
+  if(prevMonth<0){prevMonth=11;prevYear--;}
+  var inicio=prevYear+'-'+String(prevMonth+1).padStart(2,'0')+'-16';
+  return{inicio:inicio,fim:fim};
+}
 function calcPeriodoEquipe(offset){
   var hoje=new Date();
   var day=hoje.getDate();
@@ -6337,8 +6504,13 @@ async function atualizarDashEquipe(){
 
 async function renderDashEquipe(){
   var el=document.getElementById('dash-screen-equipe');if(!el)return;
-  var periodo=calcPeriodoEquipe(_dashEquipe.periodoOffset);
-  var label=labelPeriodoEquipe(periodo.inicio,periodo.fim);
+  var periodoLivre=_dashEquipe.periodoLivre||{de:'',ate:''};
+  var periodo=periodoLivre.de&&periodoLivre.ate
+    ?{inicio:periodoLivre.de,fim:periodoLivre.ate}
+    :calcPeriodoEquipe(_dashEquipe.periodoOffset);
+  var label=periodoLivre.de&&periodoLivre.ate
+    ?fmtDate(periodoLivre.de)+' – '+fmtDate(periodoLivre.ate)
+    :labelPeriodoEquipe(periodo.inicio,periodo.fim);
   var showEquipeFilter=can('dashboard_todas_equipes')||isAdmin();
   var equipes=showEquipeFilter?S_EQUIPES:S_EQUIPES.filter(function(e){return e.gestorId===CURRENT_USER.id;});
   if(!showEquipeFilter&&equipes.length)_dashEquipe.equipeId=equipes[0].id;
@@ -6359,9 +6531,13 @@ async function renderDashEquipe(){
     '</select>';
   el.innerHTML=
     '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap">'+
-      '<button class="btn btn-sm btn-ghost" onclick="_dashEquipe.periodoOffset--;S.pontosEquipe=[];renderDashEquipe()">←</button>'+
+      '<button class="btn btn-sm btn-ghost" title="Período anterior" onclick="_dashEquipe.periodoLivre={de:\'\',ate:\'\'};_dashEquipe.periodoOffset--;S.pontosEquipe=[];renderDashEquipe()">←</button>'+
       '<span style="font-size:14px;font-weight:500;min-width:145px;text-align:center">'+label+'</span>'+
-      '<button class="btn btn-sm btn-ghost" onclick="_dashEquipe.periodoOffset++;S.pontosEquipe=[];renderDashEquipe()">→</button>'+
+      '<button class="btn btn-sm btn-ghost" title="Próximo período" onclick="_dashEquipe.periodoLivre={de:\'\',ate:\'\'};_dashEquipe.periodoOffset++;S.pontosEquipe=[];renderDashEquipe()">→</button>'+
+      '<span style="font-size:12px;color:var(--muted);margin-left:8px">De</span>'+
+      '<input type="date" value="'+(periodoLivre.de||'')+'" class="form-input" style="width:130px;font-size:12px" onchange="_dashEquipe.periodoLivre.de=this.value;S.pontosEquipe=[];renderDashEquipe()">'+
+      '<span style="font-size:12px;color:var(--muted)">Até</span>'+
+      '<input type="date" value="'+(periodoLivre.ate||'')+'" class="form-input" style="width:130px;font-size:12px" onchange="_dashEquipe.periodoLivre.ate=this.value;S.pontosEquipe=[];renderDashEquipe()">'+
       (equipeFilterHtml?'<div style="margin-left:8px">'+equipeFilterHtml+'</div>':'')+
       '<div>'+pessoaFilterHtml+'</div>'+
       '<button class="btn btn-sm btn-ghost" style="margin-left:auto" onclick="atualizarDashEquipe()">↻ Atualizar</button>'+
@@ -6542,13 +6718,16 @@ function matchProdutoRedmine(redmineProjectName){
   if(!redmineProjectName)return'';
   var lower=redmineProjectName.toLowerCase();
   var prods=(S.prefs&&S.prefs.produtos)||[];
+  // Exact match (nome completo) tem prioridade
   var exact=prods.find(function(p){return p.toLowerCase()===lower});
   if(exact)return exact;
-  var partial=prods.find(function(p){
+  // Parcial: entre todos os que batem como substring, prefere o mais longo (mais específico)
+  var parciais=prods.filter(function(p){
     var pl=p.toLowerCase();
     return lower.indexOf(pl)>-1||pl.indexOf(lower)>-1;
   });
-  return partial||redmineProjectName;
+  if(parciais.length)return parciais.reduce(function(best,p){return p.length>best.length?p:best;});
+  return redmineProjectName;
 }
 async function importarDoRedmine(){
   var cfg=getRedmineConfig();
@@ -6867,8 +7046,7 @@ var __paralelo_config = {
     <div id="dayplan-greeting" style="font-size:18px;font-weight:600;margin-bottom:4px"></div>
     <div id="dayplan-date" style="font-size:12px;color:var(--muted);margin-bottom:20px"></div>
     <div class="modal-title" style="margin-bottom:12px">Planejamento do dia</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:16px">Selecione as OSs que vai trabalhar hoje e ajuste as horas estimadas.</div>
-    <div id="dayplan-os-list" style="max-height:320px;overflow-y:auto"></div>
+    <div id="dayplan-os-list" style="max-height:300px;overflow-y:auto"></div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
       <div>
         <div style="font-size:11px;color:var(--muted)">Total planejado</div>
@@ -7014,7 +7192,7 @@ var __paralelo_config = {
   </div>
 </div>
 <!-- FOCO PiP STRIP (mini indicador borda direita) -->
-<div id="pip-strip-indicator" onclick="openPipWindow()" title="Abrir painel de foco" style="display:none;position:fixed;right:0;top:50%;transform:translateY(-50%);width:14px;height:56px;background:rgba(16,185,129,.35);border-radius:6px 0 0 6px;cursor:pointer;z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;transition:background .2s">
+<div id="pip-strip-indicator" onclick="openPipWindow()" title="Abrir painel de foco" style="display:none;position:fixed;right:0;top:50%;transform:translateY(-50%);width:17px;height:73px;background:rgba(16,185,129,.35);border-radius:6px 0 0 6px;cursor:pointer;z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;transition:background .2s">
   <div style="width:5px;height:5px;border-radius:50%;background:#10b981" id="pip-si-dot"></div>
   <div style="width:3px;height:3px;border-radius:50%;background:#10b981;opacity:.5"></div>
   <div style="width:3px;height:3px;border-radius:50%;background:#10b981;opacity:.5"></div>
