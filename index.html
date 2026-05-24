@@ -1786,8 +1786,9 @@ function rolesPermToggle(roleId,key,val){
 async function rolesSalvar(roleId){
   var r=S_ROLES.find(function(x){return x.id===roleId});
   if(!r)return;
-  var {error}=await sb.from('roles').update({permissoes:r.permissoes}).eq('id',roleId);
-  if(error){toast('Erro ao salvar permissões','err');return;}
+  var {data,error}=await sb.from('roles').update({permissoes:r.permissoes}).eq('id',roleId).select();
+  if(error){toast('Erro ao salvar permissões: '+error.message,'err');return;}
+  if(!data||!data.length){toast('Permissões não salvas — adicione política UPDATE na tabela roles no Supabase','err');return;}
   if(CURRENT_ROLE&&CURRENT_ROLE.id===roleId){CURRENT_ROLE=r;applyMenuPermissions();}
   toast('Permissões salvas!');
 }
