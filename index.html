@@ -534,6 +534,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div class="foco-dropdown" id="foco-dropdown" style="display:none"></div>
         </div>
         <button class="btn btn-sm btn-ghost" id="btn-revisar-plano" onclick="openDayPlanModal(true)" style="font-size:11px;padding:4px 10px;white-space:nowrap">📋 Revisar plano</button>
+        <button class="btn btn-sm btn-ghost" onclick="goScreen('ponto')" style="font-size:11px;padding:4px 10px;white-space:nowrap">🕐 Ponto</button>
         <div style="position:relative" id="bell-container">
           <div class="bell-wrap" onclick="toggleBellDropdown()">
             <span class="bell-icon" id="bell-icon">🔔</span>
@@ -5330,6 +5331,9 @@ function renderResumeOsList(planEntries,trackedByOs,extraOsIds){
     var porte=os?osPorteFromHours(os.estimatedHours||0):{key:'normal',label:'Normal',cls:'peso-badge-normal'};
     html+=_resumeOsRowHtml(osId,title,null,autoMap[osId],porte,true,true);
   });
+  // Eventos da agenda de hoje
+  var agendaEvs=getTodayAgendaEvents();
+  agendaEvs.forEach(function(ev){html+=_resumeAgendaRowHtml(ev);});
   listEl.innerHTML=html||'<div style="text-align:center;padding:20px;font-size:12px;color:var(--hint)">Nenhuma OS rastreada hoje.</div>';
   updateResumeTotal();
 }
@@ -5359,6 +5363,29 @@ function _resumeOsRowHtml(osId,title,planned,tracked,porte,isExtra,isAuto){
     +'</div></div>';
 }
 
+function _resumeAgendaRowHtml(ev){
+  var horas=agendaEventHoras(ev);
+  var temOS=!!ev.osId;
+  var os=temOS?S.oss.find(function(o){return o.id===ev.osId}):null;
+  var osLabel=os?('#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)):(ev.osTitle?escHtml(ev.osTitle):'—');
+  var timeRange=ev.startTime?(ev.startTime+(ev.endTime?'–'+ev.endTime:'')):'';
+  var apropriarCell=temOS
+    ?'<div class="resume-cell" style="border:1px solid rgba(124,111,247,.3)"><div class="resume-cell-lbl">Apropriar</div>'
+      +'<input class="resume-h-input" value="'+horas+'" data-osid="'+escHtml(ev.osId)+'" oninput="updateResumeTotal()"></div>'
+    :'<div class="resume-cell" style="border:1px solid rgba(245,158,11,.3)"><div class="resume-cell-lbl">Apropriar</div>'
+      +'<div class="resume-cell-val" style="color:#f59e0b;font-size:11px">⚠ Associe um card</div></div>';
+  return'<div class="resume-os-row">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+    +'<span style="font-size:10px;padding:1px 7px;border-radius:10px;background:rgba(124,111,247,.15);color:#a78bfa;border:1px solid rgba(124,111,247,.3)">📅 Agenda</span>'
+    +'<div style="flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(ev.title)+'</div>'
+    +(timeRange?'<span style="font-size:10px;color:var(--muted);font-family:var(--mono)">'+timeRange+'</span>':'')
+    +'</div>'
+    +'<div class="resume-os-grid">'
+    +'<div class="resume-cell"><div class="resume-cell-lbl">OS</div><div class="resume-cell-val" style="color:'+(temOS?'var(--text)':'var(--muted)')+';font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+osLabel+'</div></div>'
+    +'<div class="resume-cell"><div class="resume-cell-lbl">Duração</div><div class="resume-cell-val" style="color:'+(horas>0?'#10b981':'var(--muted)')+'">'+horas+'h</div></div>'
+    +apropriarCell
+    +'</div></div>';
+}
 function updateResumeTotal(){
   var inputs=document.querySelectorAll('.resume-h-input');
   var total=0;inputs.forEach(function(inp){total+=parseFloat(inp.value)||0});
@@ -5467,6 +5494,23 @@ function confirmDayResume(){
 // ── AGENDA: EVENTOS PONTUAIS (vs_agenda_events) ───────────────────────────────
 function getAgendaEvents(){try{return JSON.parse(localStorage.getItem('vs_agenda_events'))||[]}catch(e){return[]}}
 function saveAgendaEvents(evs){localStorage.setItem('vs_agenda_events',JSON.stringify(evs))}
+function getTodayAgendaEvents(){
+  var hoje=new Date().toISOString().slice(0,10);
+  var dow=new Date().getDay();
+  var dom=new Date().getDate();
+  return getAgendaEvents().filter(function(ev){
+    var r=ev.recurrence||{type:'none'};
+    if(r.type==='weekly')return(r.days||[]).indexOf(dow)>=0;
+    if(r.type==='monthly')return r.dayOfMonth===dom;
+    return ev.startDate===hoje;
+  });
+}
+function agendaEventHoras(ev){
+  if(!ev.startTime||!ev.endTime)return 0;
+  var p1=ev.startTime.split(':'),p2=ev.endTime.split(':');
+  var min=parseInt(p2[0])*60+parseInt(p2[1])-parseInt(p1[0])*60-parseInt(p1[1]);
+  return Math.max(0,parseFloat((min/60).toFixed(2)));
+}
 
 var _aevEditId=null;
 var _aevSelectedOs=null;
