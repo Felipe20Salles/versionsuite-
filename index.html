@@ -4975,6 +4975,9 @@ function salvarPonto(){
   var dia=document.getElementById('p-dia').value;
   var versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
   var editId=document.getElementById('modal-ponto').dataset.editId;
+  // Captura marcações anteriores antes do save para detectar transição < 4 → 4
+  var pontoExist=editId?S.pontos.find(function(p){return p.id===editId}):S.pontos.find(function(p){return p.data===data});
+  var marcAntes=pontoExist&&pontoExist.marcacoes?pontoExist.marcacoes.trim().split(/\s+/).filter(Boolean):[];
   var pontoId=editId||uid();
   var reg={id:pontoId,data:data,dia:dia,marcacoes:marcacoes,horasTrabalhadas:horasTrabalhadas,versaoId:versaoId,apropriacoes:[]};
   if(editId){var ep=S.pontos.find(function(p){return p.id===editId});if(ep)reg.apropriacoes=ep.apropriacoes||[]}
@@ -4988,17 +4991,23 @@ function salvarPonto(){
     if(ms.length===4){
       var resumeKey=getResumeKey();var existing=null;
       try{existing=JSON.parse(localStorage.getItem(resumeKey))}catch(ex){}
-      if(!existing||!existing.confirmedAt){setTimeout(openDayResumeModal,600);}
+      // Abre se nunca confirmado OU se a 4ª marcação acabou de ser adicionada (veio de < 4)
+      var eraIncompleto=marcAntes.length<4;
+      if(!existing||!existing.confirmedAt||eraIncompleto){
+        if(existing&&existing.confirmedAt&&eraIncompleto){
+          delete existing.confirmedAt;
+          localStorage.setItem(resumeKey,JSON.stringify(existing));
+        }
+        setTimeout(openDayResumeModal,600);
+      }
     }
   }).catch(function(e){toast('Erro: '+e.message,'err')});
 }
 
 function excluirPonto(id){
   if(!confirm('Excluir este registro de ponto e todas as apropriações do dia?'))return;
-  var ponto=S.pontos.find(function(p){return p.id===id});
   dbDeletarPonto(id).then(function(){
     S.pontos=S.pontos.filter(function(p){return p.id!==id});
-    if(ponto&&ponto.data===new Date().toISOString().slice(0,10))localStorage.removeItem(getResumeKey());
     delete _apropState[id];renderPontoList();renderDash();toast('Registro excluído');
   }).catch(function(e){toast('Erro: '+e.message,'err')});
 }
