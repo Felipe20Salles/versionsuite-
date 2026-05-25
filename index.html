@@ -5314,6 +5314,10 @@ function openDayResumeModal(){
     +'<div class="resume-stat-box" style="border-color:'+(diff>=0?'rgba(16,185,129,.3)':'rgba(245,158,11,.3)')+'"><div class="resume-stat-val" style="color:'+(diff>=0?'#10b981':'#f59e0b')+'">'+(diff>=0?'+':'')+diff+'h</div><div class="resume-stat-lbl">'+(diff>=0?'Acima do plano':'Abaixo do plano')+'</div></div>';
   var cel=document.getElementById('resume-celebration');
   if(cel)cel.style.display=diff>=0?'block':'none';
+  var hoje=now.toLocaleDateString('sv');
+  var pontoHoje=S.pontos.find(function(p){return p.data===hoje;});
+  var phEl=document.getElementById('resume-ponto-horas');
+  if(phEl)phEl.textContent=pontoHoje&&pontoHoje.horasTrabalhadas>0?pontoHoje.horasTrabalhadas.toFixed(2)+'h':'—';
   renderResumeOsList(planEntries,trackedByOs,extraOsIds);
   openModal('modal-dayresume');
 }
@@ -7167,9 +7171,15 @@ var __paralelo_config = {
       </div>
     </div>
     <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;margin-top:16px">
-      <div>
-        <div style="font-size:12px;color:var(--muted)">Total a apropriar</div>
-        <div style="font-size:10px;color:var(--hint);margin-top:2px">Salvo e disponível para exportar ao Redmine</div>
+      <div style="display:flex;gap:24px;align-items:flex-end">
+        <div>
+          <div style="font-size:12px;color:var(--muted)">Horas no ponto</div>
+          <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--muted)" id="resume-ponto-horas">—</div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--muted)">Total a apropriar</div>
+          <div style="font-size:10px;color:var(--hint);margin-top:2px">Salvo e disponível para exportar ao Redmine</div>
+        </div>
       </div>
       <div style="font-size:22px;font-weight:700;font-family:var(--mono);color:var(--accent)" id="resume-total">0h</div>
     </div>
