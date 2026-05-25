@@ -810,6 +810,29 @@ textarea.form-input{resize:vertical;min-height:70px}
               <button class="btn btn-sm" id="btn-enviar-redmine" style="display:none" onclick="enviarAoRedmine()">📤 Enviar ao Redmine</button>
             </div>
           </div>
+          <div class="card">
+            <div style="font-size:13px;font-weight:500;margin-bottom:4px">Corrigir atividade em lançamentos existentes</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">Busca lançamentos já enviados ao Redmine e aplica uma atividade em lote — útil para corrigir envios anteriores sem atividade.</div>
+            <div style="display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+              <div class="form-group" style="margin:0;min-width:130px">
+                <label class="form-label">De</label>
+                <input type="date" class="form-input" id="fix-data-ini">
+              </div>
+              <div class="form-group" style="margin:0;min-width:130px">
+                <label class="form-label">Até</label>
+                <input type="date" class="form-input" id="fix-data-fim">
+              </div>
+              <div class="form-group" style="margin:0;min-width:170px">
+                <label class="form-label">Atividade a aplicar</label>
+                <select class="form-input" id="fix-atividade" style="font-size:12px;padding:6px 8px"></select>
+              </div>
+              <button class="btn btn-sm btn-primary" onclick="corrigirAtividadesRedmine()">↻ Buscar e corrigir</button>
+            </div>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer;user-select:none">
+              <input type="checkbox" id="fix-apenas-sem" checked style="accent-color:var(--accent);width:14px;height:14px">
+              Apenas lançamentos sem atividade definida
+            </label>
+          </div>
         </div>
       </div>
 
@@ -6417,7 +6440,74 @@ function removeTipoAtividade(i){
 // ── EXPORTAR HORAS (Redmine CSV) ──────────────────────────────────────────────
 var REDMINE_FORMATO_HORAS='decimal';
 var _exportRows=[];
+function _populateFixAtividade(){
+  var sel=document.getElementById('fix-atividade');if(!sel)return;
+  var tipos=getTipoAtividades().filter(function(t){return t.id!=null});
+  sel.innerHTML=tipos.length
+    ?tipos.map(function(t){return'<option value="'+t.id+'">'+escHtml(t.name)+'</option>';}).join('')
+    :'<option value="">— sem atividades configuradas —</option>';
+  // pré-preenche datas com o mês atual se vazias
+  var ini=document.getElementById('fix-data-ini');
+  var fim=document.getElementById('fix-data-fim');
+  if(ini&&!ini.value){var d=new Date();ini.value=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';}
+  if(fim&&!fim.value){fim.value=new Date().toISOString().slice(0,10);}
+}
+async function corrigirAtividadesRedmine(){
+  var cfg=getRedmineConfig();
+  if(!cfg.proxyUrl||!cfg.proxy){toast('Ative o proxy Redmine nas Preferências','err');return;}
+  var ini=document.getElementById('fix-data-ini').value;
+  var fim=document.getElementById('fix-data-fim').value;
+  var actId=parseInt(document.getElementById('fix-atividade').value)||null;
+  var apenasSem=(document.getElementById('fix-apenas-sem')||{}).checked;
+  if(!ini||!fim){toast('Informe o período','err');return;}
+  if(!actId){toast('Selecione uma atividade com ID válido','err');return;}
+  // busca paginada
+  var entries=[],offset=0,limit=100,total=Infinity;
+  toast('Buscando lançamentos no Redmine...');
+  try{
+    while(entries.length<total){
+      var res=await _redmineFetch(cfg,'/time_entries.json?user_id=me&from='+ini+'&to='+fim+'&limit='+limit+'&offset='+offset,'GET');
+      if(!res.ok){var et='HTTP '+res.status;try{var ej=await res.json();et=ej.errors?ej.errors.join(', '):(ej.error||et);}catch(e2){}throw new Error(et);}
+      var data=await res.json();
+      total=data.total_count||0;
+      var batch=data.time_entries||[];
+      entries=entries.concat(batch);
+      offset+=batch.length;
+      if(!batch.length)break;
+    }
+  }catch(e){toast('Erro ao buscar: '+e.message,'err');return;}
+  var toFix=apenasSem?entries.filter(function(e){return!e.activity||!e.activity.id;}):entries;
+  if(!toFix.length){
+    toast(apenasSem?'Todos os lançamentos do período já têm atividade ✓':'Nenhum lançamento encontrado no período','err');
+    return;
+  }
+  var actLabel=(getTipoAtividades().find(function(t){return String(t.id)===String(actId)})||{name:String(actId)}).name;
+  var ok=await modalConfirm(
+    'Corrigir atividades em lote',
+    '<strong>'+toFix.length+'</strong> lançamento(s) de <strong>'+ini+'</strong> a <strong>'+fim+'</strong>'+
+    (apenasSem?' sem atividade':'')+' receberão a atividade <strong>'+escHtml(actLabel)+'</strong>.<br>'+
+    '<span style="font-size:11px;color:var(--muted)">Total encontrado no período: '+entries.length+(apenasSem?', sem atividade: '+toFix.length:'')+'</span>',
+    'Corrigir','btn-primary'
+  );
+  if(!ok)return;
+  var sucesso=0,erros=0,erroMsgs=[];
+  for(var i=0;i<toFix.length;i++){
+    var entry=toFix[i];
+    try{
+      var r=await _redmineFetch(cfg,'/time_entries/'+entry.id+'.json','PUT',{time_entry:{activity_id:actId}});
+      if(!r.ok){var eb='HTTP '+r.status;try{var ej2=await r.json();eb=ej2.errors?ej2.errors.join(', '):(ej2.error||eb);}catch(e3){}throw new Error(eb);}
+      sucesso++;
+    }catch(ex){erros++;erroMsgs.push('#'+entry.id+': '+(ex.message||'erro'));}
+  }
+  if(erros){
+    var det=erroMsgs.slice(0,3).join(' | ')+(erroMsgs.length>3?' (+'+(erroMsgs.length-3)+' mais)':'');
+    toast(sucesso+' corrigido(s), '+erros+' erro(s): '+det,'err');
+  }else{
+    toast(sucesso+' lançamento(s) atualizados com "'+actLabel+'" ✓');
+  }
+}
 function renderExportarHoras(){
+  _populateFixAtividade();
   var ini=document.getElementById('exp-data-ini').value;
   var fim=document.getElementById('exp-data-fim').value;
   var preview=document.getElementById('export-preview');
