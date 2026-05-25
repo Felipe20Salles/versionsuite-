@@ -5790,7 +5790,7 @@ function buildExportPreview(){
       if(!os||!e.approvedHours)return;
       var tipos=getTipoAtividades();
       var tipoLabel=os.activityTypeId?(tipos.find(function(t){return t.id===os.activityTypeId})||{name:''}).name:'';
-      _exportRows.push({type:'os',osNum:os.num,date:dateStr,hours:e.approvedHours,activity:tipoLabel});
+      _exportRows.push({type:'os',osNum:os.num,date:dateStr,hours:e.approvedHours,activity:tipoLabel,activityId:os.activityTypeId||null});
     });
   }
   getEventsForDate(dateStr).forEach(function(ev){
@@ -5799,7 +5799,7 @@ function buildExportPreview(){
     var tipos=getTipoAtividades();
     var tipoLabel=ev.activityTypeId?(tipos.find(function(t){return t.id===ev.activityTypeId})||{name:''}).name:'';
     var osNum=ev.osId?(S.oss.find(function(o){return o.id===ev.osId})||{}).num||'?':null;
-    _exportRows.push({type:ev.osId?'event':'noos',osNum:osNum,date:dateStr,hours:dur,activity:tipoLabel,eventTitle:ev.title});
+    _exportRows.push({type:ev.osId?'event':'noos',osNum:osNum,date:dateStr,hours:dur,activity:tipoLabel,activityId:ev.activityTypeId||null,eventTitle:ev.title});
   });
   var previewEl=document.getElementById('dreport-preview');if(!previewEl)return;
   if(_exportRows.length===0){
@@ -6935,23 +6935,29 @@ async function enviarAoRedmine(){
     'btn-primary'
   );
   if(!ok)return;
-  var sucesso=0,erros=0;
+  var sucesso=0,erros=0,erroMsgs=[];
   for(var i=0;i<_exportRows.length;i++){
     var r=_exportRows[i];
     try{
       var res=await _redmineFetch(cfg,'/time_entries.json','POST',{time_entry:{
         issue_id:parseInt(r.osNum)||r.osNum,
-        spent_on:r.data,
-        hours:r.horas,
-        activity_id:cfg.actId,
-        comments:r.tipo
+        spent_on:r.date,
+        hours:r.hours,
+        activity_id:r.activityId||cfg.actId,
+        comments:r.activity||r.eventTitle||''
       }});
-      if(!res.ok)throw new Error('HTTP '+res.status);
+      if(!res.ok){
+        var errBody='HTTP '+res.status;
+        try{var ej=await res.json();errBody=ej.errors?ej.errors.join(', '):(ej.error||ej.message||errBody);}catch(e2){}
+        throw new Error('OS '+r.osNum+': '+errBody);
+      }
       sucesso++;
-    }catch(e){erros++;}
+    }catch(e){erros++;erroMsgs.push(e.message||'erro desconhecido');}
   }
-  if(erros)toast(sucesso+' enviado(s), '+erros+' erro(s)','err');
-  else toast(sucesso+' lançamento(s) enviado(s) ao Redmine ✓');
+  if(erros){
+    var msgDetalhe=erroMsgs.slice(0,3).join(' | ')+(erroMsgs.length>3?' (+'+(erroMsgs.length-3)+' erros)':'');
+    toast(sucesso+' enviado(s), '+erros+' erro(s): '+msgDetalhe,'err');
+  }else toast(sucesso+' lançamento(s) enviado(s) ao Redmine ✓');
 }
 
 // ── MODAL CONFIRM (substitui confirm() nativo) ────────────────────────────────
