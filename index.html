@@ -2341,7 +2341,7 @@ function renderKanban(){
       var canDel=can('os_deletar_propria')&&os.createdBy===CURRENT_USER.id;
       return'<div class="os-card'+(isFoco?' os-card-foco':'')+(isIncompleta?' os-incompleta':'')+'">'+
         (isFoco?'<div class="os-foco-badge" id="kanban-foco-timer" style="display:flex;align-items:center;justify-content:space-between">'+
-          '<span>🔥 Em foco · '+formatFocusTime(focoAcc)+'</span>'+
+          '<span id="kanban-foco-timer-text">🔥 Em foco · '+formatFocusTime(focoAcc)+'</span>'+
           '<button onclick="event.stopPropagation();trocarFoco()" style="background:none;border:none;cursor:pointer;font-size:10px;font-weight:600;color:#f97316;padding:0 0 0 8px;letter-spacing:.02em">↻ Trocar</button>'+
         '</div>':'')+
         '<div class="os-card-body">'+
@@ -4956,6 +4956,7 @@ function setStatus(osId,status){
   var os=S.oss.find(function(o){return o.id===osId});if(!os)return;
   dbMoverOS(osId,status).then(function(){
     os.status=status;renderKanban();renderDash();
+    sincronizarStatusRedmine(os,status);
   }).catch(function(e){toast('Erro: '+e.message,'err')});
 }
 
@@ -5226,9 +5227,9 @@ function confirmDayPlan(){
   // Move selecionadas para andamento; devolve as não-selecionadas que estavam em andamento
   all.forEach(function(os){
     if(selectedIds.indexOf(os.id)!==-1){
-      if(os.status!=='andamento'){os.status='andamento';dbMoverOS(os.id,'andamento').catch(function(){});}
+      if(os.status!=='andamento'){os.status='andamento';dbMoverOS(os.id,'andamento').then(function(){sincronizarStatusRedmine(os,'andamento');}).catch(function(){});}
     } else {
-      if(os.status==='andamento'){os.status='afazer';dbMoverOS(os.id,'afazer').catch(function(){});}
+      if(os.status==='andamento'){os.status='afazer';dbMoverOS(os.id,'afazer').then(function(){sincronizarStatusRedmine(os,'afazer');}).catch(function(){});}
     }
   });
   var plan={createdAt:new Date().toISOString(),confirmedAt:new Date().toISOString(),entries:entries};
@@ -5984,8 +5985,8 @@ function updateFocusUI(){
       var acc=st.accumulated+elapsed;
       var timerEl=label.querySelector('.foco-timer-label');
       if(timerEl)timerEl.textContent=formatFocusTime(acc)+' nesta sessão';
-      var kbadge=document.getElementById('kanban-foco-timer');
-      if(kbadge)kbadge.textContent='🔥 Em foco · '+formatFocusTime(acc);
+      var kspan=document.getElementById('kanban-foco-timer-text');
+      if(kspan)kspan.textContent='🔥 Em foco · '+formatFocusTime(acc);
     },1000);
     var initAcc=st.accumulated;
     label.innerHTML='<div class="foco-os-label">'+osTitle+'</div>'
@@ -6534,10 +6535,6 @@ async function renderDashEquipe(){
       '<button class="btn btn-sm btn-ghost" title="Período anterior" onclick="_dashEquipe.periodoLivre={de:\'\',ate:\'\'};_dashEquipe.periodoOffset--;S.pontosEquipe=[];renderDashEquipe()">←</button>'+
       '<span style="font-size:14px;font-weight:500;min-width:145px;text-align:center">'+label+'</span>'+
       '<button class="btn btn-sm btn-ghost" title="Próximo período" onclick="_dashEquipe.periodoLivre={de:\'\',ate:\'\'};_dashEquipe.periodoOffset++;S.pontosEquipe=[];renderDashEquipe()">→</button>'+
-      '<span style="font-size:12px;color:var(--muted);margin-left:8px">De</span>'+
-      '<input type="date" value="'+(periodoLivre.de||'')+'" class="form-input" style="width:130px;font-size:12px" onchange="_dashEquipe.periodoLivre.de=this.value;S.pontosEquipe=[];renderDashEquipe()">'+
-      '<span style="font-size:12px;color:var(--muted)">Até</span>'+
-      '<input type="date" value="'+(periodoLivre.ate||'')+'" class="form-input" style="width:130px;font-size:12px" onchange="_dashEquipe.periodoLivre.ate=this.value;S.pontosEquipe=[];renderDashEquipe()">'+
       (equipeFilterHtml?'<div style="margin-left:8px">'+equipeFilterHtml+'</div>':'')+
       '<div>'+pessoaFilterHtml+'</div>'+
       '<button class="btn btn-sm btn-ghost" style="margin-left:auto" onclick="atualizarDashEquipe()">↻ Atualizar</button>'+
