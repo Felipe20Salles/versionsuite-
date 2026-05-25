@@ -320,9 +320,9 @@ textarea.form-input{resize:vertical;min-height:70px}
 .resume-stat-box{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;text-align:center;flex:1}
 .resume-stat-val{font-size:22px;font-weight:700;font-family:var(--mono);letter-spacing:-1px}
 .resume-stat-lbl{font-size:10px;color:var(--muted);margin-top:3px}
-.resume-os-row{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px}
+.resume-os-row{background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;overflow:hidden;min-width:0}
 .resume-os-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
-.resume-cell{background:var(--surface);border-radius:6px;padding:8px 10px;text-align:center}
+.resume-cell{background:var(--surface);border-radius:6px;padding:8px 10px;text-align:center;min-width:0;overflow:hidden}
 .resume-cell-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
 .resume-cell-val{font-size:15px;font-weight:600;font-family:var(--mono)}
 .resume-h-input{width:70px;background:var(--surface);border:1px solid var(--accent);border-radius:5px;padding:4px 6px;color:var(--text);font-size:13px;text-align:center;font-family:var(--mono);font-weight:600}
@@ -549,7 +549,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           </div>
         </div>
         <div id="user-badge" style="display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--card2);border-radius:20px;border:1px solid var(--border);cursor:pointer" onclick="confirmarLogout()">
-          <img id="user-avatar" style="width:22px;height:22px;border-radius:50%;display:none">
+          <img id="user-avatar" style="width:22px;height:22px;border-radius:50%;display:none" onerror="this.style.display='none'">
           <span id="user-name" style="font-size:12px;color:var(--muted)">...</span>
           <span id="visitor-topbar-badge" style="display:none;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:var(--amber-dim);color:var(--amber-text);border:1px solid var(--amber-text)">Visitante</span>
           <span id="user-exit-label" style="font-size:10px;color:var(--hint)">Sair</span>
@@ -1470,6 +1470,11 @@ async function rejectUser(userId){
   renderUsersPrefs();
 }
 
+function _avatarFallback(imgEl,initials,bgColor){
+  var d=document.createElement('div');
+  d.className='user-avatar-initials';d.style.background=bgColor;d.textContent=initials;
+  imgEl.parentNode.replaceChild(d,imgEl);
+}
 function renderUsersPrefs(){
   // Badge do role do usuário logado
   var myRole=currentUserRole();
@@ -1494,7 +1499,7 @@ function renderUsersPrefs(){
       pendingInner.innerHTML=pendingUsers.map(function(u){
         var initials=(u.displayName||'?').split(' ').slice(0,2).map(function(w){return w[0]}).join('').toUpperCase();
         var avatarHtml=u.avatar?
-          '<img class="user-avatar-sm" src="'+u.avatar+'" alt="'+u.displayName+'" onerror="this.style.display=\'none\'">':
+          '<img class="user-avatar-sm" src="'+u.avatar+'" alt="'+u.displayName+'" onerror="_avatarFallback(this,\''+initials+'\',\'var(--border2)\')">':
           '<div class="user-avatar-initials" style="background:var(--border2)">'+initials+'</div>';
         return'<div class="user-card">'+
           avatarHtml+
@@ -1524,7 +1529,7 @@ function renderUsersPrefs(){
     var initials=(u.displayName||'?').split(' ').slice(0,2).map(function(w){return w[0]}).join('').toUpperCase();
 
     var avatarHtml=u.avatar?
-      '<img class="user-avatar-sm" src="'+u.avatar+'" alt="'+u.displayName+'" onerror="this.style.display=\'none\'">':
+      '<img class="user-avatar-sm" src="'+u.avatar+'" alt="'+u.displayName+'" onerror="_avatarFallback(this,\''+initials+'\',\''+cor.hex+'\')">':
       '<div class="user-avatar-initials" style="background:'+cor.hex+'">'+initials+'</div>';
 
     var roleHtml='';
@@ -1903,7 +1908,9 @@ async function upsertCurrentUserProfile(){
     isFirstUser=(count===0);
   }
   // Preserva role, colorIdx e status; só atualiza displayName/avatar/email
-  var newPrefs=Object.assign({},existPrefs,{displayName:displayName,avatar:avatar,email:email});
+  // Não sobrescreve avatar existente se o OAuth não retornou URL (ex: refresh de token)
+  var newPrefs=Object.assign({},existPrefs,{displayName:displayName,email:email});
+  if(avatar)newPrefs.avatar=avatar;
   if(newPrefs.colorIdx===undefined)newPrefs.colorIdx=null; // será atribuído em loadUsers
   // status: existente sem status → active (retrocompatibilidade); novo → pending (exceto primeiro)
   if(!newPrefs.status)newPrefs.status=(isNewUser&&!isFirstUser)?'pending':'active';
@@ -3813,18 +3820,22 @@ function renderApropDay(p,st,ossDisp){
       '</div>';
     return header+'<div class="aprop-section-day">'+rows+btns+'</div>';
   }
-  var ossOpts='<option value="">— selecione —</option>'+ossDisp.map(function(o){
-    var v=S.versoes.find(function(x){return x.id===o.versaoId});
-    return'<option value="'+o.id+'">OS '+o.num+' – '+o.titulo.slice(0,32)+(v?' ('+v.nome+')':'')+'</option>';
-  }).join('');
   var osRows=st.oss.map(function(item,i){
     var hItem=parseFloat((h*item.pct/100).toFixed(2));
+    var curOs=item.osId?S.oss.find(function(o){return o.id===item.osId}):null;
+    var curLabel=curOs?('#'+curOs.num+' · '+curOs.titulo):'';
+    var pid=p.id;
     return'<div class="rateio-os-row">'+
       '<div class="rateio-os-dot" style="background:'+SEG_COLORS[i%SEG_COLORS.length]+';flex-shrink:0"></div>'+
-      '<select class="aprop-os-sel" onchange="updateApropOS(\''+p.id+'\','+i+',this.value)">'+ossOpts.replace('value="'+item.osId+'"','value="'+item.osId+'" selected')+'</select>'+
-      '<div class="rateio-os-pct" id="pct-'+p.id+'-'+i+'">'+item.pct+'%</div>'+
-      '<div class="rateio-os-h" id="h-'+p.id+'-'+i+'">'+hItem+'h</div>'+
-      '<span style="color:var(--hint);cursor:pointer;font-size:18px;padding:0 4px" onclick="removeApropOS(\''+p.id+'\','+i+')">×</span></div>';
+      '<div style="flex:1;min-width:0;position:relative">'+
+        '<input id="aprop-os-input-'+pid+'-'+i+'" class="aprop-os-sel" style="width:100%;box-sizing:border-box" placeholder="#número ou título..." value="'+escHtml(curLabel)+'"'+
+        ' oninput="searchApropOS(\''+pid+'\','+i+',this.value)"'+
+        ' onblur="setTimeout(function(){var r=document.getElementById(\'aprop-os-res-'+pid+'-'+i+'\');if(r)r.style.display=\'none\'},160)">'+
+        '<div id="aprop-os-res-'+pid+'-'+i+'" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);z-index:30;max-height:140px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.3)"></div>'+
+      '</div>'+
+      '<div class="rateio-os-pct" id="pct-'+pid+'-'+i+'">'+item.pct+'%</div>'+
+      '<div class="rateio-os-h" id="h-'+pid+'-'+i+'">'+hItem+'h</div>'+
+      '<span style="color:var(--hint);cursor:pointer;font-size:18px;padding:0 4px" onclick="removeApropOS(\''+pid+'\','+i+')">×</span></div>';
   }).join('');
   var slider=st.oss.length>1?'<div class="rateio-track" id="slider-'+p.id+'"></div>':'';
   return header+'<div class="aprop-section-day">'+osRows+
@@ -3852,6 +3863,35 @@ function redrawApropDay(p,ossDisp){
 function addApropOS(pid){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);st.oss.push({osId:'',pct:0});rateioIgualSt(st);redrawApropDay(p)}
 function removeApropOS(pid,idx){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);st.oss.splice(idx,1);rateioIgualSt(st);redrawApropDay(p)}
 function updateApropOS(pid,idx,osId){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);st.oss[idx].osId=osId;redrawApropDay(p)}
+function searchApropOS(pid,idx,q){
+  var resEl=document.getElementById('aprop-os-res-'+pid+'-'+idx);if(!resEl)return;
+  q=(q||'').toLowerCase().trim();
+  if(!q){resEl.style.display='none';resEl.innerHTML='';return;}
+  var ossDisp=ossParaApropriarMinha();
+  var matches=ossDisp.filter(function(o){
+    return(o.num&&String(o.num).toLowerCase().includes(q))||(o.titulo&&o.titulo.toLowerCase().includes(q));
+  }).slice(0,6);
+  if(!matches.length){resEl.style.display='none';resEl.innerHTML='';return;}
+  resEl.innerHTML=matches.map(function(os){
+    return'<div style="padding:6px 10px;cursor:pointer;font-size:12px;border-radius:var(--radius)" '+
+      'onmousedown="selectApropOS(\''+pid+'\','+idx+',\''+os.id+'\',\''+encodeURIComponent('#'+os.num+' · '+os.titulo)+'\')" '+
+      'onmouseover="this.style.background=\'var(--card2)\'" onmouseout="this.style.background=\'\'">'+
+      '<span style="font-family:var(--mono);color:var(--muted)">#'+escHtml(String(os.num))+'</span> '+escHtml(os.titulo)+'</div>';
+  }).join('');
+  resEl.style.display='block';
+}
+function selectApropOS(pid,idx,osId,encodedLabel){
+  var inputEl=document.getElementById('aprop-os-input-'+pid+'-'+idx);
+  var resEl=document.getElementById('aprop-os-res-'+pid+'-'+idx);
+  if(inputEl)inputEl.value=decodeURIComponent(encodedLabel);
+  if(resEl){resEl.style.display='none';resEl.innerHTML='';}
+  var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;
+  var st=getApropState(p);st.oss[idx].osId=osId;
+  // atualiza só horas/percentual, sem re-renderizar toda a linha (evita perda de foco)
+  var h=p.horasTrabalhadas||0;
+  var pctEl=document.getElementById('pct-'+pid+'-'+idx);if(pctEl)pctEl.textContent=st.oss[idx].pct+'%';
+  var hEl=document.getElementById('h-'+pid+'-'+idx);if(hEl)hEl.textContent=parseFloat((h*st.oss[idx].pct/100).toFixed(2))+'h';
+}
 function rateioIgual(pid){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;rateioIgualSt(getApropState(p));redrawApropDay(p)}
 function rateioIgualSt(st){var n=st.oss.length;if(!n)return;var base=Math.floor(100/n),rem=100-base*n;st.oss.forEach(function(item,i){item.pct=base+(i<rem?1:0)})}
 function saveAprop(pid){
@@ -4682,6 +4722,18 @@ async function load(){
     if(!S.versaoK&&S.versoes.length)S.versaoK=S.versoes[0].id;
     _loadedAt=Date.now();
     await loadUsers();
+    // Recupera avatar do usuário atual caso DB esteja zerado mas metadata do Google tem a URL
+    (function(){
+      var _me=S_USERS.find(function(u){return u.id===CURRENT_USER.id;});
+      if(_me&&!_me.avatar){
+        var _meta=CURRENT_USER.user_metadata||{};
+        var _av=_meta.avatar_url||_meta.picture||'';
+        if(_av){
+          _me.avatar=_av;
+          sb.from('profiles').update({avatar_url:_av}).eq('id',CURRENT_USER.id).then(function(){}).catch(function(){});
+        }
+      }
+    })();
     await loadEquipes();
     _redmineUpdateButtons(!!(getRedmineConfig().proxyUrl&&getRedmineConfig().proxy));
   }catch(e){console.error('Erro ao carregar:',e)}
@@ -4785,7 +4837,7 @@ async function dbSalvarPrefs(){
     accent:S.prefs.accent,accentRgb:S.prefs.accentRgb,lightMode:S.prefs.lightMode,
     role:me?me.role:'visualizador',
     displayName:me?me.displayName:(meta.full_name||meta.name||''),
-    avatar:me?me.avatar:(meta.avatar_url||meta.picture||''),
+    avatar:(me&&me.avatar)||meta.avatar_url||meta.picture||'',
     email:CURRENT_USER.email||'',
     colorIdx:me?me.colorIdx:null
   }}).eq('id',CURRENT_USER.id);
@@ -5401,7 +5453,7 @@ function _resumeAgendaRowHtml(ev){
   return'<div class="resume-os-row">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
     +'<span style="font-size:10px;padding:1px 7px;border-radius:10px;background:rgba(124,111,247,.15);color:#a78bfa;border:1px solid rgba(124,111,247,.3)">📅 Agenda</span>'
-    +'<div style="flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(ev.title)+'</div>'
+    +'<div style="flex:1;min-width:0;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escHtml(ev.title)+'</div>'
     +(timeRange?'<span style="font-size:10px;color:var(--muted);font-family:var(--mono)">'+timeRange+'</span>':'')
     +'</div>'
     +'<div class="resume-os-grid">'
@@ -5413,8 +5465,14 @@ function _resumeAgendaRowHtml(ev){
 function updateResumeTotal(){
   var inputs=document.querySelectorAll('.resume-h-input');
   var total=0;inputs.forEach(function(inp){total+=parseFloat(inp.value)||0});
+  total=parseFloat(total.toFixed(2));
   var el=document.getElementById('resume-total');
-  if(el)el.textContent=parseFloat(total.toFixed(2))+'h';
+  var phEl=document.getElementById('resume-ponto-horas');
+  var pontoH=phEl?parseFloat(phEl.textContent)||0:0;
+  if(el){
+    el.textContent=total+'h';
+    el.style.color=(pontoH>0&&total===pontoH)?'#10b981':'var(--accent)';
+  }
 }
 
 function toggleResumeAddOS(){
