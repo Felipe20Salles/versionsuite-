@@ -369,7 +369,7 @@ textarea.form-input{resize:vertical;min-height:70px}
   50%{box-shadow:0 0 0 1.5px rgba(249,115,22,.7),0 0 28px rgba(239,68,68,.28)}
 }
 .os-card-foco{animation:foco-pulse 2.4s ease infinite}
-.os-foco-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#f97316;padding:5px 12px;background:rgba(239,68,68,.07);border-bottom:1px solid rgba(239,68,68,.14);letter-spacing:.02em;position:relative;z-index:1}
+.os-foco-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#f97316;padding:5px 12px;background:rgba(239,68,68,.07);border-bottom:1px solid rgba(239,68,68,.14);letter-spacing:.02em}
 /* ── FOCO PiP SIDEBAR ── */
 #foco-pip{position:fixed;top:0;right:0;height:100vh;width:14px;z-index:9000;overflow:hidden;transition:width .22s cubic-bezier(.4,0,.2,1);display:flex;pointer-events:auto}
 #foco-pip:hover{width:228px}
@@ -2340,10 +2340,7 @@ function renderKanban(){
       var canEd=can('os_editar');
       var canDel=can('os_deletar_propria')&&os.createdBy===CURRENT_USER.id;
       return'<div class="os-card'+(isFoco?' os-card-foco':'')+(isIncompleta?' os-incompleta':'')+'">'+
-        (isFoco?'<div class="os-foco-badge" id="kanban-foco-timer" style="display:flex;align-items:center;justify-content:space-between">'+
-          '<span id="kanban-foco-timer-text">🔥 Em foco · '+formatFocusTime(focoAcc)+'</span>'+
-          '<button onclick="event.stopPropagation();trocarFoco()" style="background:none;border:none;cursor:pointer;font-size:10px;font-weight:600;color:#f97316;padding:0 0 0 8px;letter-spacing:.02em">↻ Trocar</button>'+
-        '</div>':'')+
+        (isFoco?'<div class="os-foco-badge" id="kanban-foco-timer"><span id="kanban-foco-timer-text">🔥 Em foco · '+formatFocusTime(focoAcc)+'</span></div>':'')+
         '<div class="os-card-body">'+
           '<div class="os-num">Card '+os.num+
             ' <span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.08);color:'+clf.color+'" title="'+clf.title+'">'+clf.label+'</span>'+
@@ -2368,6 +2365,7 @@ function renderKanban(){
             '<button class="os-action-btn aprop" onclick="event.stopPropagation();goAprop(\''+os.id+'\')">⏱ Apropriar</button>'+
           '</div>'+
           (prevBtn||nextBtn?'<div class="os-action-row">'+prevBtn+nextBtn+'</div>':'')+
+          (isFoco?'<div class="os-action-row"><button class="os-action-btn nav-btn" onclick="event.stopPropagation();trocarFoco()">↻ Trocar foco</button></div>':'')+
         '</div>'+
       '</div>';
     }).join(''):'<div class="empty-col">Nenhum card</div>';
