@@ -4995,8 +4995,10 @@ function salvarPonto(){
 
 function excluirPonto(id){
   if(!confirm('Excluir este registro de ponto e todas as apropriações do dia?'))return;
+  var ponto=S.pontos.find(function(p){return p.id===id});
   dbDeletarPonto(id).then(function(){
     S.pontos=S.pontos.filter(function(p){return p.id!==id});
+    if(ponto&&ponto.data===new Date().toISOString().slice(0,10))localStorage.removeItem(getResumeKey());
     delete _apropState[id];renderPontoList();renderDash();toast('Registro excluído');
   }).catch(function(e){toast('Erro: '+e.message,'err')});
 }
@@ -5496,8 +5498,22 @@ function confirmDayResume(){
   recalcVelocityFactor();
   saveFocusState(null);
   closeModal('modal-dayresume');
-  renderAprop();renderDash();
-  toast('Horas apropriadas — até amanhã!');
+  renderAprop();renderDash();renderPontoList();
+  toast('Horas confirmadas!');
+  setTimeout(function(){
+    modalConfirm(
+      'Enviar ao Redmine?',
+      'Horas registradas com sucesso.<br>Deseja lançar os apontamentos no Redmine agora?',
+      'Ir para exportação'
+    ).then(function(ok){
+      if(!ok)return;
+      var today=new Date().toISOString().slice(0,10);
+      goScreen('ponto');
+      document.getElementById('exp-data-ini').value=today;
+      document.getElementById('exp-data-fim').value=today;
+      setPontoTabById('tab-exportar');
+    });
+  },300);
 }
 
 // ── AGENDA: EVENTOS PONTUAIS (vs_agenda_events) ───────────────────────────────
@@ -7152,7 +7168,6 @@ var __paralelo_config = {
       <span style="font-size:11px;color:var(--hint)">Após confirmar, a sessão do dia é encerrada.</span>
       <div style="display:flex;gap:8px">
         <button class="btn" onclick="closeModal('modal-dayresume')">Ajustar depois</button>
-        <button class="btn btn-sm btn-ghost" onclick="openExportRedmine()">📤 Exportar para Redmine</button>
         <button class="btn btn-primary" onclick="confirmDayResume()">✓ Confirmar e apropriar</button>
       </div>
     </div>
