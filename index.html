@@ -7078,10 +7078,10 @@ async function enviarAoRedmine(){
     try{
       var res=await _redmineFetch(cfg,'/time_entries.json','POST',{time_entry:{
         issue_id:parseInt(r.osNum)||r.osNum,
-        spent_on:r.date,
-        hours:r.hours,
+        spent_on:r.date||r.data,
+        hours:r.hours||r.horas,
         activity_id:r.activityId||cfg.actId,
-        comments:r.activity||r.eventTitle||''
+        comments:r.activity||r.tipo||r.eventTitle||''
       }});
       if(!res.ok){
         var errBody='HTTP '+res.status;
