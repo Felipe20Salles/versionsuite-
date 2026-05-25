@@ -534,7 +534,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div class="foco-dropdown" id="foco-dropdown" style="display:none"></div>
         </div>
         <button class="btn btn-sm btn-ghost" id="btn-revisar-plano" onclick="openDayPlanModal(true)" style="font-size:11px;padding:4px 10px;white-space:nowrap">📋 Revisar plano</button>
-        <button class="btn btn-sm btn-ghost" onclick="goScreen('ponto')" style="font-size:11px;padding:4px 10px;white-space:nowrap">🕐 Ponto</button>
+        <button class="btn btn-sm btn-ghost" onclick="goScreen('ponto');openNovoRegistro()" style="font-size:11px;padding:4px 10px;white-space:nowrap">🕐 Ponto</button>
         <div style="position:relative" id="bell-container">
           <div class="bell-wrap" onclick="toggleBellDropdown()">
             <span class="bell-icon" id="bell-icon">🔔</span>
@@ -764,6 +764,7 @@ textarea.form-input{resize:vertical;min-height:70px}
             <button class="btn btn-sm btn-ghost" title="Período anterior" onclick="_pontoFiltro.offset--;renderPontoList()">←</button>
             <span id="ponto-periodo-label" style="font-size:14px;font-weight:500;min-width:145px;text-align:center"></span>
             <button class="btn btn-sm btn-ghost" title="Próximo período" onclick="_pontoFiltro.offset++;renderPontoList()">→</button>
+            <button class="btn btn-primary btn-sm" onclick="openNovoRegistro()" style="margin-left:auto">+ Registrar Ponto</button>
           </div>
           <div id="ponto-list"></div>
         </div>
@@ -2144,7 +2145,7 @@ function goScreen(name){
     dashboard:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
     kanban:(!isVisitor&&can('os_criar'))?'<button class="btn btn-primary btn-sm" onclick="openNovaOS()">+ Nova OS</button>':'',
     boletim:'',
-    ponto:(!isVisitor&&canMenu('ponto'))?'<button class="btn btn-primary btn-sm" onclick="openNovoRegistro()">+ Registrar Ponto</button>':'',
+    ponto:'',
     historico:'',preferencias:'',
     agenda:(!isVisitor&&can('agenda_editar'))?'<button class="btn btn-primary btn-sm" onclick="openNovaPublicacao()">+ Nova publicação</button> <button class="btn btn-sm btn-ghost" onclick="openNewAgendaEvent()">+ Evento pontual</button>':''
   };
@@ -3507,14 +3508,22 @@ function openNovoRegistro(){
   document.getElementById('modal-ponto-title').textContent='Registrar dia de ponto';
   document.getElementById('modal-ponto').dataset.editId='';
   var now=new Date();
-  var today=now.toLocaleDateString('sv'); // YYYY-MM-DD sem depender de ISO
+  var today=now.toLocaleDateString('sv');
   var hh=String(now.getHours()).padStart(2,'0');
   var mm=String(now.getMinutes()).padStart(2,'0');
+  var horaAtual=hh+':'+mm;
   document.getElementById('p-data').value=today;
   onDataChange();
-  document.getElementById('p-m1').value=hh+':'+mm;
-  ['p-m2','p-m3','p-m4'].forEach(function(id){document.getElementById(id).value=''});
+  // Pré-carrega marcações do dia se já existir registro
+  var pontoHoje=S.pontos.find(function(p){return p.data===today;});
+  var marcExist=pontoHoje&&pontoHoje.marcacoes?pontoHoje.marcacoes.trim().split(/\s+/):[];
+  var ids=['p-m1','p-m2','p-m3','p-m4'];
+  ids.forEach(function(id,i){document.getElementById(id).value=marcExist[i]||'';});
+  // Coloca hora atual na próxima marcação vazia
+  var prox=ids.find(function(id){return!document.getElementById(id).value;});
+  if(prox)document.getElementById(prox).value=horaAtual;
   document.getElementById('p-total').textContent='--';
+  calcTotal();
   var acum=_horasHojeAcumuladas();
   var acumEl=document.getElementById('ponto-modal-acumulado');
   if(acumEl){if(acum>0){acumEl.style.display='block';acumEl.textContent='⏱ Horas já registradas hoje: '+acum.toFixed(2)+'h';}else{acumEl.style.display='none';}}
