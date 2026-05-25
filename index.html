@@ -108,6 +108,7 @@ textarea.form-input{resize:vertical;min-height:70px}
 .os-card:hover .os-card-body{opacity:.3}
 .os-card-actions{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:8px;opacity:0;transition:opacity .2s;pointer-events:none;flex-direction:column;padding:8px}
 .os-card:hover .os-card-actions{opacity:1;pointer-events:all}
+.os-card-foco .os-card-actions{top:28px}
 .os-action-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center}
 .os-action-btn{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;font-size:11px;border-radius:var(--radius);border:1px solid var(--border2);background:rgba(14,14,16,.85);color:var(--text);cursor:pointer;font-family:var(--font);transition:all .15s;white-space:nowrap;backdrop-filter:blur(4px)}
 .os-action-btn:hover{background:var(--surface)}
@@ -2340,7 +2341,7 @@ function renderKanban(){
       var canEd=can('os_editar');
       var canDel=can('os_deletar_propria')&&os.createdBy===CURRENT_USER.id;
       return'<div class="os-card'+(isFoco?' os-card-foco':'')+(isIncompleta?' os-incompleta':'')+'">'+
-        (isFoco?'<div class="os-foco-badge" id="kanban-foco-timer"><span id="kanban-foco-timer-text">🔥 Em foco · '+formatFocusTime(focoAcc)+'</span></div>':'')+
+        (isFoco?'<div class="os-foco-badge" id="kanban-foco-timer" style="justify-content:space-between"><span id="kanban-foco-timer-text">🔥 Em foco · '+formatFocusTime(focoAcc)+'</span><button onclick="event.stopPropagation();trocarFoco()" style="background:none;border:none;cursor:pointer;font-size:10px;font-weight:600;color:#f97316;padding:0 0 0 8px;letter-spacing:.02em">↻ Trocar</button></div>':'')+
         '<div class="os-card-body">'+
           '<div class="os-num">Card '+os.num+
             ' <span style="font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;background:rgba(0,0,0,.08);color:'+clf.color+'" title="'+clf.title+'">'+clf.label+'</span>'+
@@ -2365,7 +2366,6 @@ function renderKanban(){
             '<button class="os-action-btn aprop" onclick="event.stopPropagation();goAprop(\''+os.id+'\')">⏱ Apropriar</button>'+
           '</div>'+
           (prevBtn||nextBtn?'<div class="os-action-row">'+prevBtn+nextBtn+'</div>':'')+
-          (isFoco?'<div class="os-action-row"><button class="os-action-btn nav-btn" onclick="event.stopPropagation();trocarFoco()">↻ Trocar foco</button></div>':'')+
         '</div>'+
       '</div>';
     }).join(''):'<div class="empty-col">Nenhum card</div>';
