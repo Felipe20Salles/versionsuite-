@@ -787,7 +787,7 @@ textarea.form-input{resize:vertical;min-height:70px}
           </div>
         </div>
         <div id="tab-aprop" style="display:none">
-          <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Distribua as horas de cada dia entre as OSs da versão. Use <strong>⚡ Auto</strong> para apropriar automaticamente dias sem lançamento.</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Distribua as horas de cada dia entre as OSs da versão. Use <strong>∷ Distribuição</strong> para apropriar automaticamente dias sem lançamento.</div>
           <div id="aprop-list"></div>
         </div>
         <div id="tab-exportar" style="display:none">
@@ -3839,7 +3839,7 @@ function renderApropDay(p,st,ossDisp){
     '<div style="font-size:12px;color:var(--hint)">Nenhuma OS apropriada.</div>';
     var btns='<div style="display:flex;gap:6px;margin-top:10px">'+
       '<button class="btn btn-sm btn-ghost" onclick="startEditAprop(\''+p.id+'\')">✏ Editar manualmente</button>'+
-      (!hasAprop?'<button class="btn btn-sm" onclick="autoApropDia(\''+p.id+'\')">⚡ Auto</button>':'')+
+      (!hasAprop?'<button class="btn btn-sm" onclick="autoApropDia(\''+p.id+'\')">∷ Distribuição</button>':'')+
       '</div>';
     return header+'<div class="aprop-section-day">'+rows+btns+'</div>';
   }
