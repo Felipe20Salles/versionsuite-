@@ -5005,7 +5005,7 @@ function moveOS(osId,newStatus){
   if(newStatus!=='andamento'){
     var st=getFocusState();
     if(st&&st.osId===osId){
-      var next=S.oss.find(function(o){return o.status==='andamento'&&o.id!==osId;});
+      var next=_proxOssAndamento(osId);
       if(next){startFocus(next.id);}
       else{saveFocusState(null);updateFocusUI();updatePipUI();}
     }
@@ -5334,7 +5334,7 @@ function confirmDayPlan(){
   closeModal('modal-dayplan');
   renderKanban();renderDash();
   // Auto-inicia foco na primeira OS em andamento se ainda não há foco
-  var firstAndamento=S.oss.find(function(o){return o.status==='andamento';});
+  var firstAndamento=_proxOssAndamento(null);
   if(firstAndamento&&!getFocusState())startFocus(firstAndamento.id);
   toast('Planejamento salvo — fila do dia definida!');
 }
@@ -5936,8 +5936,8 @@ function concludeOS(osId){
   }else{
     moveOS(osId,'concluido');
   }
-  // Auto-switch: próxima OS em andamento (a fila do dia)
-  var nxt=S.oss.find(function(o){return o.id!==osId&&o.status==='andamento';});
+  // Auto-switch: próxima OS em andamento do usuário atual
+  var nxt=_proxOssAndamento(osId);
   if(nxt)startFocus(nxt.id);
   updateFocusUI();
   renderKanban();
@@ -6030,10 +6030,23 @@ function _desfazerAprop(){
   document.getElementById('toast').classList.remove('show');
 }
 
+// Retorna próxima OS em andamento que pertence ao usuário atual.
+// Nunca pula para card de outro usuário.
+function _proxOssAndamento(excludeId){
+  var meuNome=(getDisplayName()||'').trim();
+  var candidatas=S.oss.filter(function(o){
+    return o.status==='andamento'&&o.id!==excludeId;
+  });
+  if(!meuNome)return candidatas[0]||null;
+  return candidatas.find(function(o){return(o.atribuicao||'').trim()===meuNome;})
+      || candidatas.find(function(o){return!(o.atribuicao||'').trim();})
+      || null;
+}
+
 function trocarFoco(){
   var st=getFocusState();if(!st)return;
   // Encontra próxima em andamento ANTES de mover a atual
-  var next=S.oss.find(function(o){return o.status==='andamento'&&o.id!==st.osId;});
+  var next=_proxOssAndamento(st.osId);
   // Mantém a OS atual em "andamento" mas a move para o fim da fila (último no array)
   var os=S.oss.find(function(o){return o.id===st.osId;});
   if(os){var idx=S.oss.indexOf(os);if(idx>-1){S.oss.splice(idx,1);S.oss.push(os);}}
@@ -6042,7 +6055,7 @@ function trocarFoco(){
 }
 function voltarParaAfazer(){
   var st=getFocusState();if(!st)return;
-  var next=S.oss.find(function(o){return o.status==='andamento'&&o.id!==st.osId;});
+  var next=_proxOssAndamento(st.osId);
   var os=S.oss.find(function(o){return o.id===st.osId;});
   if(os){os.status='afazer';dbMoverOS(os.id,'afazer').catch(function(){});}
   if(next){startFocus(next.id);}else{saveFocusState(null);updateFocusUI();updatePipUI();}
@@ -6052,16 +6065,22 @@ function voltarParaAfazer(){
 
 function alternarFoco(){
   var st=getFocusState();
+  var meuNome=(getDisplayName()||'').trim();
+  function ehMinha(o){
+    if(!meuNome)return true;
+    var atr=(o.atribuicao||'').trim();
+    return atr===meuNome||!atr;
+  }
   var plan=getDayPlan();
   var ordered=[];
   if(plan&&plan.entries&&plan.entries.length){
     plan.entries.forEach(function(e){
-      var o=S.oss.find(function(x){return x.id===e.osId&&x.status!=='concluido'});
+      var o=S.oss.find(function(x){return x.id===e.osId&&x.status!=='concluido'&&ehMinha(x)});
       if(o)ordered.push(o);
     });
   }
-  // Adiciona OSs em andamento não cobertas pelo plano
-  S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer';}).forEach(function(o){
+  // Adiciona OSs em andamento/afazer do usuário não cobertas pelo plano
+  S.oss.filter(function(o){return(o.status==='andamento'||o.status==='afazer')&&ehMinha(o);}).forEach(function(o){
     if(!ordered.find(function(x){return x.id===o.id;}))ordered.push(o);
   });
   if(!ordered.length)return;
