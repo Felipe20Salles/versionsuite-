@@ -294,7 +294,7 @@ textarea.form-input{resize:vertical;min-height:70px}
 .ciclo-row.ciclo-concluida{opacity:.5}
 .ciclo-num{font-family:var(--mono);color:var(--muted);font-size:11px;flex-shrink:0;min-width:52px}
 .ciclo-titulo{flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.ciclo-atrib{font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.ciclo-atrib{font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;max-width:110px;overflow:hidden;text-overflow:ellipsis}
 .ciclo-status{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;flex-shrink:0;white-space:nowrap}
 .ciclo-status-afazer{background:rgba(148,163,184,.12);color:#94a3b8}
 .ciclo-status-andamento{background:rgba(251,146,60,.12);color:#fb923c}
@@ -2370,8 +2370,10 @@ function renderCicloView(){
 
   function sortByPorte(arr){
     return arr.slice().sort(function(a,b){
-      var pa=PORTE_ORDER[osPorteFromHours(a.estimatedHours||0).key]||2;
-      var pb=PORTE_ORDER[osPorteFromHours(b.estimatedHours||0).key]||2;
+      var poa=PORTE_ORDER[osPorteFromHours(a.estimatedHours||0).key];
+      var pob=PORTE_ORDER[osPorteFromHours(b.estimatedHours||0).key];
+      var pa=poa!==undefined?poa:2;
+      var pb=pob!==undefined?pob:2;
       if(pa!==pb)return pa-pb;
       return(a.num||'').localeCompare(b.num||'',undefined,{numeric:true});
     });
@@ -2407,15 +2409,15 @@ function renderCicloView(){
   var emAnd=oss.filter(function(o){return o.status==='andamento';}).length;
   var conc=concluidas.length;
 
-  var html='<div style="margin-bottom:14px">'+
-    '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'+
-      '<div>'+
-        '<span style="font-size:15px;font-weight:700;color:var(--text)">'+periodoLabel+'</span>'+
-        '<span style="font-size:12px;color:var(--muted);margin-left:10px">'+totalOss+' OSes · '+emAnd+' em andamento · '+conc+' concluídas</span>'+
-      '</div>'+
-      (pontoHoje?'<button class="btn btn-sm btn-primary" onclick="autoApropDia(\''+pontoHoje.id+'\')">∷ Distribuir</button>':
-        '<span style="font-size:11px;color:var(--muted)">Registre seu ponto para distribuir horas</span>')+
+  var html='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">'+
+    '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">'+
+      '<span style="font-size:15px;font-weight:700;color:var(--text);white-space:nowrap">'+periodoLabel+'</span>'+
+      '<span style="font-size:12px;color:var(--muted);white-space:nowrap">'+totalOss+' OSes</span>'+
+      '<span style="font-size:12px;color:var(--muted);white-space:nowrap">'+emAnd+' em andamento</span>'+
+      '<span style="font-size:12px;color:var(--muted);white-space:nowrap">'+conc+' concluídas</span>'+
     '</div>'+
+    (pontoHoje?'<button class="btn btn-sm btn-primary" style="flex-shrink:0" onclick="autoApropDia(\''+pontoHoje.id+'\')">∷ Distribuir</button>':
+      '<span style="font-size:11px;color:var(--muted);flex-shrink:0">Registre ponto para distribuir</span>')+
   '</div>'+
   '<div class="ciclo-list">'+
     (sortByPorte(abertas).map(rowHtml).join('')||'<div style="color:var(--muted);font-size:13px;text-align:center;padding:32px 0">Nenhuma OS em aberto</div>')+
