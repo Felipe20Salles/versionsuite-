@@ -523,7 +523,7 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div class="nav-section">
         <div class="nav-label">Versão atual</div>
         <div class="nav-item" onclick="goScreen('kanban')">
-          <svg class="nav-icon" viewBox="0 0 16 16"><rect x="1" y="3" width="4" height="10" rx="1"/><rect x="6" y="3" width="4" height="7" rx="1"/><rect x="11" y="3" width="4" height="5" rx="1"/></svg>Kanban
+          <svg class="nav-icon" viewBox="0 0 16 16"><rect x="1" y="3" width="4" height="10" rx="1"/><rect x="6" y="3" width="4" height="7" rx="1"/><rect x="11" y="3" width="4" height="5" rx="1"/></svg>Demandas
         </div>
         <div id="nav-boletim" class="nav-item" onclick="goScreen('boletim')">
           <svg class="nav-icon" viewBox="0 0 16 16"><path d="M2 3h12v8a1 1 0 01-1 1H3a1 1 0 01-1-1V3z"/><polyline points="2,3 8,9 14,3"/></svg>Boletim
@@ -2224,7 +2224,7 @@ function goScreen(name){
   document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active')});
   var el=document.getElementById('screen-'+name);if(el)el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(function(b){if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+name+"'"))b.classList.add('active')});
-  var titles={dashboard:'Dashboard',kanban:'Kanban',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda'};
+  var titles={dashboard:'Dashboard',kanban:'Demandas',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda'};
   var isVisitor=CURRENT_USER&&CURRENT_USER.isVisitor;
   var acts={
     dashboard:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
@@ -2453,9 +2453,7 @@ function renderCicloView(){
   var html=
     '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">'+
       '<span style="font-size:13px;color:var(--muted)">'+totalOss+' OSes · '+abertas.length+' abertas · '+conc+' concluídas</span>'+
-      (pontoHoje
-        ?'<button class="btn btn-sm btn-primary" onclick="autoApropDia(\''+pontoHoje.id+'\')">∷ Distribuir</button>'
-        :'')+
+      '<button class="btn btn-sm btn-ghost" onclick="goScreen(\'ponto\');setTimeout(function(){setPontoTabById(\'tab-aprop\')},60)" style="flex-shrink:0">∷ Apropriar período</button>'+
     '</div>'+
     '<div class="ciclo-list">'+
       (sortByPorte(abertas).map(function(o){return rowHtml(o,false);}).join('')||
@@ -3988,27 +3986,58 @@ function getApropState(p){
   }
   return _apropState[p.id];
 }
+var _aapCheck=[], _aapHoras=0;
+
+function _aapRecalc(){
+  var totalH=_aapCheck.reduce(function(s,o,i){
+    var cb=document.getElementById('auto-ck-'+i);
+    return s+(cb&&cb.checked?(o.estimatedHours||2):0);
+  },0);
+  var totalDist=0;
+  _aapCheck.forEach(function(o,i){
+    var cb=document.getElementById('auto-ck-'+i);
+    var hEl=document.getElementById('auto-h-'+i);
+    if(!hEl)return;
+    if(cb&&cb.checked&&totalH>0){
+      var h=parseFloat(((o.estimatedHours||2)/totalH*_aapHoras).toFixed(1));
+      hEl.textContent=h+'h';totalDist+=h;
+    }else{hEl.textContent='';}
+  });
+  var tot=document.getElementById('aap-total');
+  if(tot){
+    var sel=_aapCheck.filter(function(o,i){var cb=document.getElementById('auto-ck-'+i);return cb&&cb.checked;}).length;
+    tot.textContent=sel?totalDist.toFixed(1)+'h de '+_aapHoras.toFixed(1)+'h distribuídas':'';
+  }
+}
+
 function autoApropDia(pid){
   var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;
+  var cargaDiaria=getSchedule().cargaDiaria||8;
+  _aapHoras=Math.min(p.horasTrabalhadas||0,cargaDiaria);
   var ossDisp=ossParaApropriar();
   var meuNome=getDisplayName().trim();
   var minhaOss=ossDisp.filter(function(o){return(o.atribuicao||'').trim()===meuNome});
-  var check=minhaOss.length?minhaOss:ossDisp;
-  if(!check.length){toast('Nenhuma OS disponível para apropriar','err');return}
-  var chkHtml=check.map(function(o,i){
+  _aapCheck=minhaOss.length?minhaOss:ossDisp;
+  if(!_aapCheck.length){toast('Nenhuma OS disponível para apropriar','err');return}
+  var chkHtml=_aapCheck.map(function(o,i){
     var vn=S.versoes.find(function(x){return x.id===o.versaoId});
-    return'<label style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12px;cursor:pointer">'+
-      '<input type="checkbox" id="auto-ck-'+i+'" '+(minhaOss.length?'checked':'')+' style="width:14px;height:14px">'+
-      '<span>OS '+o.num+' – '+o.titulo.slice(0,38)+(vn?' <span style="color:var(--muted)">('+vn.nome+')</span>':'')+'</span></label>';
+    var porte=osPorteFromHours(o.estimatedHours||0);
+    return'<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;cursor:pointer">'+
+      '<input type="checkbox" id="auto-ck-'+i+'" '+(minhaOss.length?'checked':'')+' style="width:14px;height:14px" onchange="_aapRecalc()">'+
+      '<span class="'+porte.cls+'" style="flex-shrink:0;padding:1px 6px;font-size:10px">'+porte.label+'</span>'+
+      '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">OS '+o.num+' – '+o.titulo.slice(0,34)+(vn?' <span style="color:var(--muted)">('+vn.nome+')</span>':'')+'</span>'+
+      '<span id="auto-h-'+i+'" style="color:var(--accent);font-weight:600;flex-shrink:0;min-width:34px;text-align:right;font-size:11px"></span>'+
+    '</label>';
   }).join('');
   modalConfirm(
     '∷ Distribuição de horas',
-    '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Selecione as OSs para distribuir as <strong>'+p.horasTrabalhadas.toFixed(2)+'h</strong> deste dia:</div>'+
-    '<div style="max-height:240px;overflow-y:auto;padding:4px 0">'+chkHtml+'</div>',
+    '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Distribuindo <strong>'+_aapHoras.toFixed(2)+'h</strong> (carga diária: '+cargaDiaria+'h) proporcionalmente ao esforço:</div>'+
+    '<div style="max-height:240px;overflow-y:auto;padding:4px 0">'+chkHtml+'</div>'+
+    '<div id="aap-total" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:right;padding-top:6px;border-top:1px solid var(--border)"></div>',
     'Aplicar e editar','btn-primary'
   ).then(function(ok){
     if(!ok)return;
-    var selecionadas=check.filter(function(o,i){var cb=document.getElementById('auto-ck-'+i);return cb&&cb.checked});
+    var selecionadas=_aapCheck.filter(function(o,i){var cb=document.getElementById('auto-ck-'+i);return cb&&cb.checked});
     if(!selecionadas.length){toast('Nenhuma OS selecionada','err');return}
     var n=selecionadas.length;
     var totalH=selecionadas.reduce(function(s,o){return s+(o.estimatedHours||2);},0);
@@ -4024,6 +4053,7 @@ function autoApropDia(pid){
     redrawApropDay(p,ossDisp);
     setTimeout(function(){attachSlider(pid)},50);
   });
+  setTimeout(_aapRecalc,60);
 }
 function ossParaApropriarMinha(){
   var todas=ossParaApropriar();
