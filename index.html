@@ -288,7 +288,7 @@ textarea.form-input{resize:vertical;min-height:70px}
 .peso-badge-grande{background:rgba(245,158,11,.15);color:#f59e0b;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
 .peso-badge-normal{background:rgba(96,165,250,.15);color:#60a5fa;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
 .peso-badge-rapida{background:rgba(16,185,129,.15);color:#10b981;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
-.ciclo-list{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.ciclo-list{display:flex;flex-direction:column;gap:6px;margin-top:4px;overflow:hidden}
 .ciclo-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card2);border:1px solid var(--border);border-radius:8px;min-width:0;transition:border-color .12s}
 .ciclo-row:hover{border-color:var(--border2)}
 .ciclo-row.ciclo-concluida{opacity:.5}
@@ -621,9 +621,11 @@ textarea.form-input{resize:vertical;min-height:70px}
       <!-- KANBAN -->
       <div id="screen-kanban" class="screen">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
-          <div style="display:flex;gap:4px;flex-shrink:0">
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
             <button class="ciclo-mode-btn active" id="btn-mode-kanban" onclick="setKanbanMode('kanban')">⬡ Kanban</button>
             <button class="ciclo-mode-btn" id="btn-mode-ciclo" onclick="setKanbanMode('ciclo')">↻ Ciclo</button>
+            <button class="btn btn-sm btn-primary" id="btn-ciclo-distribuir" style="display:none;margin-left:4px" onclick="cicloDistribuir()">∷ Distribuir</button>
+            <span id="ciclo-countdown" style="display:none;font-size:11px;color:var(--muted);white-space:nowrap"></span>
           </div>
           <select class="form-input" id="kanban-versao-sel" style="width:auto" onchange="onVersaoChange()"></select>
           <select class="form-input" id="kanban-filtro-sel" style="width:auto" onchange="setFiltro(this.value)">
@@ -2327,6 +2329,9 @@ function setKanbanMode(m){
   var bc=document.getElementById('btn-mode-ciclo');
   if(bk)bk.className='ciclo-mode-btn'+(m==='kanban'?' active':'');
   if(bc)bc.className='ciclo-mode-btn'+(m==='ciclo'?' active':'');
+  var db=document.getElementById('btn-ciclo-distribuir');
+  var cd=document.getElementById('ciclo-countdown');
+  if(m==='kanban'){if(db)db.style.display='none';if(cd)cd.style.display='none';}
   renderKanban();
 }
 
@@ -2347,16 +2352,38 @@ function badgeTipoRedmine(tipo){
   return'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;'+style+'">'+escHtml(tipo)+'</span>';
 }
 
-function renderCicloView(){
-  var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-  var hoje=new Date();
-  var periodoLabel=MESES[hoje.getMonth()]+' '+hoje.getFullYear();
+function cicloDistribuir(){
+  var hoje=new Date().toISOString().slice(0,10);
+  var p=S.pontos.find(function(x){return x.data===hoje;});
+  if(p)autoApropDia(p.id);else toast('Registre seu ponto de hoje primeiro','err');
+}
 
+function renderCicloView(){
   // Mesmos filtros do Kanban
   var sel=document.getElementById('kanban-versao-sel');
   sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+(v.ativa?'':' ✓')+'</option>'}).join('');
   if(S.versaoK)sel.value=S.versaoK;
   var vid=sel.value;S.versaoK=vid;
+  var versao=S.versoes.find(function(v){return v.id===vid;});
+
+  // Contagem regressiva
+  var cdEl=document.getElementById('ciclo-countdown');
+  var distBtn=document.getElementById('btn-ciclo-distribuir');
+  if(cdEl){
+    if(versao&&versao.data&&versao.ativa){
+      var fim=new Date(versao.data+'T00:00:00');
+      var diff=Math.ceil((fim-new Date())/(1000*60*60*24));
+      cdEl.textContent=diff>0?diff+' dia'+(diff!==1?'s':'')+' restantes':'Versão encerrou hoje';
+      cdEl.style.color=diff<=3?'#f59e0b':'var(--muted)';
+      cdEl.style.display='';
+    } else {
+      cdEl.style.display='none';
+    }
+  }
+  // Mostrar botão Distribuir só no modo Ciclo
+  var hoje=new Date().toISOString().slice(0,10);
+  var pontoHoje=S.pontos.find(function(p){return p.data===hoje;});
+  if(distBtn)distBtn.style.display=pontoHoje?'':'none';
 
   var oss=S.oss.filter(function(o){return o.versaoId===vid;});
   if(S.filtro!=='todos')oss=oss.filter(function(o){return(PLINHA[o.produto]||'')===S.filtro;});
@@ -2380,51 +2407,38 @@ function renderCicloView(){
   }
 
   var canEd=can('os_editar');
+  var canDel=can('os_deletar_propria');
 
-  function rowHtml(os){
+  function rowHtml(os,concluida){
     var porte=osPorteFromHours(os.estimatedHours||0);
-    var statusCls={afazer:'ciclo-status-afazer',andamento:'ciclo-status-andamento',concluido:'ciclo-status-concluido'}[os.status]||'ciclo-status-afazer';
-    var statusTxt={afazer:'A fazer',andamento:'Em andamento',concluido:'Concluído'}[os.status]||os.status;
-    var prevK={andamento:'afazer',concluido:'andamento'}[os.status];
-    var nextK={afazer:'andamento',andamento:'concluido'}[os.status];
-    return'<div class="ciclo-row'+(os.status==='concluido'?' ciclo-concluida':'')+'">'+
+    return'<div class="ciclo-row'+(concluida?' ciclo-concluida':'')+'">'+
       '<span class="'+porte.cls+'" style="flex-shrink:0">'+porte.label+'</span>'+
       '<span class="ciclo-num">#'+escHtml(String(os.num))+'</span>'+
       '<span class="ciclo-titulo" title="'+escHtml(os.titulo)+'">'+escHtml(os.titulo)+'</span>'+
       (os.atribuicao?'<span class="ciclo-atrib">'+escHtml(os.atribuicao)+'</span>':'')+
-      '<span class="ciclo-status '+statusCls+'">'+statusTxt+'</span>'+
       '<div class="ciclo-actions">'+
-        (prevK?'<button class="os-action-btn nav-btn" onclick="moveOS(\''+os.id+'\',\''+prevK+'\')">← '+{afazer:'A fazer',andamento:'Em and.'}[prevK]+'</button>':'')+
-        (nextK?'<button class="os-action-btn nav-btn" onclick="moveOS(\''+os.id+'\',\''+nextK+'\')">'+(nextK==='concluido'?'✓ Concluir':'Em and. →')+'</button>':'')+
+        (!concluida?'<button class="os-action-btn nav-btn" onclick="moveOS(\''+os.id+'\',\'concluido\')">✓ Concluir</button>':
+                    '<button class="os-action-btn nav-btn" onclick="moveOS(\''+os.id+'\',\'afazer\')">↩ Reabrir</button>')+
         (canEd?'<button class="os-action-btn edit" onclick="openEditOS(\''+os.id+'\')">✏</button>':'')+
       '</div>'+
     '</div>';
   }
 
-  // Ponto de hoje para o botão Distribuir
-  var hojeStr=hoje.toISOString().slice(0,10);
-  var pontoHoje=S.pontos.find(function(p){return p.data===hojeStr;});
-
   var totalOss=oss.length;
-  var emAnd=oss.filter(function(o){return o.status==='andamento';}).length;
   var conc=concluidas.length;
 
-  var html='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap">'+
-    '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">'+
-      '<span style="font-size:15px;font-weight:700;color:var(--text);white-space:nowrap">'+periodoLabel+'</span>'+
-      '<span style="font-size:12px;color:var(--muted);white-space:nowrap">'+totalOss+' OSes</span>'+
-      '<span style="font-size:12px;color:var(--muted);white-space:nowrap">'+emAnd+' em andamento</span>'+
-      '<span style="font-size:12px;color:var(--muted);white-space:nowrap">'+conc+' concluídas</span>'+
-    '</div>'+
-    (pontoHoje?'<button class="btn btn-sm btn-primary" style="flex-shrink:0" onclick="autoApropDia(\''+pontoHoje.id+'\')">∷ Distribuir</button>':
-      '<span style="font-size:11px;color:var(--muted);flex-shrink:0">Registre ponto para distribuir</span>')+
-  '</div>'+
+  var statsHtml='<span style="font-size:12px;color:var(--muted);margin-bottom:10px;display:block">'+
+    totalOss+' OSes · '+abertas.length+' abertas · '+conc+' concluídas</span>';
+
+  var html=statsHtml+
   '<div class="ciclo-list">'+
-    (sortByPorte(abertas).map(rowHtml).join('')||'<div style="color:var(--muted);font-size:13px;text-align:center;padding:32px 0">Nenhuma OS em aberto</div>')+
+    (sortByPorte(abertas).map(function(o){return rowHtml(o,false);}).join('')||
+     '<div style="color:var(--muted);font-size:13px;text-align:center;padding:32px 0">Nenhuma OS em aberto</div>')+
   '</div>'+
   (concluidas.length?
-    '<details style="margin-top:12px"><summary style="font-size:12px;color:var(--muted);cursor:pointer;user-select:none">'+conc+' concluída'+(conc!==1?'s':'')+'</summary>'+
-    '<div class="ciclo-list" style="margin-top:8px">'+sortByPorte(concluidas).map(rowHtml).join('')+'</div></details>':
+    '<details style="margin-top:10px"><summary style="font-size:12px;color:var(--muted);cursor:pointer;user-select:none;padding:6px 0">'+
+    conc+' concluída'+(conc!==1?'s':'')+' ▾</summary>'+
+    '<div class="ciclo-list" style="margin-top:6px">'+sortByPorte(concluidas).map(function(o){return rowHtml(o,true);}).join('')+'</div></details>':
   '');
 
   document.getElementById('kanban-board').innerHTML=html;
