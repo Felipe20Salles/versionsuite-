@@ -3986,58 +3986,30 @@ function getApropState(p){
   }
   return _apropState[p.id];
 }
-var _aapCheck=[], _aapHoras=0;
-
-function _aapRecalc(){
-  var totalH=_aapCheck.reduce(function(s,o,i){
-    var cb=document.getElementById('auto-ck-'+i);
-    return s+(cb&&cb.checked?(o.estimatedHours||2):0);
-  },0);
-  var totalDist=0;
-  _aapCheck.forEach(function(o,i){
-    var cb=document.getElementById('auto-ck-'+i);
-    var hEl=document.getElementById('auto-h-'+i);
-    if(!hEl)return;
-    if(cb&&cb.checked&&totalH>0){
-      var h=parseFloat(((o.estimatedHours||2)/totalH*_aapHoras).toFixed(1));
-      hEl.textContent=h+'h';totalDist+=h;
-    }else{hEl.textContent='';}
-  });
-  var tot=document.getElementById('aap-total');
-  if(tot){
-    var sel=_aapCheck.filter(function(o,i){var cb=document.getElementById('auto-ck-'+i);return cb&&cb.checked;}).length;
-    tot.textContent=sel?totalDist.toFixed(1)+'h de '+_aapHoras.toFixed(1)+'h distribuídas':'';
-  }
-}
-
 function autoApropDia(pid){
   var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;
-  var cargaDiaria=getSchedule().cargaDiaria||8;
-  _aapHoras=Math.min(p.horasTrabalhadas||0,cargaDiaria);
   var ossDisp=ossParaApropriar();
   var meuNome=getDisplayName().trim();
   var minhaOss=ossDisp.filter(function(o){return(o.atribuicao||'').trim()===meuNome});
-  _aapCheck=minhaOss.length?minhaOss:ossDisp;
-  if(!_aapCheck.length){toast('Nenhuma OS disponível para apropriar','err');return}
-  var chkHtml=_aapCheck.map(function(o,i){
+  var check=minhaOss.length?minhaOss:ossDisp;
+  if(!check.length){toast('Nenhuma OS disponível para apropriar','err');return}
+  var chkHtml=check.map(function(o,i){
     var vn=S.versoes.find(function(x){return x.id===o.versaoId});
     var porte=osPorteFromHours(o.estimatedHours||0);
     return'<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;cursor:pointer">'+
-      '<input type="checkbox" id="auto-ck-'+i+'" '+(minhaOss.length?'checked':'')+' style="width:14px;height:14px" onchange="_aapRecalc()">'+
+      '<input type="checkbox" id="auto-ck-'+i+'" '+(minhaOss.length?'checked':'')+' style="width:14px;height:14px">'+
       '<span class="'+porte.cls+'" style="flex-shrink:0;padding:1px 6px;font-size:10px">'+porte.label+'</span>'+
       '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">OS '+o.num+' – '+o.titulo.slice(0,34)+(vn?' <span style="color:var(--muted)">('+vn.nome+')</span>':'')+'</span>'+
-      '<span id="auto-h-'+i+'" style="color:var(--accent);font-weight:600;flex-shrink:0;min-width:34px;text-align:right;font-size:11px"></span>'+
     '</label>';
   }).join('');
   modalConfirm(
     '∷ Distribuição de horas',
-    '<div style="font-size:12px;color:var(--muted);margin-bottom:10px">Distribuindo <strong>'+_aapHoras.toFixed(2)+'h</strong> (carga diária: '+cargaDiaria+'h) proporcionalmente ao esforço:</div>'+
-    '<div style="max-height:240px;overflow-y:auto;padding:4px 0">'+chkHtml+'</div>'+
-    '<div id="aap-total" style="font-size:11px;color:var(--muted);margin-top:8px;text-align:right;padding-top:6px;border-top:1px solid var(--border)"></div>',
+    '<div style="font-size:12px;color:var(--muted);margin-bottom:8px">Selecione as OSes para distribuir as <strong>'+p.horasTrabalhadas.toFixed(2)+'h</strong> proporcionalmente ao esforço:</div>'+
+    '<div style="max-height:240px;overflow-y:auto;padding:4px 0">'+chkHtml+'</div>',
     'Aplicar e editar','btn-primary'
   ).then(function(ok){
     if(!ok)return;
-    var selecionadas=_aapCheck.filter(function(o,i){var cb=document.getElementById('auto-ck-'+i);return cb&&cb.checked});
+    var selecionadas=check.filter(function(o,i){var cb=document.getElementById('auto-ck-'+i);return cb&&cb.checked});
     if(!selecionadas.length){toast('Nenhuma OS selecionada','err');return}
     var n=selecionadas.length;
     var totalH=selecionadas.reduce(function(s,o){return s+(o.estimatedHours||2);},0);
@@ -4053,7 +4025,6 @@ function autoApropDia(pid){
     redrawApropDay(p,ossDisp);
     setTimeout(function(){attachSlider(pid)},50);
   });
-  setTimeout(_aapRecalc,60);
 }
 function ossParaApropriarMinha(){
   var todas=ossParaApropriar();
@@ -5524,7 +5495,7 @@ function renderDayPlanOsList(){
       var porte=osPorteFromHours(os.estimatedHours||0);
       return'<div class="dayplan-os-row" id="dayplan-row-'+os.id+'">'
         +'<input type="checkbox" class="dayplan-os-check" id="dayplan-chk-'+os.id+'" '+(checked?'checked':'')
-        +' onchange="updateDayPlanTotal()">'
+        +' onchange="redistributeDayPlan()">'
         +'<div class="dayplan-os-info">'
         +'<div class="dayplan-os-title"><span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px;margin-right:6px">'+porte.label+'</span>#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)+'</div>'
         +'<div class="dayplan-os-sub">'+(os.atribuicao?'<span style="font-size:11px;color:var(--accent)">'+escHtml(os.atribuicao)+'</span> · ':'')+'Estimativa: '+(os.estimatedHours||0)+'h</div>'
@@ -5534,6 +5505,26 @@ function renderDayPlanOsList(){
         +'</div>';
     }).join('');
 
+  updateDayPlanTotal();
+}
+
+function redistributeDayPlan(){
+  var cargaDiaria=getSchedule().cargaDiaria||8;
+  var andamento=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer';});
+  var selecionadas=andamento.filter(function(os){
+    var chk=document.getElementById('dayplan-chk-'+os.id);return chk&&chk.checked;
+  });
+  if(!selecionadas.length){updateDayPlanTotal();return;}
+  var totalEst=selecionadas.reduce(function(s,o){return s+(o.estimatedHours||2);},0);
+  selecionadas.forEach(function(os){
+    var inp=document.getElementById('dayplan-h-'+os.id);if(!inp)return;
+    var rawH=totalEst>0?(cargaDiaria*(os.estimatedHours||2)/totalEst):(cargaDiaria/selecionadas.length);
+    var h=Math.max(0.5,Math.round(rawH*2)/2);
+    // Seleciona a opção mais próxima disponível
+    var opts=Array.from(inp.options).map(function(o){return parseFloat(o.value);});
+    var closest=opts.reduce(function(a,b){return Math.abs(b-h)<Math.abs(a-h)?b:a;});
+    inp.value=String(closest);
+  });
   updateDayPlanTotal();
 }
 
