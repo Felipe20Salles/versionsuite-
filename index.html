@@ -288,6 +288,21 @@ textarea.form-input{resize:vertical;min-height:70px}
 .peso-badge-grande{background:rgba(245,158,11,.15);color:#f59e0b;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
 .peso-badge-normal{background:rgba(96,165,250,.15);color:#60a5fa;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
 .peso-badge-rapida{background:rgba(16,185,129,.15);color:#10b981;border-radius:20px;padding:2px 10px;font-size:11px;font-weight:600}
+.ciclo-list{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.ciclo-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--card2);border:1px solid var(--border);border-radius:8px;min-width:0;transition:border-color .12s}
+.ciclo-row:hover{border-color:var(--border2)}
+.ciclo-row.ciclo-concluida{opacity:.5}
+.ciclo-num{font-family:var(--mono);color:var(--muted);font-size:11px;flex-shrink:0;min-width:52px}
+.ciclo-titulo{flex:1;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ciclo-atrib{font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.ciclo-status{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;flex-shrink:0;white-space:nowrap}
+.ciclo-status-afazer{background:rgba(148,163,184,.12);color:#94a3b8}
+.ciclo-status-andamento{background:rgba(251,146,60,.12);color:#fb923c}
+.ciclo-status-concluido{background:rgba(16,185,129,.12);color:#10b981}
+.ciclo-actions{display:flex;gap:4px;flex-shrink:0}
+.ciclo-mode-btn{background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:var(--muted);font-family:inherit;transition:all .12s}
+.ciclo-mode-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.ciclo-mode-btn:hover:not(.active){background:var(--card2);color:var(--text)}
 /* ── PLANEJAMENTO DO DIA ── */
 .dayplan-os-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
 .dayplan-os-row:last-child{border-bottom:none}
@@ -606,6 +621,10 @@ textarea.form-input{resize:vertical;min-height:70px}
       <!-- KANBAN -->
       <div id="screen-kanban" class="screen">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">
+          <div style="display:flex;gap:4px;flex-shrink:0">
+            <button class="ciclo-mode-btn active" id="btn-mode-kanban" onclick="setKanbanMode('kanban')">⬡ Kanban</button>
+            <button class="ciclo-mode-btn" id="btn-mode-ciclo" onclick="setKanbanMode('ciclo')">↻ Ciclo</button>
+          </div>
           <select class="form-input" id="kanban-versao-sel" style="width:auto" onchange="onVersaoChange()"></select>
           <select class="form-input" id="kanban-filtro-sel" style="width:auto" onchange="setFiltro(this.value)">
             <option value="todos">Todos</option>
@@ -2299,6 +2318,18 @@ function salvarVersao(){
 }
 
 // ── KANBAN ────────────────────────────────────────────────────────────────────
+var _kanbanMode=localStorage.getItem('vs_kanban_mode')||'kanban';
+
+function setKanbanMode(m){
+  _kanbanMode=m;
+  localStorage.setItem('vs_kanban_mode',m);
+  var bk=document.getElementById('btn-mode-kanban');
+  var bc=document.getElementById('btn-mode-ciclo');
+  if(bk)bk.className='ciclo-mode-btn'+(m==='kanban'?' active':'');
+  if(bc)bc.className='ciclo-mode-btn'+(m==='ciclo'?' active':'');
+  renderKanban();
+}
+
 function onVersaoChange(){S.versaoK=document.getElementById('kanban-versao-sel').value;renderKanban()}
 function setFiltro(f){S.filtro=f||'todos';renderKanban()}
 function statusLabel(k){return{afazer:'A fazer',andamento:'Em andamento',concluido:'Concluído'}[k]||k}
@@ -2316,7 +2347,94 @@ function badgeTipoRedmine(tipo){
   return'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;'+style+'">'+escHtml(tipo)+'</span>';
 }
 
+function renderCicloView(){
+  var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var hoje=new Date();
+  var periodoLabel=MESES[hoje.getMonth()]+' '+hoje.getFullYear();
+
+  // Mesmos filtros do Kanban
+  var sel=document.getElementById('kanban-versao-sel');
+  sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+(v.ativa?'':' ✓')+'</option>'}).join('');
+  if(S.versaoK)sel.value=S.versaoK;
+  var vid=sel.value;S.versaoK=vid;
+
+  var oss=S.oss.filter(function(o){return o.versaoId===vid;});
+  if(S.filtro!=='todos')oss=oss.filter(function(o){return(PLINHA[o.produto]||'')===S.filtro;});
+  if(S.filtroAtribuicao&&S.filtroAtribuicao!=='todos'){
+    oss=oss.filter(function(o){return(o.atribuicao||'').trim()===S.filtroAtribuicao;});
+  }
+
+  var PORTE_ORDER={epico:0,grande:1,normal:2,rapida:3};
+  var abertas=oss.filter(function(o){return o.status!=='concluido';});
+  var concluidas=oss.filter(function(o){return o.status==='concluido';});
+
+  function sortByPorte(arr){
+    return arr.slice().sort(function(a,b){
+      var pa=PORTE_ORDER[osPorteFromHours(a.estimatedHours||0).key]||2;
+      var pb=PORTE_ORDER[osPorteFromHours(b.estimatedHours||0).key]||2;
+      if(pa!==pb)return pa-pb;
+      return(a.num||'').localeCompare(b.num||'',undefined,{numeric:true});
+    });
+  }
+
+  var canEd=can('os_editar');
+
+  function rowHtml(os){
+    var porte=osPorteFromHours(os.estimatedHours||0);
+    var statusCls={afazer:'ciclo-status-afazer',andamento:'ciclo-status-andamento',concluido:'ciclo-status-concluido'}[os.status]||'ciclo-status-afazer';
+    var statusTxt={afazer:'A fazer',andamento:'Em andamento',concluido:'Concluído'}[os.status]||os.status;
+    var prevK={andamento:'afazer',concluido:'andamento'}[os.status];
+    var nextK={afazer:'andamento',andamento:'concluido'}[os.status];
+    return'<div class="ciclo-row'+(os.status==='concluido'?' ciclo-concluida':'')+'">'+
+      '<span class="'+porte.cls+'" style="flex-shrink:0">'+porte.label+'</span>'+
+      '<span class="ciclo-num">#'+escHtml(String(os.num))+'</span>'+
+      '<span class="ciclo-titulo" title="'+escHtml(os.titulo)+'">'+escHtml(os.titulo)+'</span>'+
+      (os.atribuicao?'<span class="ciclo-atrib">'+escHtml(os.atribuicao)+'</span>':'')+
+      '<span class="ciclo-status '+statusCls+'">'+statusTxt+'</span>'+
+      '<div class="ciclo-actions">'+
+        (prevK?'<button class="os-action-btn nav-btn" onclick="moveOS(\''+os.id+'\',\''+prevK+'\')">← '+{afazer:'A fazer',andamento:'Em and.'}[prevK]+'</button>':'')+
+        (nextK?'<button class="os-action-btn nav-btn" onclick="moveOS(\''+os.id+'\',\''+nextK+'\')">'+(nextK==='concluido'?'✓ Concluir':'Em and. →')+'</button>':'')+
+        (canEd?'<button class="os-action-btn edit" onclick="openEditOS(\''+os.id+'\')">✏</button>':'')+
+      '</div>'+
+    '</div>';
+  }
+
+  // Ponto de hoje para o botão Distribuir
+  var hojeStr=hoje.toISOString().slice(0,10);
+  var pontoHoje=S.pontos.find(function(p){return p.data===hojeStr;});
+
+  var totalOss=oss.length;
+  var emAnd=oss.filter(function(o){return o.status==='andamento';}).length;
+  var conc=concluidas.length;
+
+  var html='<div style="margin-bottom:14px">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">'+
+      '<div>'+
+        '<span style="font-size:15px;font-weight:700;color:var(--text)">'+periodoLabel+'</span>'+
+        '<span style="font-size:12px;color:var(--muted);margin-left:10px">'+totalOss+' OSes · '+emAnd+' em andamento · '+conc+' concluídas</span>'+
+      '</div>'+
+      (pontoHoje?'<button class="btn btn-sm btn-primary" onclick="autoApropDia(\''+pontoHoje.id+'\')">∷ Distribuir</button>':
+        '<span style="font-size:11px;color:var(--muted)">Registre seu ponto para distribuir horas</span>')+
+    '</div>'+
+  '</div>'+
+  '<div class="ciclo-list">'+
+    (sortByPorte(abertas).map(rowHtml).join('')||'<div style="color:var(--muted);font-size:13px;text-align:center;padding:32px 0">Nenhuma OS em aberto</div>')+
+  '</div>'+
+  (concluidas.length?
+    '<details style="margin-top:12px"><summary style="font-size:12px;color:var(--muted);cursor:pointer;user-select:none">'+conc+' concluída'+(conc!==1?'s':'')+'</summary>'+
+    '<div class="ciclo-list" style="margin-top:8px">'+sortByPorte(concluidas).map(rowHtml).join('')+'</div></details>':
+  '');
+
+  document.getElementById('kanban-board').innerHTML=html;
+}
+
 function renderKanban(){
+  // Sincroniza botões de modo
+  var bk=document.getElementById('btn-mode-kanban');
+  var bc=document.getElementById('btn-mode-ciclo');
+  if(bk)bk.className='ciclo-mode-btn'+(_kanbanMode==='kanban'?' active':'');
+  if(bc)bc.className='ciclo-mode-btn'+(_kanbanMode==='ciclo'?' active':'');
+  if(_kanbanMode==='ciclo'){renderCicloView();return;}
   // Popular select "Atribuído a:"
   var atribSel=document.getElementById('kanban-atrib-sel');
   if(atribSel){
