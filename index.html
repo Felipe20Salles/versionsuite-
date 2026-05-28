@@ -7046,11 +7046,27 @@ function renderExportarHoras(){
   var tipos=getTipoAtividades();
   var tiposOpts=tipos.map(function(t){return'<option value="'+(t.id!=null?t.id:t.name)+'">'+escHtml(t.name)+'</option>';}).join('');
   var tipoDefault=tipos.length?tipos[0]:{id:null,name:''};
+  function _findTipo(actId){
+    if(!actId)return null;
+    return tipos.find(function(t){return String(t.id!=null?t.id:t.name)===String(actId)||t.name===actId;})||null;
+  }
   var rows=[];
   S.pontos.filter(function(p){return p.data>=ini&&p.data<=fim&&p.horasTrabalhadas>0}).forEach(function(p){
     (p.apropriacoes||[]).forEach(function(a){
       var os=S.oss.find(function(o){return o.id===a.osId});
-      rows.push({osNum:os?os.num:'?',data:p.data,horas:a.horas,tipo:tipoDefault.name,activityId:tipoDefault.id,_osId:a.osId});
+      var osNum=os?os.num:'?';
+      if(a.breakdown&&a.breakdown.length){
+        // Expande breakdown: uma linha por tipo de atividade
+        a.breakdown.forEach(function(bk){
+          if(!bk.horas)return;
+          var t=_findTipo(bk.activityTypeId)||tipoDefault;
+          rows.push({osNum:osNum,data:p.data,horas:bk.horas,tipo:t.name,activityId:t.id!=null?t.id:null,_osId:a.osId});
+        });
+      }else{
+        // Sem breakdown: usa tipo da OS ou default
+        var t=_findTipo(os&&os.activityTypeId)||tipoDefault;
+        rows.push({osNum:osNum,data:p.data,horas:a.horas,tipo:t.name,activityId:t.id!=null?t.id:null,_osId:a.osId});
+      }
     });
   });
   _exportRows=rows;
@@ -7064,7 +7080,9 @@ function renderExportarHoras(){
       '<td style="padding:6px 10px;font-size:12px;font-family:var(--mono)">'+r.osNum+'</td>'+
       '<td style="padding:6px 10px;font-size:12px">'+fmtDate(r.data)+'</td>'+
       '<td style="padding:6px 10px;font-size:12px">'+r.horas.toFixed(2)+'h</td>'+
-      '<td style="padding:6px 10px"><select class="form-input" style="padding:2px 6px;font-size:12px;height:28px" onchange="(function(v,i){var t=getTipoAtividades().find(function(x){return String(x.id!=null?x.id:x.name)===v});_exportRows[i].tipo=t?t.name:v;_exportRows[i].activityId=t&&t.id!=null?t.id:null;})(this.value,'+i+')">'+tiposOpts+'</select></td>'+
+      '<td style="padding:6px 10px"><select class="form-input" style="padding:2px 6px;font-size:12px;height:28px" onchange="(function(v,i){var t=getTipoAtividades().find(function(x){return String(x.id!=null?x.id:x.name)===v});_exportRows[i].tipo=t?t.name:v;_exportRows[i].activityId=t&&t.id!=null?t.id:null;})(this.value,'+i+')">'+
+        tipos.map(function(t){var val=String(t.id!=null?t.id:t.name);return'<option value="'+escHtml(val)+'"'+(val===String(r.activityId!=null?r.activityId:r.tipo)?' selected':'')+'>'+escHtml(t.name)+'</option>';}).join('')+
+        '</select></td>'+
     '</tr>';
   }).join('');
   preview.innerHTML='<table style="width:100%;border-collapse:collapse;background:var(--card2);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border2)"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';
