@@ -5524,16 +5524,6 @@ function excluirPonto(id){
   }).catch(function(e){toast('Erro: '+e.message,'err')});
 }
 
-function saveAprop(pid){
-  var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;
-  var st=getApropState(p);var h=p.horasTrabalhadas||0;
-  p.apropriacoes=st.oss.filter(function(x){return x.osId}).map(function(x){return{osId:x.osId,horas:parseFloat((h*x.pct/100).toFixed(2))}});
-  st.editing=false;delete st._backup;
-  dbSalvarApropriacao(pid,p.apropriacoes).then(function(){
-    redrawApropDay(p);renderPontoList();renderDash();renderKanban();toast('Apropriação salva');
-  }).catch(function(e){toast('Erro: '+e.message,'err')});
-}
-
 function salvarPublicacao(){
   var titulo=document.getElementById('pub-titulo').value.trim();
   var inicio=document.getElementById('pub-inicio').value;var fim=document.getElementById('pub-fim').value;
