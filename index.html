@@ -7046,11 +7046,27 @@ function renderExportarHoras(){
   var tipos=getTipoAtividades();
   var tiposOpts=tipos.map(function(t){return'<option value="'+(t.id!=null?t.id:t.name)+'">'+escHtml(t.name)+'</option>';}).join('');
   var tipoDefault=tipos.length?tipos[0]:{id:null,name:''};
+  function _findTipo(actId){
+    if(!actId)return null;
+    return tipos.find(function(t){return String(t.id!=null?t.id:t.name)===String(actId)||t.name===actId;})||null;
+  }
   var rows=[];
   S.pontos.filter(function(p){return p.data>=ini&&p.data<=fim&&p.horasTrabalhadas>0}).forEach(function(p){
     (p.apropriacoes||[]).forEach(function(a){
       var os=S.oss.find(function(o){return o.id===a.osId});
-      rows.push({osNum:os?os.num:'?',data:p.data,horas:a.horas,tipo:tipoDefault.name,activityId:tipoDefault.id,_osId:a.osId});
+      var osNum=os?os.num:'?';
+      if(a.breakdown&&a.breakdown.length){
+        // Expande breakdown: uma linha por tipo de atividade
+        a.breakdown.forEach(function(bk){
+          if(!bk.horas)return;
+          var t=_findTipo(bk.activityTypeId)||tipoDefault;
+          rows.push({osNum:osNum,data:p.data,horas:bk.horas,tipo:t.name,activityId:t.id!=null?t.id:null,_osId:a.osId});
+        });
+      }else{
+        // Sem breakdown: usa tipo da OS ou default
+        var t=_findTipo(os&&os.activityTypeId)||tipoDefault;
+        rows.push({osNum:osNum,data:p.data,horas:a.horas,tipo:t.name,activityId:t.id!=null?t.id:null,_osId:a.osId});
+      }
     });
   });
   _exportRows=rows;
@@ -7064,7 +7080,9 @@ function renderExportarHoras(){
       '<td style="padding:6px 10px;font-size:12px;font-family:var(--mono)">'+r.osNum+'</td>'+
       '<td style="padding:6px 10px;font-size:12px">'+fmtDate(r.data)+'</td>'+
       '<td style="padding:6px 10px;font-size:12px">'+r.horas.toFixed(2)+'h</td>'+
-      '<td style="padding:6px 10px"><select class="form-input" style="padding:2px 6px;font-size:12px;height:28px" onchange="(function(v,i){var t=getTipoAtividades().find(function(x){return String(x.id!=null?x.id:x.name)===v});_exportRows[i].tipo=t?t.name:v;_exportRows[i].activityId=t&&t.id!=null?t.id:null;})(this.value,'+i+')">'+tiposOpts+'</select></td>'+
+      '<td style="padding:6px 10px"><select class="form-input" style="padding:2px 6px;font-size:12px;height:28px" onchange="(function(v,i){var t=getTipoAtividades().find(function(x){return String(x.id!=null?x.id:x.name)===v});_exportRows[i].tipo=t?t.name:v;_exportRows[i].activityId=t&&t.id!=null?t.id:null;})(this.value,'+i+')">'+
+        tipos.map(function(t){var val=String(t.id!=null?t.id:t.name);return'<option value="'+escHtml(val)+'"'+(val===String(r.activityId!=null?r.activityId:r.tipo)?' selected':'')+'>'+escHtml(t.name)+'</option>';}).join('')+
+        '</select></td>'+
     '</tr>';
   }).join('');
   preview.innerHTML='<table style="width:100%;border-collapse:collapse;background:var(--card2);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border2)"><thead>'+thead+'</thead><tbody>'+tbody+'</tbody></table>';
@@ -7516,20 +7534,23 @@ function matchAtribuicaoRedmine(redmineName){
   });
   return bestScore>=0.5?best:'-Sem atribuição-';
 }
-function matchProdutoRedmine(redmineProjectName){
-  if(!redmineProjectName)return'';
-  var lower=redmineProjectName.toLowerCase();
+function matchProdutoRedmine(iss){
+  // Prioridade 1: custom field "Produto" da issue (homologação/Redmine)
+  var cf=(iss.custom_fields||[]).find(function(f){return f.name&&f.name.toLowerCase()==='produto'});
+  var rawName=(cf&&cf.value)||'';
+  // Fallback: nome do projeto
+  if(!rawName)rawName=(iss.project&&iss.project.name)||'';
+  if(!rawName)return'';
+  var lower=rawName.toLowerCase();
   var prods=(S.prefs&&S.prefs.produtos)||[];
-  // Exact match (nome completo) tem prioridade
   var exact=prods.find(function(p){return p.toLowerCase()===lower});
   if(exact)return exact;
-  // Parcial: entre todos os que batem como substring, prefere o mais longo (mais específico)
   var parciais=prods.filter(function(p){
     var pl=p.toLowerCase();
     return lower.indexOf(pl)>-1||pl.indexOf(lower)>-1;
   });
   if(parciais.length)return parciais.reduce(function(best,p){return p.length>best.length?p:best;});
-  return redmineProjectName;
+  return rawName;
 }
 async function importarDoRedmine(){
   var cfg=getRedmineConfig();
@@ -7546,32 +7567,76 @@ async function importarDoRedmine(){
       return TIPOS_FILHOS.indexOf(iss.tracker&&iss.tracker.name||'')>-1&&iss.parent;
     });
     if(!issues.length){toast('Nenhuma tarefa do tipo filho atribuída a você','err');return}
-    var existingNums=S.oss.filter(function(o){return o.versaoId===S.versaoK}).map(function(o){return String(o.num)});
+
+    var existingOss=S.oss.filter(function(o){return o.versaoId===S.versaoK});
+    var existingNums=existingOss.map(function(o){return String(o.num)});
+
     var novas=issues.filter(function(iss){return existingNums.indexOf(String(iss.id))===-1});
-    if(!novas.length){toast('Todas as tarefas já estão importadas nessa versão','err');return}
-    var ok=await modalConfirm(
-      'Importar do Redmine',
-      '<div style="font-size:13px;margin-bottom:10px"><strong>'+novas.length+'</strong> tarefa(s) disponível(is) para importar:</div>'+
-      '<div style="max-height:200px;overflow-y:auto;border:1px solid var(--border2);border-radius:var(--radius);padding:4px 0">'+
-      novas.map(function(iss){
-        return'<div style="font-size:12px;padding:6px 10px;border-bottom:1px solid var(--border2)">'+
-          (iss.tracker?'<span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:rgba(59,130,246,.12);color:#3b82f6;margin-right:6px">'+escHtml(iss.tracker.name)+'</span>':'')+
-          '<span style="color:var(--muted);font-family:var(--mono);margin-right:6px">#'+iss.id+'</span>'+
-          escHtml(iss.subject)+
-          (iss.parent?'<span style="color:var(--hint);font-size:11px;margin-left:6px">(Pai: #'+iss.parent.id+')</span>':'')+
-        '</div>';
-      }).join('')+
-      '</div>',
-      'Importar tudo','btn-primary'
-    );
+
+    // Detectar cards já importados com campos alterados no Redmine
+    var atualizadas=issues.filter(function(iss){
+      var local=existingOss.find(function(o){return String(o.num)===String(iss.id)});
+      if(!local)return false;
+      var nt=iss.subject||'';
+      var na=matchAtribuicaoRedmine(iss.assigned_to?iss.assigned_to.name:'');
+      var np=matchProdutoRedmine(iss);
+      var ntp=iss.tracker?iss.tracker.name:'';
+      return nt!==local.titulo||na!==local.atribuicao||np!==local.produto||ntp!==local.tipoRedmine;
+    }).map(function(iss){
+      var local=existingOss.find(function(o){return String(o.num)===String(iss.id)});
+      var novoTitulo=iss.subject||'';
+      var novaAtrib=matchAtribuicaoRedmine(iss.assigned_to?iss.assigned_to.name:'');
+      var novoProd=matchProdutoRedmine(iss);
+      var novoTipo=iss.tracker?iss.tracker.name:'';
+      var diffs=[];
+      if(novoTitulo!==local.titulo)diffs.push({campo:'título',de:local.titulo,para:novoTitulo});
+      if(novaAtrib!==local.atribuicao)diffs.push({campo:'atribuição',de:local.atribuicao,para:novaAtrib});
+      if(novoProd!==local.produto)diffs.push({campo:'produto',de:local.produto,para:novoProd});
+      if(novoTipo!==local.tipoRedmine)diffs.push({campo:'tipo',de:local.tipoRedmine,para:novoTipo});
+      return{iss:iss,local:local,diffs:diffs,novoTitulo:novoTitulo,novaAtrib:novaAtrib,novoProd:novoProd,novoTipo:novoTipo};
+    });
+
+    if(!novas.length&&!atualizadas.length){toast('Nenhuma novidade — todos os cards estão atualizados');return}
+
+    var bodyHtml='';
+    if(novas.length){
+      bodyHtml+='<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">'+novas.length+' nova(s)</div>'+
+        '<div style="max-height:150px;overflow-y:auto;border:1px solid var(--border2);border-radius:var(--radius);padding:4px 0;margin-bottom:14px">'+
+        novas.map(function(iss){
+          return'<div style="font-size:12px;padding:6px 10px;border-bottom:1px solid var(--border2)">'+
+            (iss.tracker?'<span style="font-size:10px;font-weight:600;padding:1px 6px;border-radius:4px;background:rgba(59,130,246,.12);color:#3b82f6;margin-right:6px">'+escHtml(iss.tracker.name)+'</span>':'')+
+            '<span style="color:var(--muted);font-family:var(--mono);margin-right:6px">#'+iss.id+'</span>'+
+            escHtml(iss.subject)+
+            (iss.parent?'<span style="color:var(--hint);font-size:11px;margin-left:6px">(Pai: #'+iss.parent.id+')</span>':'')+
+          '</div>';
+        }).join('')+'</div>';
+    }
+    if(atualizadas.length){
+      bodyHtml+='<div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">'+atualizadas.length+' atualizada(s) no Redmine</div>'+
+        '<div style="max-height:160px;overflow-y:auto;border:1px solid var(--border2);border-radius:var(--radius);padding:4px 0">'+
+        atualizadas.map(function(upd){
+          return'<div style="font-size:12px;padding:6px 10px;border-bottom:1px solid var(--border2)">'+
+            '<span style="color:var(--muted);font-family:var(--mono);margin-right:6px">#'+upd.iss.id+'</span>'+
+            '<span style="margin-right:8px">'+escHtml(upd.iss.subject)+'</span>'+
+            upd.diffs.map(function(df){
+              return'<span style="font-size:11px;background:rgba(245,158,11,.1);color:#f59e0b;border-radius:4px;padding:1px 5px;margin-right:4px">'+
+                escHtml(df.campo)+': '+escHtml(df.de||'—')+' → '+escHtml(df.para||'—')+'</span>';
+            }).join('')+
+          '</div>';
+        }).join('')+'</div>';
+    }
+
+    var okLabel=novas.length&&atualizadas.length?'Importar + Sincronizar':novas.length?'Importar tudo':'Sincronizar';
+    var ok=await modalConfirm('Importar do Redmine',bodyHtml,okLabel,'btn-primary');
     if(!ok)return;
+
     var count=0;
     for(var i=0;i<novas.length;i++){
       var iss=novas[i];
       var novaOS={
         id:crypto.randomUUID(),versaoId:S.versaoK,
         num:String(iss.id),titulo:iss.subject||'',
-        produto:matchProdutoRedmine(iss.project?iss.project.name:''),
+        produto:matchProdutoRedmine(iss),
         atribuicao:matchAtribuicaoRedmine(iss.assigned_to?iss.assigned_to.name:''),
         obs:iss.description||'',status:'afazer',link:'',entregas:{},
         createdBy:CURRENT_USER.id,
@@ -7582,8 +7647,26 @@ async function importarDoRedmine(){
       S.oss.push(novaOS);
       count++;
     }
+
+    var synced=0;
+    for(var j=0;j<atualizadas.length;j++){
+      var upd=atualizadas[j];
+      var idx=S.oss.findIndex(function(o){return o.id===upd.local.id});
+      if(idx===-1)continue;
+      S.oss[idx]=Object.assign({},S.oss[idx],{
+        titulo:upd.novoTitulo,atribuicao:upd.novaAtrib,
+        produto:upd.novoProd,tipoRedmine:upd.novoTipo,
+        paiRedmine:upd.iss.parent?String(upd.iss.parent.id):''
+      });
+      await dbSalvarOS(S.oss[idx]);
+      synced++;
+    }
+
     renderKanban();
-    toast(count+' card(s) importado(s) do Redmine ✓');
+    var msg=[];
+    if(count)msg.push(count+' importado(s)');
+    if(synced)msg.push(synced+' sincronizado(s)');
+    toast(msg.join(' · ')+' ✓');
   }catch(e){
     toast('Erro ao conectar ao Redmine: '+e.message,'err');
   }
