@@ -4313,7 +4313,10 @@ function saveAprop(pid){
     });
     return entry;
   });
-  st.editing=false;delete st._backup;save();redrawApropDay(p);renderPontoList();renderDash();renderKanban();toast('Apropriação salva');
+  st.editing=false;delete st._backup;
+  dbSalvarApropriacao(p.id,p.apropriacoes).then(function(){
+    redrawApropDay(p);renderPontoList();renderDash();renderKanban();toast('Apropriação salva');
+  }).catch(function(e){toast('Erro ao salvar: '+e.message,'err');});
 }
 function cancelAprop(pid){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);if(st._backup)st.oss=st._backup;st.editing=false;delete st._backup;redrawApropDay(p)}
 function attachSlider(pontoId){
