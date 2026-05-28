@@ -4036,6 +4036,14 @@ function getApropState(p){
       var breakdown=(a.breakdown||[]).map(function(b){
         return{activityTypeId:b.activityTypeId,pct:hItem>0?Math.round(b.horas/hItem*100):0};
       });
+      // Normaliza para garantir soma = 100 (evita bloqueio por arredondamento)
+      if(breakdown.length>0){
+        var bkSum=breakdown.reduce(function(s,b){return s+b.pct;},0);
+        if(bkSum!==100&&bkSum>0){
+          var maxIdx=breakdown.reduce(function(mi,b,i){return b.pct>breakdown[mi].pct?i:mi;},0);
+          breakdown[maxIdx].pct+=100-bkSum;
+        }
+      }
       return{osId:a.osId,pct:osPct,breakdown:breakdown,bkExpanded:false};
     });
     _apropState[p.id]={oss:oss,editing:false};
@@ -5263,7 +5271,8 @@ async function dbDeletarPonto(id){
   await sb.from('pontos').delete().eq('id',id);
 }
 async function dbSalvarApropriacao(pontoId,apropriacoes){
-  await sb.from('pontos').update({apropriacoes:apropriacoes}).eq('id',pontoId);
+  var {error}=await sb.from('pontos').update({apropriacoes:apropriacoes}).eq('id',pontoId);
+  if(error)throw error;
 }
 
 // Publicações
