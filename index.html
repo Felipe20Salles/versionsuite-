@@ -961,6 +961,12 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div id="produtos-list" style="display:flex;flex-direction:column;gap:6px"></div>
             <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addProduto()">+ Adicionar produto</button>
           </div>
+          <div class="pref-section">
+            <div class="pref-section-title">Mapeamento Redmine → Produto VS</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Quando o nome do produto no Redmine não corresponde exatamente ao produto cadastrado acima, defina a equivalência aqui.</div>
+            <div id="redmine-produto-map-list" style="display:flex;flex-direction:column;gap:6px"></div>
+            <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addRedmineProdutoMapRow()">+ Adicionar mapeamento</button>
+          </div>
         </div>
 
         <!-- Painel: Admin -->
@@ -1046,6 +1052,13 @@ textarea.form-input{resize:vertical;min-height:70px}
                 <select id="pref-redmine-status-concluido" class="form-input" style="font-size:12px;padding:4px 8px" onchange="saveRedmineStatusMapFromInputs()"><option value="">— selecione —</option></select>
               </div>
             </div>
+          </div>
+
+          <div class="pref-section" id="pref-section-redmine-users">
+            <div class="pref-section-title">Mapeamento de Usuários Redmine</div>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Quando o nome do usuário no Redmine não corresponde ao nome cadastrado no VS, defina aqui a equivalência para que a atribuição seja reconhecida corretamente.</div>
+            <div id="redmine-user-map-list" style="display:flex;flex-direction:column;gap:6px"></div>
+            <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addRedmineUserMapRow()">+ Adicionar mapeamento</button>
           </div>
 
           <div class="pref-section" id="pref-section-zendesk">
@@ -2265,7 +2278,7 @@ function goScreen(name){
     var adminTabBtn=document.getElementById('pref-tab-btn-admin');
     if(adminTabBtn)adminTabBtn.style.display=isAdmin()?'':'none';
     goPrefsTab('pessoal');
-    renderPalette();renderProdutos();renderTipoAtividades();
+    renderPalette();renderProdutos();renderRedmineProdutoMap();renderTipoAtividades();renderRedmineUserMap();
     renderRedmineConfig();renderZendeskConfig();renderRolesPrefs();renderEquipesPrefs();renderUsersPrefs();
     var pf=document.getElementById('pref-visitor-pass');if(pf)pf.value=localStorage.getItem('vs_visitor_pass')||'';
     renderVisitorLog();
@@ -7159,6 +7172,87 @@ function getRedmineStatusMap(){
   try{return JSON.parse(localStorage.getItem('vs_redmine_status_map'))||{}}catch(e){return{}}
 }
 function saveRedmineStatusMap(map){localStorage.setItem('vs_redmine_status_map',JSON.stringify(map))}
+function getRedmineProdutoMap(){try{return JSON.parse(localStorage.getItem('vs_redmine_produto_map'))||{}}catch(e){return{}}}
+function saveRedmineProdutoMap(map){localStorage.setItem('vs_redmine_produto_map',JSON.stringify(map))}
+function renderRedmineProdutoMap(){
+  var el=document.getElementById('redmine-produto-map-list');if(!el)return;
+  var map=getRedmineProdutoMap();var prods=(S.prefs&&S.prefs.produtos)||[];
+  var keys=Object.keys(map);
+  if(!keys.length){el.innerHTML='<span style="font-size:12px;color:var(--hint)">Nenhum mapeamento configurado.</span>';return;}
+  el.innerHTML=keys.map(function(k){
+    var v=map[k];
+    var opts=prods.map(function(p){return'<option value="'+escHtml(p)+'"'+(p===v?' selected':'')+'>'+escHtml(p)+'</option>';}).join('');
+    return'<div class="map-row-prod" style="display:flex;align-items:center;gap:8px">'+
+      '<input class="form-input map-key" style="flex:1;font-size:12px;padding:4px 8px" value="'+escHtml(k)+'" placeholder="Nome no Redmine" onblur="_saveProdMapFromDOM()" onkeydown="if(event.key===\'Enter\')this.blur()">'+
+      '<span style="color:var(--muted);font-size:12px;flex-shrink:0">→</span>'+
+      '<select class="form-input map-val" style="flex:1;font-size:12px;padding:4px 8px" onchange="_saveProdMapFromDOM()">'+opts+'</select>'+
+      '<span style="cursor:pointer;color:var(--muted);font-size:18px;line-height:1;flex-shrink:0" onclick="_removeProdMapRow(this)" title="Remover">×</span>'+
+    '</div>';
+  }).join('');
+}
+function _saveProdMapFromDOM(){
+  var map={};
+  document.querySelectorAll('#redmine-produto-map-list .map-row-prod').forEach(function(row){
+    var k=(row.querySelector('.map-key').value||'').trim();
+    var v=row.querySelector('.map-val').value;
+    if(k)map[k]=v;
+  });
+  saveRedmineProdutoMap(map);
+}
+function _removeProdMapRow(btn){btn.closest('.map-row-prod').remove();_saveProdMapFromDOM();if(!document.querySelectorAll('#redmine-produto-map-list .map-row-prod').length)renderRedmineProdutoMap();}
+function addRedmineProdutoMapRow(){
+  var el=document.getElementById('redmine-produto-map-list');if(!el)return;
+  var hint=el.querySelector('span');if(hint)hint.remove();
+  var prods=(S.prefs&&S.prefs.produtos)||[];
+  var opts=prods.map(function(p){return'<option value="'+escHtml(p)+'">'+escHtml(p)+'</option>';}).join('');
+  var row=document.createElement('div');row.className='map-row-prod';row.style.cssText='display:flex;align-items:center;gap:8px';
+  row.innerHTML='<input class="form-input map-key" style="flex:1;font-size:12px;padding:4px 8px" placeholder="Nome no Redmine" onblur="_saveProdMapFromDOM()" onkeydown="if(event.key===\'Enter\')this.blur()">'+
+    '<span style="color:var(--muted);font-size:12px;flex-shrink:0">→</span>'+
+    '<select class="form-input map-val" style="flex:1;font-size:12px;padding:4px 8px" onchange="_saveProdMapFromDOM()">'+opts+'</select>'+
+    '<span style="cursor:pointer;color:var(--muted);font-size:18px;line-height:1;flex-shrink:0" onclick="_removeProdMapRow(this)" title="Remover">×</span>';
+  el.appendChild(row);row.querySelector('.map-key').focus();
+}
+function getRedmineUserMap(){try{return JSON.parse(localStorage.getItem('vs_redmine_user_map'))||{}}catch(e){return{}}}
+function saveRedmineUserMap(map){localStorage.setItem('vs_redmine_user_map',JSON.stringify(map))}
+function renderRedmineUserMap(){
+  var el=document.getElementById('redmine-user-map-list');if(!el)return;
+  var map=getRedmineUserMap();
+  var users=(typeof S_USERS!=='undefined'?S_USERS:[]).filter(function(u){return u.displayName;});
+  var keys=Object.keys(map);
+  if(!keys.length){el.innerHTML='<span style="font-size:12px;color:var(--hint)">Nenhum mapeamento configurado.</span>';return;}
+  el.innerHTML=keys.map(function(k){
+    var v=map[k];
+    var opts=users.map(function(u){return'<option value="'+escHtml(u.displayName)+'"'+(u.displayName===v?' selected':'')+'>'+escHtml(u.displayName)+'</option>';}).join('');
+    return'<div class="map-row-user" style="display:flex;align-items:center;gap:8px">'+
+      '<input class="form-input map-key" style="flex:1;font-size:12px;padding:4px 8px" value="'+escHtml(k)+'" placeholder="Nome no Redmine" onblur="_saveUserMapFromDOM()" onkeydown="if(event.key===\'Enter\')this.blur()">'+
+      '<span style="color:var(--muted);font-size:12px;flex-shrink:0">→</span>'+
+      '<select class="form-input map-val" style="flex:1;font-size:12px;padding:4px 8px" onchange="_saveUserMapFromDOM()">'+opts+'</select>'+
+      '<span style="cursor:pointer;color:var(--muted);font-size:18px;line-height:1;flex-shrink:0" onclick="_removeUserMapRow(this)" title="Remover">×</span>'+
+    '</div>';
+  }).join('');
+}
+function _saveUserMapFromDOM(){
+  var map={};
+  document.querySelectorAll('#redmine-user-map-list .map-row-user').forEach(function(row){
+    var k=(row.querySelector('.map-key').value||'').trim();
+    var v=row.querySelector('.map-val').value;
+    if(k)map[k]=v;
+  });
+  saveRedmineUserMap(map);
+}
+function _removeUserMapRow(btn){btn.closest('.map-row-user').remove();_saveUserMapFromDOM();if(!document.querySelectorAll('#redmine-user-map-list .map-row-user').length)renderRedmineUserMap();}
+function addRedmineUserMapRow(){
+  var el=document.getElementById('redmine-user-map-list');if(!el)return;
+  var hint=el.querySelector('span');if(hint)hint.remove();
+  var users=(typeof S_USERS!=='undefined'?S_USERS:[]).filter(function(u){return u.displayName;});
+  var opts=users.map(function(u){return'<option value="'+escHtml(u.displayName)+'">'+escHtml(u.displayName)+'</option>';}).join('');
+  var row=document.createElement('div');row.className='map-row-user';row.style.cssText='display:flex;align-items:center;gap:8px';
+  row.innerHTML='<input class="form-input map-key" style="flex:1;font-size:12px;padding:4px 8px" placeholder="Nome no Redmine" onblur="_saveUserMapFromDOM()" onkeydown="if(event.key===\'Enter\')this.blur()">'+
+    '<span style="color:var(--muted);font-size:12px;flex-shrink:0">→</span>'+
+    '<select class="form-input map-val" style="flex:1;font-size:12px;padding:4px 8px" onchange="_saveUserMapFromDOM()">'+opts+'</select>'+
+    '<span style="cursor:pointer;color:var(--muted);font-size:18px;line-height:1;flex-shrink:0" onclick="_removeUserMapRow(this)" title="Remover">×</span>';
+  el.appendChild(row);row.querySelector('.map-key').focus();
+}
 function saveRedmineStatusMapFromInputs(){
   var map={};
   var sa=document.getElementById('pref-redmine-status-afazer');
@@ -7526,6 +7620,8 @@ function renderCentralAjuda(){
 // ── IMPORTAR DO REDMINE (Kanban) ──────────────────────────────────────────────
 function matchAtribuicaoRedmine(redmineName){
   if(!redmineName)return'';
+  var userMap=getRedmineUserMap();
+  if(userMap[redmineName])return userMap[redmineName];
   var parts=redmineName.toLowerCase().split(/\s+/).filter(Boolean);
   var best=null,bestScore=0;
   (S_USERS||[]).forEach(function(u){
@@ -7537,12 +7633,12 @@ function matchAtribuicaoRedmine(redmineName){
   return bestScore>=0.5?best:'-Sem atribuição-';
 }
 function matchProdutoRedmine(iss){
-  // Prioridade 1: custom field "Produto" da issue (homologação/Redmine)
   var cf=(iss.custom_fields||[]).find(function(f){return f.name&&f.name.toLowerCase()==='produto'});
   var rawName=(cf&&cf.value)||'';
-  // Fallback: nome do projeto
   if(!rawName)rawName=(iss.project&&iss.project.name)||'';
   if(!rawName)return'';
+  var prodMap=getRedmineProdutoMap();
+  if(prodMap[rawName])return prodMap[rawName];
   var lower=rawName.toLowerCase();
   var prods=(S.prefs&&S.prefs.produtos)||[];
   var exact=prods.find(function(p){return p.toLowerCase()===lower});
