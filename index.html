@@ -2346,6 +2346,7 @@ function goPrefsTab(nome){
     }
   });
   if(nome==='pessoal')loadSchedulePrefs();
+  if(nome==='plataforma')loadRedmineProdOpts().then(renderProdutos);
 }
 
 // ── NAV ──────────────────────────────────────────────────────────────────────
