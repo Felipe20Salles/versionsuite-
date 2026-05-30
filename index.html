@@ -957,15 +957,20 @@ textarea.form-input{resize:vertical;min-height:70px}
         <!-- Painel: Plataforma -->
         <div id="pref-tab-plataforma" style="display:none">
           <div class="pref-section">
-            <div class="pref-section-title">Produtos cadastrados</div>
-            <div id="produtos-list" style="display:flex;flex-direction:column;gap:6px"></div>
-            <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addProduto()">+ Adicionar produto</button>
-          </div>
-          <div class="pref-section">
-            <div class="pref-section-title">Mapeamento Redmine → Produto VS</div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Quando o nome do produto no Redmine não corresponde exatamente ao produto cadastrado acima, defina a equivalência aqui.</div>
-            <div id="redmine-produto-map-list" style="display:flex;flex-direction:column;gap:6px"></div>
-            <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addRedmineProdutoMapRow()">+ Adicionar mapeamento</button>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+              <div class="pref-section-title" style="margin-bottom:0">Produtos cadastrados</div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span id="redmine-prod-load-status" style="font-size:11px;color:var(--muted)"></span>
+                <button class="btn btn-sm btn-ghost" onclick="recarregarProdutosRedmine()" title="Recarregar nomes do Redmine">↻ Redmine</button>
+                <button class="btn btn-sm btn-ghost" onclick="addProduto()">+ Novo produto</button>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 32px;gap:8px;margin-bottom:6px;padding:0 4px">
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Produto VS</div>
+              <div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Produto no Redmine</div>
+              <div></div>
+            </div>
+            <div id="produtos-list" style="display:flex;flex-direction:column;gap:0"></div>
           </div>
         </div>
 
@@ -1054,13 +1059,6 @@ textarea.form-input{resize:vertical;min-height:70px}
             </div>
           </div>
 
-          <div class="pref-section" id="pref-section-redmine-users">
-            <div class="pref-section-title">Mapeamento de Usuários Redmine</div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.5">Quando o nome do usuário no Redmine não corresponde ao nome cadastrado no VS, defina aqui a equivalência para que a atribuição seja reconhecida corretamente.</div>
-            <div id="redmine-user-map-list" style="display:flex;flex-direction:column;gap:6px"></div>
-            <button class="btn btn-sm btn-ghost" style="margin-top:8px" onclick="addRedmineUserMapRow()">+ Adicionar mapeamento</button>
-          </div>
-
           <div class="pref-section" id="pref-section-zendesk">
             <div class="pref-section-title">Integração Zendesk</div>
             <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5">Exibe dados da Central de Ajuda no Dashboard. Credenciais configuradas via variáveis de ambiente do Netlify.</div>
@@ -1081,6 +1079,44 @@ textarea.form-input{resize:vertical;min-height:70px}
 
     </div>
   </main>
+</div>
+
+<!-- MODAL EDITAR USUÁRIO -->
+<div class="modal-overlay" id="modal-edit-user">
+  <div class="modal" style="width:480px">
+    <div class="modal-title" id="edit-user-modal-title">Editar usuário</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Cargo</label>
+        <input class="form-input" id="eud-cargo" placeholder="Ex: Analista Sênior">
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Perfil de acesso</label>
+        <select class="form-input" id="eud-role"></select>
+      </div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Equipe</label>
+        <select class="form-input" id="eud-equipe"></select>
+      </div>
+      <div class="form-group" style="margin:0;display:flex;align-items:flex-end;padding-bottom:2px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="eud-gestor" style="accent-color:var(--accent);width:15px;height:15px">
+          Gestor geral
+        </label>
+      </div>
+    </div>
+    <div style="border-top:1px solid var(--border);margin:16px 0 0;padding-top:14px">
+      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-bottom:10px">Integrações</div>
+      <div class="form-group" style="margin:0">
+        <label class="form-label">Usuário no Redmine <span style="font-weight:400;color:var(--hint)">(como aparece em "Atribuído a")</span></label>
+        <select class="form-input" id="eud-redmine-user"><option value="">— carregando... —</option></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-user')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEditUserModal()">Salvar</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL ADICIONAR PRODUTO -->
@@ -1477,7 +1513,9 @@ async function loadUsers(){
         status:prefs.status||'active',
         colorIdx:prefs.colorIdx!==undefined?prefs.colorIdx:null,
         equipeId:p.equipe_id||null,
-        gestorGeral:!!p.gestor_geral
+        gestorGeral:!!p.gestor_geral,
+        cargo:prefs.cargo||'',
+        redmineUser:prefs.redmineUser||''
       };
     });
     // Atribui colorIdx únicos para quem não tem (ordem de cadastro)
@@ -1666,34 +1704,99 @@ function renderUsersPrefs(){
       '<span style="width:8px;height:8px;border-radius:50%;background:'+cor.hex+';display:inline-block"></span>'+cor.name+'</span>';
 
     var nomeDisplay=isMe?(CURRENT_USER._displayName||u.displayName):u.displayName;
-    var editIcon=isMe?'<button onclick="editarNomeUsuario(\''+u.id+'\')" title="Editar nome" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 4px;color:var(--muted);line-height:1">✏</button>':'';
-
-    var equipeHtml='';
-    var gestorGeralHtml='';
-    if(can('preferencias_admin')&&!isMe){
-      var equipeOpts='<option value="">— Sem equipe —</option>'+
-        S_EQUIPES.map(function(e){return'<option value="'+e.id+'"'+(u.equipeId===e.id?' selected':'')+'>'+escHtml(e.nome)+'</option>';}).join('');
-      equipeHtml='<select onchange="saveUserEquipe(\''+u.id+'\',this.value)" style="border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:11px;padding:3px 6px;border-radius:4px;cursor:pointer;margin-left:6px">'+equipeOpts+'</select>';
-      gestorGeralHtml='<label style="display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);margin-left:8px;cursor:pointer">'+
-        '<input type="checkbox" '+(u.gestorGeral?'checked':'')+' onchange="saveUserGestorGeral(\''+u.id+'\',this.checked)" style="accent-color:var(--accent)">'+
-        'Gestor geral</label>';
-    }
+    var editIconSelf=isMe?'<button onclick="editarNomeUsuario(\''+u.id+'\')" title="Editar nome" style="background:none;border:none;cursor:pointer;font-size:12px;padding:0 4px;color:var(--muted);line-height:1">✏</button>':'';
+    var equipeNome=u.equipeId?(S_EQUIPES.find(function(e){return e.id===u.equipeId})||{}).nome||'—':'—';
+    var subtitulo=[u.cargo,equipeNome].filter(function(x){return x&&x!=='—';}).join(' · ')||'—';
+    var editBtn=(!isMe&&can('preferencias_admin'))?
+      '<button onclick="openEditUserModal(\''+u.id+'\')" title="Editar usuário" style="background:none;border:1px solid var(--border);border-radius:5px;padding:4px 7px;cursor:pointer;font-size:13px;color:var(--muted);line-height:1;flex-shrink:0">✏</button>':'';
     return'<div class="user-card">'+
       avatarHtml+
       '<div style="flex:1;min-width:0">'+
         '<div id="user-name-pref-'+u.id+'" style="font-size:13px;font-weight:500;color:var(--text);display:flex;align-items:center;gap:4px">'+
           '<span>'+nomeDisplay+(isMe?' <span style="font-size:10px;color:var(--hint)">(você)</span>':'')+' </span>'+
-          editIcon+
+          editIconSelf+
         '</div>'+
-        '<div style="font-size:11px;color:var(--hint);margin-top:1px">'+colorDot+'</div>'+
+        '<div style="font-size:11px;color:var(--hint);margin-top:1px">'+escHtml(subtitulo)+'</div>'+
       '</div>'+
-      '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:0">'+
-        roleHtml+equipeHtml+gestorGeralHtml+
+      '<div style="display:flex;align-items:center;gap:8px">'+
+        roleHtml+editBtn+
       '</div>'+
     '</div>';
   }).join('');
 }
 
+var _editUserModalId=null;
+function openEditUserModal(userId){
+  var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
+  _editUserModalId=userId;
+  var titleEl=document.getElementById('edit-user-modal-title');
+  if(titleEl)titleEl.textContent='Editar: '+u.displayName;
+  var cargoEl=document.getElementById('eud-cargo');if(cargoEl)cargoEl.value=u.cargo||'';
+  var roleEl=document.getElementById('eud-role');
+  if(roleEl){
+    roleEl.innerHTML=S_ROLES.map(function(r){return'<option value="'+r.nome+'"'+(u.role===r.nome?' selected':'')+'>'+escHtml(r.label||r.nome)+'</option>';}).join('');
+  }
+  var eqEl=document.getElementById('eud-equipe');
+  if(eqEl){
+    eqEl.innerHTML='<option value="">— Sem equipe —</option>'+S_EQUIPES.map(function(e){return'<option value="'+e.id+'"'+(u.equipeId===e.id?' selected':'')+'>'+escHtml(e.nome)+'</option>';}).join('');
+  }
+  var gEl=document.getElementById('eud-gestor');if(gEl)gEl.checked=!!u.gestorGeral;
+  openModal('modal-edit-user');
+  _loadRedmineUsersForModal(u);
+}
+async function _loadRedmineUsersForModal(vsUser){
+  var sel=document.getElementById('eud-redmine-user');if(!sel)return;
+  var cfg=getRedmineConfig();
+  if(!cfg.proxyUrl||!cfg.proxy){
+    sel.innerHTML='<option value="">— proxy inativo —</option>';return;
+  }
+  sel.innerHTML='<option value="">carregando...</option>';
+  try{
+    var r=await _redmineFetch(cfg,'/users.json?limit=100&status=1','GET');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    var all=(d.users||[]);
+    var firstName=(vsUser.displayName||'').split(' ')[0].toLowerCase();
+    var suggestions=all.filter(function(u){return(u.firstname+' '+u.lastname).toLowerCase().indexOf(firstName)>-1;});
+    var others=all.filter(function(u){return!suggestions.find(function(s){return s.id===u.id;});});
+    var cur=vsUser.redmineUser||'';
+    sel.innerHTML='<option value="">— sem vínculo —</option>';
+    function mkOpt(u){
+      var name=(u.firstname+' '+u.lastname).trim();
+      var opt=document.createElement('option');opt.value=name;opt.textContent=name;
+      if(name===cur)opt.selected=true;return opt;
+    }
+    if(suggestions.length){
+      var sg=document.createElement('optgroup');
+      sg.label="Sugestões ('"+vsUser.displayName.split(' ')[0]+"')";
+      suggestions.forEach(function(u){sg.appendChild(mkOpt(u));});sel.appendChild(sg);
+    }
+    if(others.length){
+      var og=document.createElement('optgroup');og.label='Todos os usuários Redmine';
+      others.forEach(function(u){og.appendChild(mkOpt(u));});sel.appendChild(og);
+    }
+  }catch(e){
+    sel.innerHTML='<option value="">Erro: '+escHtml(e.message)+'</option>';
+  }
+}
+async function saveEditUserModal(){
+  if(!_editUserModalId)return;
+  var u=S_USERS.find(function(x){return x.id===_editUserModalId});if(!u)return;
+  var cargo=(document.getElementById('eud-cargo')||{}).value||'';
+  var role=(document.getElementById('eud-role')||{}).value||u.role;
+  var equipeId=(document.getElementById('eud-equipe')||{}).value||null;
+  var gestorGeral=!!(document.getElementById('eud-gestor')||{}).checked;
+  var redmineUser=(document.getElementById('eud-redmine-user')||{}).value||'';
+  try{
+    var {data:p}=await sb.from('profiles').select('prefs').eq('id',_editUserModalId).maybeSingle();
+    var prefs=Object.assign({},parsePrefs(p?p.prefs:null));
+    prefs.cargo=cargo;prefs.redmineUser=redmineUser;
+    var {error}=await sb.from('profiles').update({role:role,equipe_id:equipeId||null,gestor_geral:gestorGeral,prefs:prefs}).eq('id',_editUserModalId);
+    if(error)throw error;
+    u.role=role;u.equipeId=equipeId||null;u.gestorGeral=gestorGeral;u.cargo=cargo;u.redmineUser=redmineUser;
+    closeModal('modal-edit-user');renderUsersPrefs();toast(u.displayName+' atualizado ✓');
+  }catch(e){toast('Erro ao salvar: '+e.message,'err');}
+}
 function renderEquipesPrefs(){
   var sec=document.getElementById('pref-section-equipes');
   if(!sec)return;
@@ -2135,39 +2238,62 @@ function shadeColor(hex,pct){var n=parseInt(hex.slice(1),16),r=Math.max(0,Math.m
 function renderPalette(){var pal=document.getElementById('color-palette');if(!pal)return;pal.innerHTML=CORES.map(function(c){return'<div class="color-swatch'+(S.prefs.accent===c.hex?' selected':'')+'" style="background:'+c.hex+'" title="'+c.name+'" onclick="setAccent(\''+c.hex+'\',\''+c.rgb+'\')"></div>'}).join('')}
 function setAccent(hex,rgb){S.prefs.accent=hex;S.prefs.accentRgb=rgb;save();applyPrefs();renderPalette()}
 function toggleTheme(){S.prefs.lightMode=!S.prefs.lightMode;save();applyPrefs()}
+var _redmineProdOpts=[];
+function getProdutoRedmineMap(){try{return JSON.parse(localStorage.getItem('vs_produto_redmine_map'))||{}}catch(e){return{}}}
+function saveProdutoRedmineMap(map){localStorage.setItem('vs_produto_redmine_map',JSON.stringify(map))}
+function _setProdRedmineLink(vsName,val){var m=getProdutoRedmineMap();if(val)m[vsName]=val;else delete m[vsName];saveProdutoRedmineMap(m);}
+async function loadRedmineProdOpts(){
+  var cfg=getRedmineConfig();
+  var statusEl=document.getElementById('redmine-prod-load-status');
+  if(!cfg.proxyUrl||!cfg.proxy){if(statusEl)statusEl.textContent='proxy inativo';return[];}
+  if(statusEl)statusEl.textContent='carregando...';
+  try{
+    var r=await _redmineFetch(cfg,'/custom_fields.json','GET');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    var fields=d.custom_fields||[];
+    var pf=fields.find(function(f){return f.name&&f.name.toLowerCase()==='produto'});
+    if(pf&&pf.possible_values&&pf.possible_values.length){
+      _redmineProdOpts=(pf.possible_values||[]).map(function(v){return typeof v==='string'?v:v.value;}).filter(Boolean);
+    }else{_redmineProdOpts=[];}
+    if(statusEl)statusEl.textContent=_redmineProdOpts.length?_redmineProdOpts.length+' opções carregadas':'sem valores no campo';
+  }catch(e){
+    _redmineProdOpts=[];
+    if(statusEl)statusEl.textContent='erro: '+e.message;
+  }
+  return _redmineProdOpts;
+}
+async function recarregarProdutosRedmine(){await loadRedmineProdOpts();renderProdutos();}
 function renderProdutos(){
   var el=document.getElementById('produtos-list');if(!el)return;
   var canEdit=isAdmin();
-  var gt=S.prefs.produtos.filter(function(p){return(PLINHA[p]||'Gestão de Talentos')==='Gestão de Talentos'});
-  var pag=S.prefs.produtos.filter(function(p){return(PLINHA[p]||'')===('Pagadoria')});
-
-  function mkItem(p){
-    var i=S.prefs.produtos.indexOf(p);
-    return'<div style="display:inline-flex;align-items:center;gap:7px;padding:5px 12px;background:var(--card2);border-radius:20px;border:1px solid var(--border);transition:border-color .15s" onmouseenter="this.style.borderColor=\'var(--border2)\'" onmouseleave="this.style.borderColor=\'var(--border)\'">'+
-      '<span style="font-size:12px;font-weight:500;color:var(--text)">'+p+'</span>'+
-      (canEdit?'<span style="font-size:13px;color:var(--hint);cursor:pointer;line-height:1;margin-left:2px" onclick="removeProduto('+i+')" title="Remover">×</span>':'')+
+  var prods=S.prefs.produtos||[];
+  var map=getProdutoRedmineMap();
+  var opts=_redmineProdOpts;
+  el.innerHTML=prods.map(function(p,i){
+    var linked=map[p]||'';
+    var linhaBadge=(PLINHA[p]||'')===('Pagadoria')?
+      '<span class="badge tag-pag" style="font-size:9px;padding:1px 5px">PAG</span>':
+      '<span class="badge tag-gt" style="font-size:9px;padding:1px 5px">GT</span>';
+    var selHtml='';
+    if(opts.length){
+      selHtml='<select style="border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:12px;padding:4px 8px;border-radius:5px;cursor:pointer;width:100%"'+
+        ' onchange="_setProdRedmineLink(\''+escHtml(p)+'\',this.value)">'+'<option value="">— sem vínculo —</option>'+
+        opts.map(function(o){return'<option value="'+escHtml(o)+'"'+(o===linked?' selected':'')+'>'+escHtml(o)+'</option>';}).join('')+
+      '</select>';
+    }else{
+      selHtml='<input style="border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:12px;padding:4px 8px;border-radius:5px;width:100%;box-sizing:border-box"'+
+        ' value="'+escHtml(linked)+'" placeholder="— sem vínculo —"'+
+        ' onblur="_setProdRedmineLink(\''+escHtml(p)+'\',this.value.trim())"'+
+        ' onkeydown="if(event.key===\'Enter\')this.blur()">';
+    }
+    var borderCol=linked?'var(--border)':'rgba(245,158,11,.4)';
+    return'<div style="display:grid;grid-template-columns:1fr 1fr 32px;gap:8px;align-items:center;padding:8px 4px;border-bottom:1px solid var(--border)">'+
+      '<div style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;min-width:0">'+linhaBadge+'<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+escHtml(p)+'</span></div>'+
+      '<div>'+selHtml+'</div>'+
+      (canEdit?'<span style="color:var(--muted);font-size:16px;cursor:pointer;text-align:center;line-height:1" onclick="removeProduto('+i+')" title="Remover produto">×</span>':'<div></div>')+
     '</div>';
-  }
-
-  var html='';
-  html+='<div style="margin-bottom:16px">'+
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
-      '<span class="badge tag-gt" style="font-size:10px">Gestão de Talentos</span>'+
-      '<span style="font-size:11px;color:var(--hint)">'+gt.length+' produto(s)</span>'+
-    '</div>'+
-    (gt.length?'<div style="display:flex;flex-wrap:wrap;gap:8px">'+gt.map(mkItem).join('')+'</div>':
-      '<div style="font-size:12px;color:var(--hint)">Nenhum produto cadastrado</div>')+
-  '</div>';
-  html+='<div>'+
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'+
-      '<span class="badge tag-pag" style="font-size:10px">Pagadoria</span>'+
-      '<span style="font-size:11px;color:var(--hint)">'+pag.length+' produto(s)</span>'+
-    '</div>'+
-    (pag.length?'<div style="display:flex;flex-wrap:wrap;gap:8px">'+pag.map(mkItem).join('')+'</div>':
-      '<div style="font-size:12px;color:var(--hint)">Nenhum produto cadastrado</div>')+
-  '</div>';
-
-  el.innerHTML=html;
+  }).join('')||(canEdit?'':'<div style="font-size:12px;color:var(--hint)">Nenhum produto cadastrado.</div>');
   var addBtn=document.querySelector('[onclick="addProduto()"]');
   if(addBtn)addBtn.style.display=canEdit?'':'none';
   populateProdutoSel();
@@ -2278,7 +2404,7 @@ function goScreen(name){
     var adminTabBtn=document.getElementById('pref-tab-btn-admin');
     if(adminTabBtn)adminTabBtn.style.display=isAdmin()?'':'none';
     goPrefsTab('pessoal');
-    renderPalette();renderProdutos();renderRedmineProdutoMap();renderTipoAtividades();renderRedmineUserMap();
+    renderPalette();renderProdutos();renderTipoAtividades();
     renderRedmineConfig();renderZendeskConfig();renderRolesPrefs();renderEquipesPrefs();renderUsersPrefs();
     var pf=document.getElementById('pref-visitor-pass');if(pf)pf.value=localStorage.getItem('vs_visitor_pass')||'';
     renderVisitorLog();
@@ -7172,87 +7298,6 @@ function getRedmineStatusMap(){
   try{return JSON.parse(localStorage.getItem('vs_redmine_status_map'))||{}}catch(e){return{}}
 }
 function saveRedmineStatusMap(map){localStorage.setItem('vs_redmine_status_map',JSON.stringify(map))}
-function getRedmineProdutoMap(){try{return JSON.parse(localStorage.getItem('vs_redmine_produto_map'))||{}}catch(e){return{}}}
-function saveRedmineProdutoMap(map){localStorage.setItem('vs_redmine_produto_map',JSON.stringify(map))}
-function renderRedmineProdutoMap(){
-  var el=document.getElementById('redmine-produto-map-list');if(!el)return;
-  var map=getRedmineProdutoMap();var prods=(S.prefs&&S.prefs.produtos)||[];
-  var keys=Object.keys(map);
-  if(!keys.length){el.innerHTML='<span style="font-size:12px;color:var(--hint)">Nenhum mapeamento configurado.</span>';return;}
-  el.innerHTML=keys.map(function(k){
-    var v=map[k];
-    var opts=prods.map(function(p){return'<option value="'+escHtml(p)+'"'+(p===v?' selected':'')+'>'+escHtml(p)+'</option>';}).join('');
-    return'<div class="map-row-prod" style="display:flex;align-items:center;gap:8px">'+
-      '<input class="form-input map-key" style="flex:1;font-size:12px;padding:4px 8px" value="'+escHtml(k)+'" placeholder="Nome no Redmine" onblur="_saveProdMapFromDOM()" onkeydown="if(event.key===\'Enter\')this.blur()">'+
-      '<span style="color:var(--muted);font-size:12px;flex-shrink:0">→</span>'+
-      '<select class="form-input map-val" style="flex:1;font-size:12px;padding:4px 8px" onchange="_saveProdMapFromDOM()">'+opts+'</select>'+
-      '<span style="cursor:pointer;color:var(--muted);font-size:18px;line-height:1;flex-shrink:0" onclick="_removeProdMapRow(this)" title="Remover">×</span>'+
-    '</div>';
-  }).join('');
-}
-function _saveProdMapFromDOM(){
-  var map={};
-  document.querySelectorAll('#redmine-produto-map-list .map-row-prod').forEach(function(row){
-    var k=(row.querySelector('.map-key').value||'').trim();
-    var v=row.querySelector('.map-val').value;
-    if(k)map[k]=v;
-  });
-  saveRedmineProdutoMap(map);
-}
-function _removeProdMapRow(btn){btn.closest('.map-row-prod').remove();_saveProdMapFromDOM();if(!document.querySelectorAll('#redmine-produto-map-list .map-row-prod').length)renderRedmineProdutoMap();}
-function addRedmineProdutoMapRow(){
-  var el=document.getElementById('redmine-produto-map-list');if(!el)return;
-  var hint=el.querySelector('span');if(hint)hint.remove();
-  var prods=(S.prefs&&S.prefs.produtos)||[];
-  var opts=prods.map(function(p){return'<option value="'+escHtml(p)+'">'+escHtml(p)+'</option>';}).join('');
-  var row=document.createElement('div');row.className='map-row-prod';row.style.cssText='display:flex;align-items:center;gap:8px';
-  row.innerHTML='<input class="form-input map-key" style="flex:1;font-size:12px;padding:4px 8px" placeholder="Nome no Redmine" onblur="_saveProdMapFromDOM()" onkeydown="if(event.key===\'Enter\')this.blur()">'+
-    '<span style="color:var(--muted);font-size:12px;flex-shrink:0">→</span>'+
-    '<select class="form-input map-val" style="flex:1;font-size:12px;padding:4px 8px" onchange="_saveProdMapFromDOM()">'+opts+'</select>'+
-    '<span style="cursor:pointer;color:var(--muted);font-size:18px;line-height:1;flex-shrink:0" onclick="_removeProdMapRow(this)" title="Remover">×</span>';
-  el.appendChild(row);row.querySelector('.map-key').focus();
-}
-function getRedmineUserMap(){try{return JSON.parse(localStorage.getItem('vs_redmine_user_map'))||{}}catch(e){return{}}}
-function saveRedmineUserMap(map){localStorage.setItem('vs_redmine_user_map',JSON.stringify(map))}
-function renderRedmineUserMap(){
-  var el=document.getElementById('redmine-user-map-list');if(!el)return;
-  var map=getRedmineUserMap();
-  var users=(typeof S_USERS!=='undefined'?S_USERS:[]).filter(function(u){return u.displayName;});
-  var keys=Object.keys(map);
-  if(!keys.length){el.innerHTML='<span style="font-size:12px;color:var(--hint)">Nenhum mapeamento configurado.</span>';return;}
-  el.innerHTML=keys.map(function(k){
-    var v=map[k];
-    var opts=users.map(function(u){return'<option value="'+escHtml(u.displayName)+'"'+(u.displayName===v?' selected':'')+'>'+escHtml(u.displayName)+'</option>';}).join('');
-    return'<div class="map-row-user" style="display:flex;align-items:center;gap:8px">'+
-      '<input class="form-input map-key" style="flex:1;font-size:12px;padding:4px 8px" value="'+escHtml(k)+'" placeholder="Nome no Redmine" onblur="_saveUserMapFromDOM()" onkeydown="if(event.key===\'Enter\')this.blur()">'+
-      '<span style="color:var(--muted);font-size:12px;flex-shrink:0">→</span>'+
-      '<select class="form-input map-val" style="flex:1;font-size:12px;padding:4px 8px" onchange="_saveUserMapFromDOM()">'+opts+'</select>'+
-      '<span style="cursor:pointer;color:var(--muted);font-size:18px;line-height:1;flex-shrink:0" onclick="_removeUserMapRow(this)" title="Remover">×</span>'+
-    '</div>';
-  }).join('');
-}
-function _saveUserMapFromDOM(){
-  var map={};
-  document.querySelectorAll('#redmine-user-map-list .map-row-user').forEach(function(row){
-    var k=(row.querySelector('.map-key').value||'').trim();
-    var v=row.querySelector('.map-val').value;
-    if(k)map[k]=v;
-  });
-  saveRedmineUserMap(map);
-}
-function _removeUserMapRow(btn){btn.closest('.map-row-user').remove();_saveUserMapFromDOM();if(!document.querySelectorAll('#redmine-user-map-list .map-row-user').length)renderRedmineUserMap();}
-function addRedmineUserMapRow(){
-  var el=document.getElementById('redmine-user-map-list');if(!el)return;
-  var hint=el.querySelector('span');if(hint)hint.remove();
-  var users=(typeof S_USERS!=='undefined'?S_USERS:[]).filter(function(u){return u.displayName;});
-  var opts=users.map(function(u){return'<option value="'+escHtml(u.displayName)+'">'+escHtml(u.displayName)+'</option>';}).join('');
-  var row=document.createElement('div');row.className='map-row-user';row.style.cssText='display:flex;align-items:center;gap:8px';
-  row.innerHTML='<input class="form-input map-key" style="flex:1;font-size:12px;padding:4px 8px" placeholder="Nome no Redmine" onblur="_saveUserMapFromDOM()" onkeydown="if(event.key===\'Enter\')this.blur()">'+
-    '<span style="color:var(--muted);font-size:12px;flex-shrink:0">→</span>'+
-    '<select class="form-input map-val" style="flex:1;font-size:12px;padding:4px 8px" onchange="_saveUserMapFromDOM()">'+opts+'</select>'+
-    '<span style="cursor:pointer;color:var(--muted);font-size:18px;line-height:1;flex-shrink:0" onclick="_removeUserMapRow(this)" title="Remover">×</span>';
-  el.appendChild(row);row.querySelector('.map-key').focus();
-}
 function saveRedmineStatusMapFromInputs(){
   var map={};
   var sa=document.getElementById('pref-redmine-status-afazer');
@@ -7620,8 +7665,8 @@ function renderCentralAjuda(){
 // ── IMPORTAR DO REDMINE (Kanban) ──────────────────────────────────────────────
 function matchAtribuicaoRedmine(redmineName){
   if(!redmineName)return'';
-  var userMap=getRedmineUserMap();
-  if(userMap[redmineName])return userMap[redmineName];
+  var mapped=(S_USERS||[]).find(function(u){return u.redmineUser&&u.redmineUser===redmineName;});
+  if(mapped)return mapped.displayName;
   var parts=redmineName.toLowerCase().split(/\s+/).filter(Boolean);
   var best=null,bestScore=0;
   (S_USERS||[]).forEach(function(u){
@@ -7637,8 +7682,9 @@ function matchProdutoRedmine(iss){
   var rawName=(cf&&cf.value)||'';
   if(!rawName)rawName=(iss.project&&iss.project.name)||'';
   if(!rawName)return'';
-  var prodMap=getRedmineProdutoMap();
-  if(prodMap[rawName])return prodMap[rawName];
+  var prodMap=getProdutoRedmineMap();
+  var vsName=Object.keys(prodMap).find(function(vs){return prodMap[vs]===rawName;});
+  if(vsName)return vsName;
   var lower=rawName.toLowerCase();
   var prods=(S.prefs&&S.prefs.produtos)||[];
   var exact=prods.find(function(p){return p.toLowerCase()===lower});
