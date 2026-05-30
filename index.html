@@ -1733,7 +1733,12 @@ function openEditUserModal(userId){
   _loadRedmineUsersForModal(u);
 }
 async function _loadRedmineUsersForModal(vsUser){
-  var sel=document.getElementById('eud-redmine-user');if(!sel)return;
+  var existing=document.getElementById('eud-redmine-user');if(!existing)return;
+  var sel;
+  if(existing.tagName!=='SELECT'){
+    sel=document.createElement('select');sel.className=existing.className;sel.id=existing.id;
+    existing.parentNode.replaceChild(sel,existing);
+  }else{sel=existing;}
   var cfg=getRedmineConfig();
   if(!cfg.proxyUrl||!cfg.proxy){
     sel.innerHTML='<option value="">— proxy inativo —</option>';return;
@@ -1741,6 +1746,11 @@ async function _loadRedmineUsersForModal(vsUser){
   sel.innerHTML='<option value="">carregando...</option>';
   try{
     var r=await _redmineFetch(cfg,'/users.json?limit=100&status=1','GET');
+    if(r.status===403){
+      var inp=document.createElement('input');inp.type='text';inp.className=sel.className;inp.id=sel.id;
+      inp.placeholder='Digite o nome exato do usuário no Redmine';inp.value=vsUser.redmineUser||'';
+      sel.parentNode.replaceChild(inp,sel);return;
+    }
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
     var all=(d.users||[]);
@@ -2237,6 +2247,7 @@ async function loadRedmineProdOpts(){
   if(statusEl)statusEl.textContent='carregando...';
   try{
     var r=await _redmineFetch(cfg,'/custom_fields.json','GET');
+    if(r.status===403){_redmineProdOpts=[];if(statusEl)statusEl.textContent='sem permissão de admin (digite manualmente)';return _redmineProdOpts;}
     if(!r.ok)throw new Error('HTTP '+r.status);
     var d=await r.json();
     var fields=d.custom_fields||[];
