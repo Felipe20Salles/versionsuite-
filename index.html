@@ -991,12 +991,20 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">
               Gerencie quem pode acessar a VersionSuite e seus níveis de permissão. Somente <strong>Admins</strong> podem alterar roles.
             </div>
-            <div id="pending-list" style="display:none;margin-bottom:16px">
-              <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.7px;color:var(--amber-text,#f59e0b);margin-bottom:8px">⏳ Aguardando aprovação</div>
-              <div id="pending-list-inner" style="display:flex;flex-direction:column;gap:8px"></div>
-            </div>
             <div id="users-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px"></div>
             <div id="users-list-hint" style="font-size:11px;color:var(--hint)">Usuários aparecem automaticamente após o primeiro login com Google.</div>
+          </div>
+
+          <div class="pref-section" id="pref-section-pending-access">
+            <button type="button" onclick="openPendingRequests()" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;text-align:left">
+              <span id="pending-access-icon" class="bell-icon" style="font-size:18px">🔔</span>
+              <span style="flex:1">
+                <span style="display:block;font-size:13px;font-weight:600">Solicitações pendentes</span>
+                <span id="pending-access-subtitle" style="display:block;font-size:11px;color:var(--muted);margin-top:2px">Nenhuma solicitação aguardando aprovação.</span>
+              </span>
+              <span id="pending-access-badge" class="bell-badge" style="display:none;position:static;border-color:var(--card2)">0</span>
+              <span style="color:var(--muted);font-size:18px">›</span>
+            </button>
           </div>
 
           <div class="pref-section" id="pref-section-visitor">
@@ -1115,6 +1123,22 @@ textarea.form-input{resize:vertical;min-height:70px}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-edit-user')">Cancelar</button>
       <button class="btn btn-primary" onclick="saveEditUserModal()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-pending-requests">
+  <div class="modal" style="max-width:580px;width:calc(100% - 32px)">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Solicitações pendentes</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">Ao aprovar, o usuário receberá o perfil Visualizador.</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-pending-requests')">×</button>
+    </div>
+    <div id="pending-requests-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-pending-requests')">Fechar</button>
     </div>
   </div>
 </div>
@@ -1509,7 +1533,7 @@ async function loadUsers(){
         email:p.email||prefs.email||'',
         displayName:p.nome||prefs.displayName||prefs.email||p.email||'Usuário',
         avatar:p.avatar_url||prefs.avatar||'',
-        role:p.role||prefs.role||'visualizador',
+        role:p.role||prefs.role||null,
         status:prefs.status||'active',
         colorIdx:prefs.colorIdx!==undefined?prefs.colorIdx:null,
         equipeId:p.equipe_id||null,
@@ -1537,7 +1561,16 @@ async function loadUsers(){
     _USER_COLOR_NEXT=Math.max(S_USERS.length,_USER_COLOR_NEXT);
     // Também usa nomes das OSs como fallback
     seedUserColors(S.oss.map(function(o){return o.atribuicao||''}).filter(Boolean));
+    updatePendingAccessUI();
   }catch(e){console.warn('loadUsers:',e);}
+}
+
+var _pendingAccessInterval=null;
+function startPendingAccessMonitor(){
+  if(_pendingAccessInterval||!isAdmin())return;
+  _pendingAccessInterval=setInterval(function(){
+    if(CURRENT_USER&&isAdmin())loadUsers();
+  },60000);
 }
 
 async function loadEquipes(){
@@ -1597,12 +1630,15 @@ async function approveUser(userId){
   if(!isAdmin()){toast('Apenas admins podem aprovar usuários','err');return}
   var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
   var {data:p}=await sb.from('profiles').select('prefs').eq('id',userId).maybeSingle();
-  var prefs=Object.assign({},p?p.prefs||{}:{},{status:'active'});
-  var {error}=await sb.from('profiles').update({prefs:prefs}).eq('id',userId);
+  var prefs=Object.assign({},parsePrefs(p?p.prefs:null),{status:'active',role:'visualizador'});
+  var {error}=await sb.from('profiles').update({prefs:prefs,role:'visualizador'}).eq('id',userId);
   if(error){toast('Erro ao aprovar: '+error.message,'err');return}
   u.status='active';
+  u.role='visualizador';
   toast((u.displayName||u.email)+' aprovado ✓');
   renderUsersPrefs();
+  renderPendingRequests();
+  updatePendingAccessUI();
 }
 async function rejectUser(userId){
   if(!isAdmin()){toast('Apenas admins podem remover usuários','err');return}
@@ -1614,6 +1650,68 @@ async function rejectUser(userId){
   S_USERS=S_USERS.filter(function(x){return x.id!==userId});
   toast('Usuário removido');
   renderUsersPrefs();
+  renderPendingRequests();
+  updatePendingAccessUI();
+}
+
+function getPendingUsers(){
+  return S_USERS.filter(function(u){return u.status==='pending'||!u.role;});
+}
+
+function updatePendingAccessUI(){
+  var pending=getPendingUsers();
+  var count=pending.length;
+  var badge=document.getElementById('pending-access-badge');
+  var icon=document.getElementById('pending-access-icon');
+  var subtitle=document.getElementById('pending-access-subtitle');
+  if(badge){
+    badge.style.display=count?'flex':'none';
+    badge.textContent=count>9?'9+':count;
+  }
+  if(icon)icon.classList.toggle('ringing',count>0);
+  if(subtitle)subtitle.textContent=count
+    ?count+' '+(count===1?'solicitação aguardando':'solicitações aguardando')+' aprovação.'
+    :'Nenhuma solicitação aguardando aprovação.';
+  if(isAdmin()&&count){
+    var seenKey='vs_pending_access_seen_'+(CURRENT_USER?CURRENT_USER.id:'admin');
+    var seen=[];
+    try{seen=JSON.parse(localStorage.getItem(seenKey))||[];}catch(e){}
+    var newUsers=pending.filter(function(u){return seen.indexOf(u.id)===-1;});
+    if(newUsers.length){
+      var ids=newUsers.map(function(u){return u.id;}).sort();
+      fireAlert('pending-access-'+ids.join('-'),newUsers.length+' '+(newUsers.length===1?'nova solicitação de acesso':'novas solicitações de acesso'),'open-pending-users');
+      localStorage.setItem(seenKey,JSON.stringify(seen.concat(ids)));
+    }
+  }
+}
+
+function renderPendingRequests(){
+  var list=document.getElementById('pending-requests-list');if(!list)return;
+  var pending=getPendingUsers();
+  if(!pending.length){
+    list.innerHTML='<div style="padding:28px 16px;text-align:center;color:var(--hint);font-size:12px">Nenhuma solicitação aguardando aprovação.</div>';
+    return;
+  }
+  list.innerHTML=pending.map(function(u){
+    var initials=(u.displayName||'?').split(' ').slice(0,2).map(function(w){return w[0]}).join('').toUpperCase();
+    var avatarHtml=u.avatar
+      ?'<img class="user-avatar-sm" src="'+u.avatar+'" alt="'+escHtml(u.displayName)+'" onerror="_avatarFallback(this,\''+initials+'\',\'var(--border2)\')">'
+      :'<div class="user-avatar-initials" style="background:var(--border2)">'+initials+'</div>';
+    return'<div class="user-card">'+avatarHtml+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13px;font-weight:500;color:var(--text)">'+escHtml(u.displayName)+'</div>'+
+        '<div style="font-size:11px;color:var(--hint)">'+escHtml(u.email)+'</div>'+
+      '</div>'+
+      '<button class="btn btn-sm btn-primary" onclick="approveUser(\''+u.id+'\')">Aprovar</button>'+
+      '<button class="btn btn-sm btn-ghost" onclick="rejectUser(\''+u.id+'\')" title="Recusar solicitação">Recusar</button>'+
+    '</div>';
+  }).join('');
+}
+
+function openPendingRequests(){
+  if(!isAdmin()){toast('Apenas admins podem gerenciar solicitações','err');return;}
+  renderPendingRequests();
+  openModal('modal-pending-requests');
 }
 
 function _avatarFallback(imgEl,initials,bgColor){
@@ -1635,35 +1733,8 @@ function renderUsersPrefs(){
   var el=document.getElementById('users-list');if(!el)return;
   if(!S_USERS.length){el.innerHTML='<div style="font-size:12px;color:var(--hint)">Nenhum usuário registrado ainda.</div>';return;}
 
-  // Renderiza pendentes (apenas visível para admins)
-  var pendingEl=document.getElementById('pending-list');
-  var pendingInner=document.getElementById('pending-list-inner');
-  if(pendingEl&&pendingInner&&isAdmin()){
-    var pendingUsers=S_USERS.filter(function(u){return u.status==='pending'});
-    if(pendingUsers.length){
-      pendingEl.style.display='';
-      pendingInner.innerHTML=pendingUsers.map(function(u){
-        var initials=(u.displayName||'?').split(' ').slice(0,2).map(function(w){return w[0]}).join('').toUpperCase();
-        var avatarHtml=u.avatar?
-          '<img class="user-avatar-sm" src="'+u.avatar+'" alt="'+u.displayName+'" onerror="_avatarFallback(this,\''+initials+'\',\'var(--border2)\')">':
-          '<div class="user-avatar-initials" style="background:var(--border2)">'+initials+'</div>';
-        return'<div class="user-card">'+
-          avatarHtml+
-          '<div style="flex:1;min-width:0">'+
-            '<div style="font-size:13px;font-weight:500;color:var(--text)">'+escHtml(u.displayName)+'</div>'+
-            '<div style="font-size:11px;color:var(--hint)">'+escHtml(u.email)+'</div>'+
-          '</div>'+
-          '<button onclick="approveUser(\''+u.id+'\')" style="padding:5px 12px;font-size:12px;background:var(--green-dim,rgba(62,207,142,.15));color:var(--green,#3ecf8e);border:1px solid var(--green,#3ecf8e);border-radius:6px;cursor:pointer;margin-right:6px">✓ Aprovar</button>'+
-          '<button onclick="rejectUser(\''+u.id+'\')" style="padding:5px 10px;font-size:12px;background:none;color:var(--muted);border:1px solid var(--border2);border-radius:6px;cursor:pointer">✕</button>'+
-        '</div>';
-      }).join('');
-    }else{
-      pendingEl.style.display='none';
-    }
-  }
-
   // Ordena: admins primeiro, depois alfabético
-  var sorted=S_USERS.filter(function(u){return u.status!=='pending'}).sort(function(a,b){
+  var sorted=S_USERS.filter(function(u){return u.status!=='pending'&&!!u.role}).sort(function(a,b){
     var rp=(ROLE_PRIORITY[a.role]||1)-(ROLE_PRIORITY[b.role]||1);
     if(rp!==0)return rp;
     return a.displayName.localeCompare(b.displayName);
@@ -1711,6 +1782,7 @@ function renderUsersPrefs(){
       '</div>'+
     '</div>';
   }).join('');
+  updatePendingAccessUI();
 }
 
 var _editUserModalId=null;
@@ -2121,14 +2193,25 @@ async function upsertCurrentUserProfile(){
   var newPrefs=Object.assign({},existPrefs,{displayName:displayName,email:email});
   if(avatar)newPrefs.avatar=avatar;
   if(newPrefs.colorIdx===undefined)newPrefs.colorIdx=null; // será atribuído em loadUsers
-  // status: existente sem status → active (retrocompatibilidade); novo → pending (exceto primeiro)
-  if(!newPrefs.status)newPrefs.status=(isNewUser&&!isFirstUser)?'pending':'active';
+  // Contas recém-criadas podem já ter profile por trigger do Supabase.
+  // Sem status explícito, elas sempre entram na fila e nunca herdam o DEFAULT de role do banco.
+  var authCreatedAt=CURRENT_USER.created_at?new Date(CURRENT_USER.created_at).getTime():0;
+  var isFreshAuth=authCreatedAt&&Date.now()-authCreatedAt<10*60*1000;
+  if(!newPrefs.status)newPrefs.status=((isNewUser||isFreshAuth)&&!isFirstUser)?'pending':'active';
   if(!existing){
     // Novo usuário: role=null garante fila de espera independente do DEFAULT do banco
-    await sb.from('profiles').insert({id:CURRENT_USER.id,prefs:newPrefs,role:null});
+    var {error:insertProfileError}=await sb.from('profiles').insert({id:CURRENT_USER.id,prefs:newPrefs,role:null});
+    if(insertProfileError){
+      // Um trigger pode ter criado o profile entre o SELECT e o INSERT.
+      // Nesse caso, força novamente a pendência e remove qualquer role DEFAULT.
+      var {error:retryProfileError}=await sb.from('profiles').update({prefs:newPrefs,role:null}).eq('id',CURRENT_USER.id);
+      if(retryProfileError)throw retryProfileError;
+    }
   }else{
-    // Usuário existente: só atualiza prefs, nunca toca no role
-    await sb.from('profiles').update({prefs:newPrefs}).eq('id',CURRENT_USER.id);
+    // Se o trigger acabou de criar o profile, remove qualquer role DEFAULT indevido.
+    var profileUpdate={prefs:newPrefs};
+    if(isFreshAuth&&newPrefs.status==='pending')profileUpdate.role=null;
+    await sb.from('profiles').update(profileUpdate).eq('id',CURRENT_USER.id);
   }
   // Tenta atualizar avatar_url separadamente (não bloqueia o fluxo se falhar)
   if(avatar)sb.from('profiles').update({avatar_url:avatar}).eq('id',CURRENT_USER.id).then(function(){}).catch(function(){});
@@ -6927,6 +7010,10 @@ function fireAlertAction(action){
   if(!action)return;
   document.getElementById('bell-dropdown').style.display='none';
   if(action==='open-dayplan'){goScreen('kanban');setTimeout(function(){openDayPlanModal(true);},120);}
+  if(action==='open-pending-users'){
+    goScreen('preferencias');
+    setTimeout(function(){goPrefsTab('admin');openPendingRequests();},120);
+  }
 }
 
 function renderBellDropdown(){
@@ -7954,6 +8041,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     mostrarApp();
     updateBellUI();
     updateFocusUI();
+    startPendingAccessMonitor();
     setInterval(checkAlerts,60000);
     renderDash();
     // Abrir modal de planejamento se ainda não confirmado hoje
@@ -8003,6 +8091,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       mostrarApp();
       updateBellUI();
       updateFocusUI();
+      startPendingAccessMonitor();
       renderDash();
       // ── Paralelo ────────────────────────────────────────
       function _initParalelo2() {
@@ -8031,7 +8120,10 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       },1200);
     }else if(event==='SIGNED_OUT'){
       _appIniciado=false;
+      if(_pendingAccessInterval){clearInterval(_pendingAccessInterval);_pendingAccessInterval=null;}
       CURRENT_USER=null;
+      CURRENT_ROLE=null;
+      CURRENT_ROLE_NAME=null;
       _loadedAt=0;
       S={versoes:[],oss:[],pontos:[],publicacoes:[],filtro:'todos',filtroAtrib:'todos',filtroAtribuicao:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
         prefs:{accent:'#7c6ff7',accentRgb:'124,111,247',lightMode:false,produtos:PROD_SEG.slice()}};
