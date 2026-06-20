@@ -1631,8 +1631,9 @@ async function approveUser(userId){
   var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
   var {data:p}=await sb.from('profiles').select('prefs').eq('id',userId).maybeSingle();
   var prefs=Object.assign({},parsePrefs(p?p.prefs:null),{status:'active',role:'visualizador'});
-  var {error}=await sb.from('profiles').update({prefs:prefs,role:'visualizador'}).eq('id',userId);
+  var {data:updated,error}=await sb.from('profiles').update({prefs:prefs,role:'visualizador'}).eq('id',userId).select('id');
   if(error){toast('Erro ao aprovar: '+error.message,'err');return}
+  if(!updated||!updated.length){toast('Aprovação não persistida. Verifique a política UPDATE da tabela profiles.','err');return}
   u.status='active';
   u.role='visualizador';
   toast((u.displayName||u.email)+' aprovado ✓');
@@ -1643,19 +1644,23 @@ async function approveUser(userId){
 async function rejectUser(userId){
   if(!isAdmin()){toast('Apenas admins podem remover usuários','err');return}
   var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
-  var ok=await modalConfirm('Remover acesso','Remover o acesso de <strong>'+escHtml(u.displayName||u.email)+'</strong>? O usuário não poderá mais entrar na plataforma.','Remover','btn-danger');
+  var ok=await modalConfirm('Recusar solicitação','Recusar a solicitação de <strong>'+escHtml(u.displayName||u.email)+'</strong>? O usuário continuará sem acesso à plataforma.','Recusar','btn-danger');
   if(!ok)return;
-  var {error}=await sb.from('profiles').delete().eq('id',userId);
+  var {data:p}=await sb.from('profiles').select('prefs').eq('id',userId).maybeSingle();
+  var prefs=Object.assign({},parsePrefs(p?p.prefs:null),{status:'rejected'});
+  var {data:updated,error}=await sb.from('profiles').update({prefs:prefs,role:null}).eq('id',userId).select('id');
   if(error){toast('Erro: '+error.message,'err');return}
-  S_USERS=S_USERS.filter(function(x){return x.id!==userId});
-  toast('Usuário removido');
+  if(!updated||!updated.length){toast('Recusa não persistida. Verifique a política UPDATE da tabela profiles.','err');return}
+  u.status='rejected';
+  u.role=null;
+  toast('Solicitação recusada');
   renderUsersPrefs();
   renderPendingRequests();
   updatePendingAccessUI();
 }
 
 function getPendingUsers(){
-  return S_USERS.filter(function(u){return u.status==='pending'||!u.role;});
+  return S_USERS.filter(function(u){return u.status==='pending'||(!u.role&&u.status!=='rejected');});
 }
 
 function updatePendingAccessUI(){
@@ -1695,7 +1700,7 @@ function renderPendingRequests(){
   list.innerHTML=pending.map(function(u){
     var initials=(u.displayName||'?').split(' ').slice(0,2).map(function(w){return w[0]}).join('').toUpperCase();
     var avatarHtml=u.avatar
-      ?'<img class="user-avatar-sm" src="'+u.avatar+'" alt="'+escHtml(u.displayName)+'" onerror="_avatarFallback(this,\''+initials+'\',\'var(--border2)\')">'
+      ?'<img class="user-avatar-sm" src="'+u.avatar+'" alt="'+escHtml(u.displayName)+'" referrerpolicy="no-referrer" onerror="_avatarFallback(this,\''+initials+'\',\'var(--border2)\')">'
       :'<div class="user-avatar-initials" style="background:var(--border2)">'+initials+'</div>';
     return'<div class="user-card">'+avatarHtml+
       '<div style="flex:1;min-width:0">'+
@@ -1746,7 +1751,7 @@ function renderUsersPrefs(){
     var initials=(u.displayName||'?').split(' ').slice(0,2).map(function(w){return w[0]}).join('').toUpperCase();
 
     var avatarHtml=u.avatar?
-      '<img class="user-avatar-sm" src="'+u.avatar+'" alt="'+u.displayName+'" onerror="_avatarFallback(this,\''+initials+'\',\''+cor.hex+'\')">':
+      '<img class="user-avatar-sm" src="'+u.avatar+'" alt="'+u.displayName+'" referrerpolicy="no-referrer" onerror="_avatarFallback(this,\''+initials+'\',\''+cor.hex+'\')">':
       '<div class="user-avatar-initials" style="background:'+cor.hex+'">'+initials+'</div>';
 
     var isNovo=!u.role;
@@ -8034,7 +8039,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     updateUserBadge(session.user);
     setLoadingMsg('Carregando dados...');
     var status=await upsertCurrentUserProfile();
-    if(status==='pending'){mostrarPendente(session.user);return;}
+    if(status!=='active'){mostrarPendente(session.user);return;}
     await load();
     applyPrefs();
     if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
@@ -8084,7 +8089,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       document.getElementById('loading-screen').style.display='flex';
       setLoadingMsg('Carregando dados...');
       var status=await upsertCurrentUserProfile();
-      if(status==='pending'){mostrarPendente(session.user);return;}
+      if(status!=='active'){mostrarPendente(session.user);return;}
       await load();
       applyPrefs();
       if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
