@@ -641,6 +641,9 @@ textarea.form-input{resize:vertical;min-height:70px}
             <option value="Gestão de Talentos">GT</option>
             <option value="Pagadoria">Pagadoria</option>
           </select>
+          <select class="form-input" id="kanban-produto-sel" style="width:auto" onchange="setFiltroProduto(this.value)">
+            <option value="todos">Todos os produtos</option>
+          </select>
           <div style="display:flex;align-items:center;gap:6px;border-left:1px solid var(--border);padding-left:8px">
             <span style="font-size:12px;color:var(--muted);white-space:nowrap">Atribuído a:</span>
             <select id="kanban-atrib-sel" class="form-input" style="padding:4px 8px;font-size:12px;height:auto" onchange="setFiltroAtribuicao(this.value)">
@@ -2274,7 +2277,7 @@ var SEG_COLORS=['#6366f1','#3b82f6','#10b981','#f59e0b','#ec4899','#ef4444','#a8
 var CANAL_LABELS={inline:'Inline/Banner',email:'E-mail',entregate:'Entre a Gente',webinar:'Webinar',teams:'Teams'};
 var CANAL_COLORS={inline:'#6366f1',email:'#3b82f6',entregate:'#10b981',webinar:'#f59e0b',teams:'#7c3aed'};
 
-var S={versoes:[],oss:[],pontos:[],pontosEquipe:[],publicacoes:[],filtro:'todos',filtroAtrib:'todos',filtroAtribuicao:null,bolFiltro:'todos',editOS:null,versaoK:null,
+var S={versoes:[],oss:[],pontos:[],pontosEquipe:[],publicacoes:[],filtro:'todos',filtroAtrib:'todos',filtroAtribuicao:null,filtroProduto:'todos',bolFiltro:'todos',editOS:null,versaoK:null,
   prefs:{accent:'#7c6ff7',accentRgb:'124,111,247',lightMode:false,produtos:PROD_SEG.slice()}};
 
 var _agendaMes=new Date().getMonth(),_agendaAno=new Date().getFullYear(),_agendaFiltro='todos';
@@ -2614,6 +2617,15 @@ function setKanbanMode(m){
 
 function onVersaoChange(){S.versaoK=document.getElementById('kanban-versao-sel').value;renderKanban()}
 function setFiltro(f){S.filtro=f||'todos';renderKanban()}
+function setFiltroProduto(p){S.filtroProduto=p||'todos';renderKanban()}
+function populateFiltroProdutoSel(){
+  var sel=document.getElementById('kanban-produto-sel');if(!sel)return;
+  var produtos=(S.prefs&&S.prefs.produtos||[]).slice().sort();
+  sel.innerHTML='<option value="todos">Todos os produtos</option>'+produtos.map(function(p){
+    return'<option value="'+escHtml(p)+'">'+escHtml(p)+'</option>';
+  }).join('');
+  sel.value=produtos.indexOf(S.filtroProduto)!==-1?S.filtroProduto:'todos';
+}
 function statusLabel(k){return{afazer:'A fazer',andamento:'Em andamento',concluido:'Concluído'}[k]||k}
 function statusNext(k){return{afazer:'andamento',andamento:'concluido',concluido:null}[k]}
 function statusPrev(k){return{afazer:null,andamento:'afazer',concluido:'andamento'}[k]}
@@ -2655,8 +2667,11 @@ function renderCicloView(){
     atribSel.value=curVal;
   }
 
+  populateFiltroProdutoSel();
+
   var oss=S.oss.filter(function(o){return o.versaoId===vid;});
   if(S.filtro!=='todos')oss=oss.filter(function(o){return(PLINHA[o.produto]||'')===S.filtro;});
+  if(S.filtroProduto&&S.filtroProduto!=='todos')oss=oss.filter(function(o){return o.produto===S.filtroProduto;});
   if(S.filtroAtribuicao&&S.filtroAtribuicao!=='todos'){
     oss=oss.filter(function(o){return(o.atribuicao||'').trim()===S.filtroAtribuicao;});
   }
@@ -2826,6 +2841,7 @@ function renderKanban(){
   }
   var filtroSel=document.getElementById('kanban-filtro-sel');
   if(filtroSel)filtroSel.value=S.filtro||'todos';
+  populateFiltroProdutoSel();
   var sel=document.getElementById('kanban-versao-sel');
   sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+(v.ativa?'':' ✓')+'</option>'}).join('');
   if(S.versaoK)sel.value=S.versaoK;
@@ -2834,6 +2850,7 @@ function renderKanban(){
   var isEncerrada=versao&&!versao.ativa;
   var oss=S.oss.filter(function(o){return o.versaoId===vid});
   if(S.filtro!=='todos')oss=oss.filter(function(o){return(PLINHA[o.produto]||'')===S.filtro});
+  if(S.filtroProduto&&S.filtroProduto!=='todos')oss=oss.filter(function(o){return o.produto===S.filtroProduto});
   // Filtro de atribuição por select (nome exato)
   if(S.filtroAtribuicao&&S.filtroAtribuicao!=='todos'){
     oss=oss.filter(function(o){return(o.atribuicao||'').trim()===S.filtroAtribuicao});
@@ -7804,22 +7821,26 @@ async function importarDoRedmine(){
     });
     if(!issues.length){toast('Nenhuma tarefa do tipo filho atribuída a você','err');return}
 
-    var existingOss=S.oss.filter(function(o){return o.versaoId===S.versaoK});
-    var existingNums=existingOss.map(function(o){return String(o.num)});
+    // Duplicidade de OS é verificada pelo número em TODAS as versões (não só na versão
+    // selecionada), pois o Redmine não filtra issues por versão nesta busca — uma OS já
+    // existente em outra versão não pode ser recriada aqui, senão quebra a unicidade do num.
+    var existingByNum={};
+    S.oss.forEach(function(o){existingByNum[String(o.num)]=o});
 
-    var novas=issues.filter(function(iss){return existingNums.indexOf(String(iss.id))===-1});
+    var novas=issues.filter(function(iss){return!existingByNum[String(iss.id)]});
 
-    // Detectar cards já importados com campos alterados no Redmine
+    // Cards já importados (em qualquer versão): sincroniza campos e migra para a versão
+    // atual — exceto os já Concluídos, que são ignorados para não reabrir/mover trabalho fechado.
     var atualizadas=issues.filter(function(iss){
-      var local=existingOss.find(function(o){return String(o.num)===String(iss.id)});
-      if(!local)return false;
+      var local=existingByNum[String(iss.id)];
+      if(!local||local.status==='concluido')return false;
       var nt=iss.subject||'';
       var na=matchAtribuicaoRedmine(iss.assigned_to?iss.assigned_to.name:'');
       var np=matchProdutoRedmine(iss);
       var ntp=iss.tracker?iss.tracker.name:'';
-      return nt!==local.titulo||na!==local.atribuicao||np!==local.produto||ntp!==local.tipoRedmine;
+      return nt!==local.titulo||na!==local.atribuicao||np!==local.produto||ntp!==local.tipoRedmine||local.versaoId!==S.versaoK;
     }).map(function(iss){
-      var local=existingOss.find(function(o){return String(o.num)===String(iss.id)});
+      var local=existingByNum[String(iss.id)];
       var novoTitulo=iss.subject||'';
       var novaAtrib=matchAtribuicaoRedmine(iss.assigned_to?iss.assigned_to.name:'');
       var novoProd=matchProdutoRedmine(iss);
@@ -7829,6 +7850,10 @@ async function importarDoRedmine(){
       if(novaAtrib!==local.atribuicao)diffs.push({campo:'atribuição',de:local.atribuicao,para:novaAtrib});
       if(novoProd!==local.produto)diffs.push({campo:'produto',de:local.produto,para:novoProd});
       if(novoTipo!==local.tipoRedmine)diffs.push({campo:'tipo',de:local.tipoRedmine,para:novoTipo});
+      if(local.versaoId!==S.versaoK){
+        var vAntiga=S.versoes.find(function(v){return v.id===local.versaoId});
+        diffs.push({campo:'versão',de:vAntiga?vAntiga.nome:'—',para:versao.nome});
+      }
       return{iss:iss,local:local,diffs:diffs,novoTitulo:novoTitulo,novaAtrib:novaAtrib,novoProd:novoProd,novoTipo:novoTipo};
     });
 
@@ -7892,6 +7917,7 @@ async function importarDoRedmine(){
       S.oss[idx]=Object.assign({},S.oss[idx],{
         titulo:upd.novoTitulo,atribuicao:upd.novaAtrib,
         produto:upd.novoProd,tipoRedmine:upd.novoTipo,
+        versaoId:S.versaoK,
         paiRedmine:upd.iss.parent?String(upd.iss.parent.id):''
       });
       await dbSalvarOS(S.oss[idx]);
