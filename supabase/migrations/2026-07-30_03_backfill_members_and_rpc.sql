@@ -25,7 +25,9 @@ begin
 end $$;
 
 create or replace function ensure_workspace_membership(ws_id uuid)
-returns table(status text, role_id uuid) language plpgsql security definer as $$
+returns table(status text, role_id uuid) language plpgsql security definer
+set search_path = public
+as $$
 declare
   existing record;
   member_count int;
