@@ -1594,16 +1594,13 @@ async function refreshRoles(){
 }
 async function saveUserRole(userId,newRole){
   var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
-  var {data:prof}=await sb.from('profiles').select('prefs').eq('id',userId).single();
-  var prefs=Object.assign({},parsePrefs(prof?prof.prefs:null));
-  prefs.role=newRole;
-  var {error}=await sb.from('profiles').update({prefs:prefs,role:newRole}).eq('id',userId);
+  var roleRow=S_ROLES.find(function(r){return r.nome===newRole});
+  var {error}=await sb.from('workspace_members').update({role_id:roleRow?roleRow.id:null}).eq('workspace_id',CURRENT_WORKSPACE_ID).eq('user_id',userId);
   if(error){toast('Erro ao salvar role','err');return;}
   u.role=newRole;
-  // Se o usuário alterado é o próprio usuário logado, atualiza permissões imediatamente
   if(CURRENT_USER&&userId===CURRENT_USER.id){
     CURRENT_ROLE_NAME=newRole;
-    CURRENT_ROLE=S_ROLES.find(function(r){return r.nome===newRole;})||null;
+    CURRENT_ROLE=roleRow||null;
     applyMenuPermissions();
   }
   renderUsersPrefs();
@@ -1630,11 +1627,10 @@ async function saveUserGestorGeral(userId,checked){
 async function approveUser(userId){
   if(!isAdmin()){toast('Apenas admins podem aprovar usuários','err');return}
   var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
-  var {data:p}=await sb.from('profiles').select('prefs').eq('id',userId).maybeSingle();
-  var prefs=Object.assign({},parsePrefs(p?p.prefs:null),{status:'active',role:'visualizador'});
-  var {data:updated,error}=await sb.from('profiles').update({prefs:prefs,role:'visualizador'}).eq('id',userId).select('id');
+  var visualizador=S_ROLES.find(function(r){return r.nome==='visualizador'});
+  var {data:updated,error}=await sb.from('workspace_members').update({status:'active',role_id:visualizador?visualizador.id:null}).eq('workspace_id',CURRENT_WORKSPACE_ID).eq('user_id',userId).select('id');
   if(error){toast('Erro ao aprovar: '+error.message,'err');return}
-  if(!updated||!updated.length){toast('Aprovação não persistida. Verifique a política UPDATE da tabela profiles.','err');return}
+  if(!updated||!updated.length){toast('Aprovação não persistida. Verifique a política UPDATE da tabela workspace_members.','err');return}
   u.status='active';
   u.role='visualizador';
   toast((u.displayName||u.email)+' aprovado ✓');
@@ -1647,11 +1643,9 @@ async function rejectUser(userId){
   var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
   var ok=await modalConfirm('Recusar solicitação','Recusar a solicitação de <strong>'+escHtml(u.displayName||u.email)+'</strong>? O usuário continuará sem acesso à plataforma.','Recusar','btn-danger');
   if(!ok)return;
-  var {data:p}=await sb.from('profiles').select('prefs').eq('id',userId).maybeSingle();
-  var prefs=Object.assign({},parsePrefs(p?p.prefs:null),{status:'rejected'});
-  var {data:updated,error}=await sb.from('profiles').update({prefs:prefs,role:null}).eq('id',userId).select('id');
+  var {data:updated,error}=await sb.from('workspace_members').update({status:'rejected',role_id:null}).eq('workspace_id',CURRENT_WORKSPACE_ID).eq('user_id',userId).select('id');
   if(error){toast('Erro: '+error.message,'err');return}
-  if(!updated||!updated.length){toast('Recusa não persistida. Verifique a política UPDATE da tabela profiles.','err');return}
+  if(!updated||!updated.length){toast('Recusa não persistida. Verifique a política UPDATE da tabela workspace_members.','err');return}
   u.status='rejected';
   u.role=null;
   toast('Solicitação recusada');
@@ -1867,8 +1861,11 @@ async function saveEditUserModal(){
     var {data:p}=await sb.from('profiles').select('prefs').eq('id',_editUserModalId).maybeSingle();
     var prefs=Object.assign({},parsePrefs(p?p.prefs:null));
     prefs.cargo=cargo;prefs.redmineUser=redmineUser;
-    var {error}=await sb.from('profiles').update({role:role,equipe_id:equipeId||null,gestor_geral:gestorGeral,prefs:prefs}).eq('id',_editUserModalId);
+    var {error}=await sb.from('profiles').update({equipe_id:equipeId||null,gestor_geral:gestorGeral,prefs:prefs}).eq('id',_editUserModalId);
     if(error)throw error;
+    var roleRow=S_ROLES.find(function(r){return r.nome===role});
+    var {error:roleErr}=await sb.from('workspace_members').update({role_id:roleRow?roleRow.id:null}).eq('workspace_id',CURRENT_WORKSPACE_ID).eq('user_id',_editUserModalId);
+    if(roleErr)throw roleErr;
     u.role=role;u.equipeId=equipeId||null;u.gestorGeral=gestorGeral;u.cargo=cargo;u.redmineUser=redmineUser;
     closeModal('modal-edit-user');renderUsersPrefs();toast(u.displayName+' atualizado ✓');
   }catch(e){toast('Erro ao salvar: '+e.message,'err');}
