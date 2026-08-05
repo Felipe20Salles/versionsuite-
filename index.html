@@ -8048,8 +8048,9 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     CURRENT_USER=session.user;
     updateUserBadge(session.user);
     setLoadingMsg('Carregando dados...');
+    await resolveCurrentWorkspace();
     var status=await upsertCurrentUserProfile();
-    if(status!=='active'){mostrarPendente(session.user);return;}
+    if(status!=='active'){mostrarPendente();return;}
     await load();
     applyPrefs();
     if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
@@ -8098,8 +8099,9 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       document.getElementById('login-screen').style.display='none';
       document.getElementById('loading-screen').style.display='flex';
       setLoadingMsg('Carregando dados...');
+      await resolveCurrentWorkspace();
       var status=await upsertCurrentUserProfile();
-      if(status!=='active'){mostrarPendente(session.user);return;}
+      if(status!=='active'){mostrarPendente();return;}
       await load();
       applyPrefs();
       if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
