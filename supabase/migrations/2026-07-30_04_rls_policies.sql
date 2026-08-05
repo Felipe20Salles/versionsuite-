@@ -1,7 +1,7 @@
 -- 2026-07-30_04_rls_policies.sql  (NÃO RODAR AINDA — só na Task 14, depois do client novo validado em produção)
 
 create or replace function is_workspace_member(ws_id uuid, only_active boolean default true)
-returns boolean language sql security definer set search_path = public stable as $$
+returns boolean language sql security definer set search_path = public, pg_temp stable as $$
   select exists (
     select 1 from workspace_members
     where workspace_id = ws_id and user_id = auth.uid()
@@ -10,7 +10,7 @@ returns boolean language sql security definer set search_path = public stable as
 $$;
 
 create or replace function shares_workspace_with(other_user_id uuid)
-returns boolean language sql security definer set search_path = public stable as $$
+returns boolean language sql security definer set search_path = public, pg_temp stable as $$
   select exists (
     select 1 from workspace_members wm1
     join workspace_members wm2 on wm1.workspace_id = wm2.workspace_id
@@ -19,7 +19,7 @@ returns boolean language sql security definer set search_path = public stable as
 $$;
 
 create or replace function is_workspace_admin(ws_id uuid)
-returns boolean language sql security definer set search_path = public stable as $$
+returns boolean language sql security definer set search_path = public, pg_temp stable as $$
   select exists (
     select 1 from workspace_members wm join roles r on r.id = wm.role_id
     where wm.workspace_id = ws_id and wm.user_id = auth.uid()
@@ -77,9 +77,12 @@ create policy profiles_admin_update on profiles for update using (
 );
 
 create or replace function prevent_self_privilege_escalation()
-returns trigger language plpgsql security definer set search_path = public as $$
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 begin
-  if new.id = auth.uid() and (new.gestor_geral is distinct from old.gestor_geral or new.role is distinct from old.role) then
+  if new.id = auth.uid() and (
+    (new.gestor_geral is true and old.gestor_geral is not true)
+    or (new.role is not null and new.role is distinct from old.role)
+  ) then
     raise exception 'Você não pode alterar seu próprio gestor_geral/role — peça a outro admin.';
   end if;
   return new;
