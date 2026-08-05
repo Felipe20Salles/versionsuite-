@@ -5350,14 +5350,14 @@ async function load(){
     var uid=CURRENT_USER.id;
 
     // Produtos
-    var {data:prods}=await sb.from('produtos').select('*').order('nome');
+    var {data:prods}=await sb.from('produtos').select('*').eq('workspace_id',CURRENT_WORKSPACE_ID).order('nome');
     if(prods&&prods.length){
       S.prefs.produtos=prods.map(function(p){return p.nome});
       prods.forEach(function(p){PLINHA[p.nome]=p.grupo});
     }
 
     // Preferências do usuário + nome personalizado
-    var {data:prof}=await sb.from('profiles').select('nome, prefs, role').eq('id',uid).single();
+    var {data:prof}=await sb.from('profiles').select('nome, prefs').eq('id',uid).single();
     if(prof&&prof.nome){
       CURRENT_USER._displayName=prof.nome;
       document.getElementById('user-name').textContent=prof.nome.split(' ')[0];
@@ -5371,28 +5371,28 @@ async function load(){
     if(parsedPrefs.lightMode!==undefined)S.prefs.lightMode=parsedPrefs.lightMode;
 
     // Carregar todos os roles disponíveis
-    var {data:rolesData,error:rolesErr}=await sb.from('roles').select('*');
+    var {data:rolesData,error:rolesErr}=await sb.from('roles').select('*').eq('workspace_id',CURRENT_WORKSPACE_ID);
     if(rolesErr)console.error('[VS] Erro ao carregar tabela roles (verifique RLS):',rolesErr);
     S_ROLES=rolesData||[];
     // Popular ROLE_LABELS dinamicamente com roles da tabela
     S_ROLES.forEach(function(r){ROLE_LABELS[r.nome]=r.label||r.nome;});
 
-    // Role vem exclusivamente da coluna direta; null = aguardando aprovação
-    var roleNome=(prof&&prof.role)||null;
-    CURRENT_ROLE_NAME=roleNome;
-    CURRENT_ROLE=roleNome?S_ROLES.find(function(r){return r.nome===roleNome})||null:null;
+    // Role vem de workspace_members; null/'pending'/'rejected' = sem acesso
+    var {data:membership}=await sb.from('workspace_members').select('role_id, status').eq('workspace_id',CURRENT_WORKSPACE_ID).eq('user_id',uid).maybeSingle();
+    CURRENT_ROLE=(membership&&membership.status==='active'&&membership.role_id)?S_ROLES.find(function(r){return r.id===membership.role_id})||null:null;
+    CURRENT_ROLE_NAME=CURRENT_ROLE?CURRENT_ROLE.nome:null;
     applyMenuPermissions();
 
     // Versões
     setLoadingMsg('Carregando OSs...');
-    var {data:versoes}=await sb.from('versoes').select('*').order('created_at',{ascending:false});
+    var {data:versoes}=await sb.from('versoes').select('*').eq('workspace_id',CURRENT_WORKSPACE_ID).order('created_at',{ascending:false});
     S.versoes=(versoes||[]).map(function(v){return{
       id:v.id,nome:v.nome,data:v.data,boletim:v.boletim,
       ativa:v.ativa,encerradaEm:v.encerrada_em,createdBy:v.created_by||null
     }});
 
     // OSs
-    var {data:oss}=await sb.from('oss').select('*').order('created_at');
+    var {data:oss}=await sb.from('oss').select('*').eq('workspace_id',CURRENT_WORKSPACE_ID).order('created_at');
     S.oss=(oss||[]).map(function(o){return{
       id:o.id,num:o.num,titulo:o.titulo,produto:o.produto,
       status:o.status,obs:o.obs||'',link:o.link||'',atribuicao:o.atribuicao||'',
@@ -5404,7 +5404,7 @@ async function load(){
 
     // Pontos (apenas do usuário)
     setLoadingMsg('Carregando ponto...');
-    var {data:pontos}=await sb.from('pontos').select('*').eq('user_id',uid).order('data',{ascending:false});
+    var {data:pontos}=await sb.from('pontos').select('*').eq('workspace_id',CURRENT_WORKSPACE_ID).eq('user_id',uid).order('data',{ascending:false});
     S.pontos=(pontos||[]).map(function(p){return{
       id:p.id,data:p.data,dia:p.dia||'',marcacoes:p.marcacoes||'',
       horasTrabalhadas:parseFloat(p.horas_trabalhadas)||0,
@@ -5413,7 +5413,7 @@ async function load(){
 
     // Publicações
     setLoadingMsg('Carregando agenda...');
-    var {data:pubs}=await sb.from('publicacoes').select('*').order('inicio');
+    var {data:pubs}=await sb.from('publicacoes').select('*').eq('workspace_id',CURRENT_WORKSPACE_ID).order('inicio');
     S.publicacoes=(pubs||[]).map(function(p){return{
       id:p.id,titulo:p.titulo,inicio:p.inicio,fim:p.fim,
       tipo:p.tipo||'inline',produto:p.produto||'Todos',desc:p.descricao||''
