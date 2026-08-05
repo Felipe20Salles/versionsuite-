@@ -5215,6 +5215,13 @@ var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZ
 var sb=supabase.createClient(SUPA_URL,SUPA_KEY);
 var CURRENT_USER=null;
 var CURRENT_ROLE=null;
+var CURRENT_WORKSPACE_ID=null;
+async function resolveCurrentWorkspace(){
+  var {data:ws,error}=await sb.from('workspaces').select('id').eq('slug','default').single();
+  if(error||!ws)throw new Error('Workspace padrão não encontrado (slug "default"). Rode as migrações de workspaces.');
+  CURRENT_WORKSPACE_ID=ws.id;
+  return ws.id;
+}
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function loginGoogle(){
