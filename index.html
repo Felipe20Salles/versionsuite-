@@ -2186,44 +2186,26 @@ async function upsertCurrentUserProfile(){
   var displayName=meta.full_name||meta.name||CURRENT_USER.email||'Usuário';
   var avatar=meta.avatar_url||meta.picture||'';
   var email=CURRENT_USER.email||'';
-  // Busca profile existente (inclui role para não sobrescrever)
-  var {data:existing}=await sb.from('profiles').select('prefs,role').eq('id',CURRENT_USER.id).maybeSingle();
-  var isNewUser=!existing;
+  var {data:existing}=await sb.from('profiles').select('prefs').eq('id',CURRENT_USER.id).maybeSingle();
   var existPrefs=parsePrefs(existing?existing.prefs:null);
-  // Verifica se é o primeiro usuário do sistema (vira admin automaticamente)
-  var isFirstUser=false;
-  if(isNewUser){
-    var {count}=await sb.from('profiles').select('id',{count:'exact',head:true});
-    isFirstUser=(count===0);
-  }
-  // Preserva role, colorIdx e status; só atualiza displayName/avatar/email
-  // Não sobrescreve avatar existente se o OAuth não retornou URL (ex: refresh de token)
   var newPrefs=Object.assign({},existPrefs,{displayName:displayName,email:email});
+  delete newPrefs.role;delete newPrefs.status;
   if(avatar)newPrefs.avatar=avatar;
-  if(newPrefs.colorIdx===undefined)newPrefs.colorIdx=null; // será atribuído em loadUsers
-  // Contas recém-criadas podem já ter profile por trigger do Supabase.
-  // Sem status explícito, elas sempre entram na fila e nunca herdam o DEFAULT de role do banco.
-  var authCreatedAt=CURRENT_USER.created_at?new Date(CURRENT_USER.created_at).getTime():0;
-  var isFreshAuth=authCreatedAt&&Date.now()-authCreatedAt<10*60*1000;
-  if(!newPrefs.status)newPrefs.status=((isNewUser||isFreshAuth)&&!isFirstUser)?'pending':'active';
+  if(newPrefs.colorIdx===undefined)newPrefs.colorIdx=null;
   if(!existing){
-    // Novo usuário: role=null garante fila de espera independente do DEFAULT do banco
-    var {error:insertProfileError}=await sb.from('profiles').insert({id:CURRENT_USER.id,prefs:newPrefs,role:null});
+    var {error:insertProfileError}=await sb.from('profiles').insert({id:CURRENT_USER.id,prefs:newPrefs});
     if(insertProfileError){
-      // Um trigger pode ter criado o profile entre o SELECT e o INSERT.
-      // Nesse caso, força novamente a pendência e remove qualquer role DEFAULT.
-      var {error:retryProfileError}=await sb.from('profiles').update({prefs:newPrefs,role:null}).eq('id',CURRENT_USER.id);
+      var {error:retryProfileError}=await sb.from('profiles').update({prefs:newPrefs}).eq('id',CURRENT_USER.id);
       if(retryProfileError)throw retryProfileError;
     }
   }else{
-    // Se o trigger acabou de criar o profile, remove qualquer role DEFAULT indevido.
-    var profileUpdate={prefs:newPrefs};
-    if(isFreshAuth&&newPrefs.status==='pending')profileUpdate.role=null;
-    await sb.from('profiles').update(profileUpdate).eq('id',CURRENT_USER.id);
+    await sb.from('profiles').update({prefs:newPrefs}).eq('id',CURRENT_USER.id);
   }
-  // Tenta atualizar avatar_url separadamente (não bloqueia o fluxo se falhar)
   if(avatar)sb.from('profiles').update({avatar_url:avatar}).eq('id',CURRENT_USER.id).then(function(){}).catch(function(){});
-  return newPrefs.status;
+  var {data:membership,error:memErr}=await sb.rpc('ensure_workspace_membership',{ws_id:CURRENT_WORKSPACE_ID});
+  if(memErr)throw memErr;
+  var row=Array.isArray(membership)?membership[0]:membership;
+  return row?row.status:'pending';
 }
 
 
