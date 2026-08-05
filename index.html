@@ -1950,7 +1950,7 @@ async function salvarEquipeForm(){
   var nome=document.getElementById('equipe-form-nome').value.trim();
   var gestorId=document.getElementById('equipe-form-gestor').value||null;
   if(!nome){toast('Informe o nome da equipe','err');return;}
-  var payload={nome:nome,gestor_id:gestorId||null};
+  var payload={nome:nome,gestor_id:gestorId||null,workspace_id:CURRENT_WORKSPACE_ID};
   if(id){
     var {error}=await sb.from('equipes').update(payload).eq('id',id);
     if(error){toast('Erro ao salvar equipe','err');return;}
@@ -1989,7 +1989,7 @@ async function renderRolesPrefs(){
     'acoes.dashboard_todas_equipes':'Dashboard: ver todas as equipes'
   };
 
-  var {data:rolesData}=await sb.from('roles').select('*');
+  var {data:rolesData}=await sb.from('roles').select('*').eq('workspace_id',CURRENT_WORKSPACE_ID);
   S_ROLES=rolesData||[];
   S_ROLES.forEach(function(r){ROLE_LABELS[r.nome]=r.label||r.nome;});
 
@@ -2140,7 +2140,7 @@ async function rolesCriar(){
     var base=S_ROLES.find(function(r){return r.id===herdaId});
     if(base&&base.permissoes)permissoes=JSON.parse(JSON.stringify(base.permissoes));
   }
-  var {error}=await sb.from('roles').insert({nome:nome,label:label,permissoes:permissoes});
+  var {error}=await sb.from('roles').insert({nome:nome,label:label,permissoes:permissoes,workspace_id:CURRENT_WORKSPACE_ID});
   if(error){toast('Erro ao criar perfil de acesso','err');return;}
   closeModal('modal-novo-role');
   await renderRolesPrefs();
@@ -5444,7 +5444,7 @@ async function save(){
 // Versões
 async function dbSalvarVersao(v){
   var {data,error}=await sb.from('versoes').upsert({
-    id:v.id,nome:v.nome,data:v.data||null,boletim:v.boletim||null,
+    id:v.id,workspace_id:CURRENT_WORKSPACE_ID,nome:v.nome,data:v.data||null,boletim:v.boletim||null,
     ativa:v.ativa,encerrada_em:v.encerradaEm||null,created_by:CURRENT_USER.id
   }).select().single();
   if(error)throw error;
@@ -5467,7 +5467,7 @@ async function dbDeletarVersao(id){
 // OSs
 async function dbSalvarOS(os){
   var {data,error}=await sb.from('oss').upsert({
-    id:os.id,versao_id:os.versaoId,num:os.num,titulo:os.titulo,
+    id:os.id,workspace_id:CURRENT_WORKSPACE_ID,versao_id:os.versaoId,num:os.num,titulo:os.titulo,
     produto:os.produto,status:os.status,obs:os.obs||'',link:os.link||'',
     atribuicao:os.atribuicao||'',estimated_hours:os.estimatedHours||0,entregas:os.entregas,created_by:CURRENT_USER.id,
     tipo_redmine:os.tipoRedmine||'',pai_redmine:os.paiRedmine||''
@@ -5488,7 +5488,7 @@ async function dbToggleEntrega(id,entregas){
 // Pontos
 async function dbSalvarPonto(p){
   var {data,error}=await sb.from('pontos').upsert({
-    id:p.id,user_id:CURRENT_USER.id,versao_id:p.versaoId||null,
+    id:p.id,workspace_id:CURRENT_WORKSPACE_ID,user_id:CURRENT_USER.id,versao_id:p.versaoId||null,
     data:p.data,dia:p.dia,marcacoes:p.marcacoes,
     horas_trabalhadas:p.horasTrabalhadas,apropriacoes:p.apropriacoes||[]
   },{onConflict:'user_id,data'}).select().single();
@@ -5506,7 +5506,7 @@ async function dbSalvarApropriacao(pontoId,apropriacoes){
 // Publicações
 async function dbSalvarPublicacao(pub){
   var {data,error}=await sb.from('publicacoes').upsert({
-    id:pub.id,titulo:pub.titulo,inicio:pub.inicio,fim:pub.fim,
+    id:pub.id,workspace_id:CURRENT_WORKSPACE_ID,titulo:pub.titulo,inicio:pub.inicio,fim:pub.fim,
     tipo:pub.tipo,produto:pub.produto,descricao:pub.desc||'',created_by:CURRENT_USER.id
   }).select().single();
   if(error)throw error;
@@ -5518,7 +5518,7 @@ async function dbDeletarPublicacao(id){
 
 // Produtos
 async function dbSalvarProduto(nome,grupo){
-  await sb.from('produtos').upsert({nome:nome,grupo:grupo},{onConflict:'nome'});
+  await sb.from('produtos').upsert({nome:nome,grupo:grupo,workspace_id:CURRENT_WORKSPACE_ID},{onConflict:'nome'});
 }
 async function dbDeletarProduto(nome){
   await sb.from('produtos').delete().eq('nome',nome);
@@ -5531,7 +5531,6 @@ async function dbSalvarPrefs(){
   var meta=CURRENT_USER.user_metadata||{};
   var {error}=await sb.from('profiles').update({prefs:{
     accent:S.prefs.accent,accentRgb:S.prefs.accentRgb,lightMode:S.prefs.lightMode,
-    role:me?me.role:'visualizador',
     displayName:me?me.displayName:(meta.full_name||meta.name||''),
     avatar:(me&&me.avatar)||meta.avatar_url||meta.picture||'',
     email:CURRENT_USER.email||'',
