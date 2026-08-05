@@ -1527,17 +1527,20 @@ function canEditVersao(v){
 // Carrega todos os profiles do Supabase para popular lista de usuários
 async function loadUsers(){
   try{
-    var {data:profiles}=await sb.from('profiles').select('id,nome,email,avatar_url,prefs,role,equipe_id,gestor_geral');
-    if(!profiles)return;
-    S_USERS=profiles.map(function(p){
+    var {data:members}=await sb.from('workspace_members')
+      .select('status, role_id, roles(nome), profiles(id,nome,email,avatar_url,prefs,equipe_id,gestor_geral)')
+      .eq('workspace_id',CURRENT_WORKSPACE_ID);
+    if(!members)return;
+    S_USERS=members.filter(function(m){return m.profiles}).map(function(m){
+      var p=m.profiles;
       var prefs=parsePrefs(p.prefs);
       return{
         id:p.id,
         email:p.email||prefs.email||'',
         displayName:p.nome||prefs.displayName||prefs.email||p.email||'Usuário',
         avatar:p.avatar_url||prefs.avatar||'',
-        role:p.role||prefs.role||null,
-        status:prefs.status||'active',
+        role:m.roles?m.roles.nome:null,
+        status:m.status,
         colorIdx:prefs.colorIdx!==undefined?prefs.colorIdx:null,
         equipeId:p.equipe_id||null,
         gestorGeral:!!p.gestor_geral,
@@ -1545,7 +1548,6 @@ async function loadUsers(){
         redmineUser:prefs.redmineUser||''
       };
     });
-    // Atribui colorIdx únicos para quem não tem (ordem de cadastro)
     var usedIdx=S_USERS.filter(function(u){return u.colorIdx!==null}).map(function(u){return u.colorIdx});
     var next=0;
     S_USERS.forEach(function(u){
@@ -1554,15 +1556,11 @@ async function loadUsers(){
         u.colorIdx=next;usedIdx.push(next);next++;
       }
     });
-    // Seed do mapa de cores por nome
-    var nomes=S_USERS.map(function(u){return u.displayName});
-    // Reseta e reconstrói o mapa com índices fixos por colorIdx
     S_USERS.forEach(function(u){
       var key=(u.displayName||'').trim().split(' ')[0];
       if(key)_USER_COLOR_MAP[key]=u.colorIdx;
     });
     _USER_COLOR_NEXT=Math.max(S_USERS.length,_USER_COLOR_NEXT);
-    // Também usa nomes das OSs como fallback
     seedUserColors(S.oss.map(function(o){return o.atribuicao||''}).filter(Boolean));
     updatePendingAccessUI();
   }catch(e){console.warn('loadUsers:',e);}
@@ -1578,7 +1576,7 @@ function startPendingAccessMonitor(){
 
 async function loadEquipes(){
   try{
-    var {data,error}=await sb.from('equipes').select('id,nome,gestor_id');
+    var {data,error}=await sb.from('equipes').select('id,nome,gestor_id').eq('workspace_id',CURRENT_WORKSPACE_ID);
     if(error)throw error;
     S_EQUIPES=(data||[]).map(function(e){return{id:e.id,nome:e.nome,gestorId:e.gestor_id};});
   }catch(e){console.warn('loadEquipes:',e);S_EQUIPES=[];}
