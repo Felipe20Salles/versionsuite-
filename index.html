@@ -5522,7 +5522,7 @@ async function dbSalvarPonto(p){
     id:p.id,workspace_id:CURRENT_WORKSPACE_ID,user_id:CURRENT_USER.id,versao_id:p.versaoId||null,
     data:p.data,dia:p.dia,marcacoes:p.marcacoes,
     horas_trabalhadas:p.horasTrabalhadas,apropriacoes:p.apropriacoes||[]
-  },{onConflict:'user_id,data'}).select().single();
+  },{onConflict:'workspace_id,user_id,data'}).select().single();
   if(error)throw error;
   return data;
 }
@@ -5549,10 +5549,10 @@ async function dbDeletarPublicacao(id){
 
 // Produtos
 async function dbSalvarProduto(nome,grupo){
-  await sb.from('produtos').upsert({nome:nome,grupo:grupo,workspace_id:CURRENT_WORKSPACE_ID},{onConflict:'nome'});
+  await sb.from('produtos').upsert({nome:nome,grupo:grupo,workspace_id:CURRENT_WORKSPACE_ID},{onConflict:'workspace_id,nome'});
 }
 async function dbDeletarProduto(nome){
-  await sb.from('produtos').delete().eq('nome',nome);
+  await sb.from('produtos').delete().eq('workspace_id',CURRENT_WORKSPACE_ID).eq('nome',nome);
 }
 
 // Preferências
@@ -7573,6 +7573,7 @@ async function loadPontosEquipe(userIds,inicio,fim){
   try{
     var {data,error}=await sb.from('pontos')
       .select('id,user_id,data,horas_trabalhadas,apropriacoes')
+      .eq('workspace_id',CURRENT_WORKSPACE_ID)
       .in('user_id',userIds)
       .gte('data',inicio)
       .lte('data',fim);
