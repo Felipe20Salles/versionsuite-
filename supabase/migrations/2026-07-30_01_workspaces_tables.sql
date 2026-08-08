@@ -23,5 +23,7 @@ create table workspace_members (
   unique (workspace_id, user_id)
 );
 
--- Edite 'Minha Empresa' para o nome real da empresa antes de rodar em produção.
-insert into workspaces (nome, slug) values ('Minha Empresa', 'default');
+-- O nome ('LG') é o valor real usado em produção: a migração foi aplicada com o
+-- placeholder 'Minha Empresa' e corrigida manualmente depois. O literal aqui já é o
+-- valor correto para que um replay (DR / staging) não divirja da produção.
+insert into workspaces (nome, slug) values ('LG', 'default');
