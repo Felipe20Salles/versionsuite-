@@ -5193,11 +5193,14 @@ var sb=supabase.createClient(SUPA_URL,SUPA_KEY);
 var CURRENT_USER=null;
 var CURRENT_ROLE=null;
 var CURRENT_WORKSPACE_ID=null;
+// Resolve via RPC security definer (2026-08-08_01) em vez de SELECT direto: a tabela
+// workspaces tem RLS ligada e nenhuma policy de SELECT — de propósito, para que um
+// usuário ainda não-membro consiga descobrir o workspace e pedir acesso.
 async function resolveCurrentWorkspace(){
-  var {data:ws,error}=await sb.from('workspaces').select('id').eq('slug','default').single();
-  if(error||!ws)throw new Error('Workspace padrão não encontrado (slug "default"). Rode as migrações de workspaces.');
-  CURRENT_WORKSPACE_ID=ws.id;
-  return ws.id;
+  var {data:wsId,error}=await sb.rpc('get_workspace_id_by_slug',{ws_slug:'default'});
+  if(error||!wsId)throw new Error('Workspace padrão não encontrado (slug "default"). Rode as migrações de workspaces.');
+  CURRENT_WORKSPACE_ID=wsId;
+  return wsId;
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
