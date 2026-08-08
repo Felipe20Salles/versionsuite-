@@ -8079,10 +8079,18 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     CURRENT_USER=session.user;
     updateUserBadge(session.user);
     setLoadingMsg('Carregando dados...');
-    await resolveCurrentWorkspace();
-    var status=await upsertCurrentUserProfile();
-    if(status!=='active'){mostrarPendente();return;}
-    await load();
+    try{
+      await resolveCurrentWorkspace();
+      var status=await upsertCurrentUserProfile();
+      if(status!=='active'){mostrarPendente();return;}
+      await load();
+    }catch(e){
+      // Sem isso a tela de loading fica presa para sempre.
+      console.error('[VS] Falha ao inicializar a sessão:',e);
+      _appIniciado=false;
+      mostrarLogin('Não foi possível carregar seus dados ('+(e&&e.message?e.message:'erro desconhecido')+'). Tente entrar novamente.');
+      return;
+    }
     applyPrefs();
     if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
     mostrarApp();
@@ -8130,10 +8138,18 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       document.getElementById('login-screen').style.display='none';
       document.getElementById('loading-screen').style.display='flex';
       setLoadingMsg('Carregando dados...');
-      await resolveCurrentWorkspace();
-      var status=await upsertCurrentUserProfile();
-      if(status!=='active'){mostrarPendente();return;}
-      await load();
+      try{
+        await resolveCurrentWorkspace();
+        var status=await upsertCurrentUserProfile();
+        if(status!=='active'){mostrarPendente();return;}
+        await load();
+      }catch(e){
+        // Sem isso a tela de loading fica presa para sempre.
+        console.error('[VS] Falha ao inicializar a sessão:',e);
+        _appIniciado=false;
+        mostrarLogin('Não foi possível carregar seus dados ('+(e&&e.message?e.message:'erro desconhecido')+'). Tente entrar novamente.');
+        return;
+      }
       applyPrefs();
       if(!CURRENT_ROLE_NAME){mostrarPendente();return;}
       mostrarApp();
