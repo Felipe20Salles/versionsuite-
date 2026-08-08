@@ -1584,19 +1584,38 @@ async function loadEquipes(){
 
 async function refreshRoles(){
   try{
-    var {data}=await sb.from('roles').select('*');
+    var {data}=await sb.from('roles').select('*').eq('workspace_id',CURRENT_WORKSPACE_ID);
     if(!data||!data.length)return;
     S_ROLES=data;
     S_ROLES.forEach(function(r){ROLE_LABELS[r.nome]=r.label||r.nome;});
-    if(CURRENT_ROLE_NAME){CURRENT_ROLE=S_ROLES.find(function(r){return r.nome===CURRENT_ROLE_NAME})||null;}
+    // Re-resolve por id (mesmo critério do load()); casar por nome ignoraria o workspace.
+    if(CURRENT_ROLE){
+      var roleId=CURRENT_ROLE.id;
+      CURRENT_ROLE=S_ROLES.find(function(r){return r.id===roleId})||null;
+      CURRENT_ROLE_NAME=CURRENT_ROLE?CURRENT_ROLE.nome:null;
+    }
     applyMenuPermissions();
   }catch(e){}
+}
+// Stopgap: as policies pré-existentes de produção ("Admins gerenciam equipes",
+// "Admins podem atualizar qualquer profile") ainda checam a coluna profiles.role,
+// que a Fase 1 parou de manter. Enquanto a Task 14 não migra essas policies para
+// workspace_members, todo write de role precisa espelhar em profiles.role — senão
+// a revogação de admin falha aberta e a promoção não vale nas policies antigas.
+async function syncProfileRole(userId,roleName){
+  var {data,error}=await sb.from('profiles').update({role:roleName||null}).eq('id',userId).select('id');
+  if(error)return{error:error};
+  if(!data||!data.length)return{error:new Error('nenhuma linha de profiles atualizada — verifique a política UPDATE da tabela profiles')};
+  return{error:null};
 }
 async function saveUserRole(userId,newRole){
   var u=S_USERS.find(function(x){return x.id===userId});if(!u)return;
   var roleRow=S_ROLES.find(function(r){return r.nome===newRole});
-  var {error}=await sb.from('workspace_members').update({role_id:roleRow?roleRow.id:null}).eq('workspace_id',CURRENT_WORKSPACE_ID).eq('user_id',userId);
+  var {data:updated,error}=await sb.from('workspace_members').update({role_id:roleRow?roleRow.id:null}).eq('workspace_id',CURRENT_WORKSPACE_ID).eq('user_id',userId).select('id');
   if(error){toast('Erro ao salvar role','err');return;}
+  if(!updated||!updated.length){toast('Role não persistido. Verifique a política UPDATE da tabela workspace_members.','err');return;}
+  var {error:profErr}=await syncProfileRole(userId,newRole);
+  if(profErr){toast('Erro ao sincronizar o role no profile: '+profErr.message,'err');return;}
   u.role=newRole;
   if(CURRENT_USER&&userId===CURRENT_USER.id){
     CURRENT_ROLE_NAME=newRole;
@@ -1631,6 +1650,8 @@ async function approveUser(userId){
   var {data:updated,error}=await sb.from('workspace_members').update({status:'active',role_id:visualizador?visualizador.id:null}).eq('workspace_id',CURRENT_WORKSPACE_ID).eq('user_id',userId).select('id');
   if(error){toast('Erro ao aprovar: '+error.message,'err');return}
   if(!updated||!updated.length){toast('Aprovação não persistida. Verifique a política UPDATE da tabela workspace_members.','err');return}
+  var {error:profErr}=await syncProfileRole(userId,'visualizador');
+  if(profErr){toast('Erro ao sincronizar o role no profile: '+profErr.message,'err');return}
   u.status='active';
   u.role='visualizador';
   toast((u.displayName||u.email)+' aprovado ✓');
@@ -1646,6 +1667,9 @@ async function rejectUser(userId){
   var {data:updated,error}=await sb.from('workspace_members').update({status:'rejected',role_id:null}).eq('workspace_id',CURRENT_WORKSPACE_ID).eq('user_id',userId).select('id');
   if(error){toast('Erro: '+error.message,'err');return}
   if(!updated||!updated.length){toast('Recusa não persistida. Verifique a política UPDATE da tabela workspace_members.','err');return}
+  // Sem isso um admin recusado continua com poderes de admin nas policies antigas.
+  var {error:profErr}=await syncProfileRole(userId,null);
+  if(profErr){toast('Recusa registrada, mas profiles.role NÃO foi limpo: '+profErr.message,'err');return}
   u.status='rejected';
   u.role=null;
   toast('Solicitação recusada');
@@ -1861,11 +1885,14 @@ async function saveEditUserModal(){
     var {data:p}=await sb.from('profiles').select('prefs').eq('id',_editUserModalId).maybeSingle();
     var prefs=Object.assign({},parsePrefs(p?p.prefs:null));
     prefs.cargo=cargo;prefs.redmineUser=redmineUser;
-    var {error}=await sb.from('profiles').update({equipe_id:equipeId||null,gestor_geral:gestorGeral,prefs:prefs}).eq('id',_editUserModalId);
+    // role vai junto no update de profiles — stopgap de sincronia com as policies
+    // antigas de produção, ver syncProfileRole(). Task 14 remove essa duplicação.
+    var {error}=await sb.from('profiles').update({equipe_id:equipeId||null,gestor_geral:gestorGeral,prefs:prefs,role:role||null}).eq('id',_editUserModalId);
     if(error)throw error;
     var roleRow=S_ROLES.find(function(r){return r.nome===role});
-    var {error:roleErr}=await sb.from('workspace_members').update({role_id:roleRow?roleRow.id:null}).eq('workspace_id',CURRENT_WORKSPACE_ID).eq('user_id',_editUserModalId);
+    var {data:roleUpd,error:roleErr}=await sb.from('workspace_members').update({role_id:roleRow?roleRow.id:null}).eq('workspace_id',CURRENT_WORKSPACE_ID).eq('user_id',_editUserModalId).select('id');
     if(roleErr)throw roleErr;
+    if(!roleUpd||!roleUpd.length)throw new Error('Role não persistido. Verifique a política UPDATE da tabela workspace_members.');
     u.role=role;u.equipeId=equipeId||null;u.gestorGeral=gestorGeral;u.cargo=cargo;u.redmineUser=redmineUser;
     closeModal('modal-edit-user');renderUsersPrefs();toast(u.displayName+' atualizado ✓');
   }catch(e){toast('Erro ao salvar: '+e.message,'err');}
@@ -1952,8 +1979,9 @@ async function salvarEquipeForm(){
   if(!nome){toast('Informe o nome da equipe','err');return;}
   var payload={nome:nome,gestor_id:gestorId||null,workspace_id:CURRENT_WORKSPACE_ID};
   if(id){
-    var {error}=await sb.from('equipes').update(payload).eq('id',id);
+    var {data:eqUpd,error}=await sb.from('equipes').update(payload).eq('id',id).select('id');
     if(error){toast('Erro ao salvar equipe','err');return;}
+    if(!eqUpd||!eqUpd.length){toast('Equipe não persistida. Verifique as permissões (RLS) da tabela equipes.','err');return;}
     var eq=S_EQUIPES.find(function(x){return x.id===id});
     if(eq){eq.nome=nome;eq.gestorId=gestorId||null;}
   }else{
