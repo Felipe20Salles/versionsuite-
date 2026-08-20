@@ -477,6 +477,34 @@ textarea.form-input{resize:vertical;min-height:70px}
   <button class="btn btn-ghost btn-sm" onclick="signOut()" style="margin-top:12px">Sair</button>
 </div>
 
+<div id="create-workspace-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;flex-direction:column">
+  <div style="text-align:center;max-width:380px;width:calc(100% - 32px);padding:40px 32px;background:var(--card);border:1px solid var(--border);border-radius:20px">
+    <div style="font-family:var(--mono);font-size:20px;font-weight:500;margin-bottom:4px">Criar workspace</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px">Cada workspace isola seus produtos, versões e equipe.</div>
+    <div class="form-group" style="text-align:left">
+      <label class="form-label">Nome do workspace</label>
+      <input class="form-input" id="cw-nome" placeholder="ex.: Nome do Cliente ou Projeto" oninput="onCwNomeInput()" autocomplete="off">
+    </div>
+    <div class="form-group" style="text-align:left">
+      <label class="form-label">Identificador</label>
+      <input class="form-input" id="cw-slug" placeholder="identificador" oninput="onCwSlugInput()" autocomplete="off">
+      <div style="font-size:11px;color:var(--hint);margin-top:4px">usado internamente, sem espaços</div>
+    </div>
+    <div id="cw-error" style="display:none;margin-top:6px;font-size:12px;color:var(--red-text);padding:8px 12px;background:var(--red-dim);border-radius:8px;text-align:left"></div>
+    <button class="btn btn-primary" id="cw-btn-criar" onclick="criarWorkspace()" style="width:100%;margin-top:18px">Criar workspace</button>
+    <button class="btn btn-ghost" onclick="confirmarLogout()" style="width:100%;margin-top:8px">Sair</button>
+  </div>
+</div>
+
+<div id="no-access-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;flex-direction:column">
+  <div style="text-align:center;max-width:380px;padding:40px 32px;background:var(--card);border:1px solid var(--border);border-radius:20px">
+    <div style="font-size:40px;margin-bottom:16px">🔒</div>
+    <div style="font-family:var(--mono);font-size:18px;font-weight:500;margin-bottom:8px">Sem acesso</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6">Você ainda não tem acesso a nenhum workspace. Peça para alguém te convidar.</div>
+    <button class="btn btn-ghost" onclick="confirmarLogout()" style="width:100%">Sair</button>
+  </div>
+</div>
+
 <div class="app">
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -572,6 +600,9 @@ textarea.form-input{resize:vertical;min-height:70px}
             </div>
             <div id="bell-dd-body"></div>
           </div>
+        </div>
+        <div id="workspace-badge" style="display:none;align-items:center;gap:6px;padding:4px 10px;background:var(--card2);border-radius:20px;border:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--muted)" onclick="abrirSwitcher()">
+          <span>🏢</span><span id="workspace-badge-name"></span>
         </div>
         <div id="user-badge" style="display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--card2);border-radius:20px;border:1px solid var(--border);cursor:pointer" onclick="confirmarLogout()">
           <img id="user-avatar" style="width:22px;height:22px;border-radius:50%;display:none" onerror="this.style.display='none'">
@@ -1364,6 +1395,19 @@ textarea.form-input{resize:vertical;min-height:70px}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-visitor')">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmarVisitante()">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SWITCHER DE WORKSPACE -->
+<div class="modal-overlay" id="modal-switcher">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-title">Escolher workspace</div>
+    <div id="switcher-list" style="display:flex;flex-direction:column;gap:8px;margin:12px 0"></div>
+    <button class="btn btn-ghost" id="switcher-btn-criar" style="display:none;width:100%" onclick="closeModal('modal-switcher');mostrarCriarWorkspace()">+ Criar novo workspace</button>
+    <div class="modal-footer">
+      <button class="btn" id="switcher-btn-fechar" onclick="closeModal('modal-switcher')">Fechar</button>
+      <button class="btn btn-ghost" id="switcher-btn-sair" style="display:none" onclick="confirmarLogout()">Sair</button>
     </div>
   </div>
 </div>
