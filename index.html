@@ -2298,6 +2298,60 @@ async function criarWorkspace(){
   location.reload();
 }
 
+// ── SWITCHER DE WORKSPACE ────────────────────────────────────────────────────
+var _switcherForced=false;
+// forced=true: chamado no meio do boot, antes do app existir na tela (2+
+// workspaces sem escolha lembrada em localStorage) — sem botão "Fechar",
+// porque não há nada por trás do modal para voltar.
+// forced=false (padrão): aberto pelo usuário a qualquer momento via badge do
+// topbar — busca a lista fresca (memberships podem ter mudado) e some com
+// "Fechar" normal.
+async function abrirSwitcher(forced){
+  _switcherForced=!!forced;
+  if(!forced){
+    try{
+      var boot=await bootstrapLogin();
+      _BOOT_WORKSPACES=boot.workspaces||[];
+      _CAN_CREATE_WORKSPACE=!!boot.can_create;
+    }catch(e){toast('Erro ao carregar workspaces: '+e.message,true);return;}
+  }
+  renderSwitcherList();
+  document.getElementById('switcher-btn-fechar').style.display=forced?'none':'inline-block';
+  document.getElementById('switcher-btn-sair').style.display=forced?'inline-block':'none';
+  if(forced){
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('pending-screen').style.display='none';
+    document.getElementById('create-workspace-screen').style.display='none';
+    document.getElementById('no-access-screen').style.display='none';
+    document.querySelector('.app').style.display='none';
+  }
+  openModal('modal-switcher');
+}
+function renderSwitcherList(){
+  var el=document.getElementById('switcher-list');
+  var ativos=_BOOT_WORKSPACES.filter(function(w){return w.status==='active'});
+  el.innerHTML=ativos.map(function(w){
+    var atual=w.id===CURRENT_WORKSPACE_ID;
+    return '<button class="btn'+(atual?' btn-primary':' btn-ghost')+'" style="width:100%;text-align:left" '+
+      (atual?'disabled':('onclick="selecionarWorkspace(\''+w.id+'\')"'))+'>'+
+      (atual?'✓ ':'')+escHtml(w.nome)+'</button>';
+  }).join('')||'<div style="font-size:12px;color:var(--muted)">Nenhum workspace ativo.</div>';
+  document.getElementById('switcher-btn-criar').style.display=_CAN_CREATE_WORKSPACE?'block':'none';
+}
+function selecionarWorkspace(wsId){
+  localStorage.setItem(lastWorkspaceKey(),wsId);
+  location.reload();
+}
+function updateWorkspaceBadge(){
+  var el=document.getElementById('workspace-badge');
+  if(!el)return;
+  var show=(_BOOT_WORKSPACES.length>1)||_CAN_CREATE_WORKSPACE;
+  el.style.display=show?'flex':'none';
+  var resolved=_BOOT_WORKSPACES.find(function(w){return w.id===CURRENT_WORKSPACE_ID});
+  document.getElementById('workspace-badge-name').textContent=resolved?resolved.nome:'';
+}
+
 
 // Cada usuário recebe uma cor da paleta. Cores não se repetem entre usuários cadastrados.
 // Mapa global: primeiro_nome → índice da cor (populado por carregarProfiles)
