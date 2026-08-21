@@ -2269,10 +2269,6 @@ async function upsertCurrentUserProfile(){
     await sb.from('profiles').update({prefs:newPrefs}).eq('id',CURRENT_USER.id);
   }
   if(avatar)sb.from('profiles').update({avatar_url:avatar}).eq('id',CURRENT_USER.id).then(function(){}).catch(function(){});
-  var {data:membership,error:memErr}=await sb.rpc('ensure_workspace_membership',{ws_id:CURRENT_WORKSPACE_ID});
-  if(memErr)throw memErr;
-  var row=Array.isArray(membership)?membership[0]:membership;
-  return row?row.status:'pending';
 }
 
 
@@ -5265,14 +5261,41 @@ var sb=supabase.createClient(SUPA_URL,SUPA_KEY);
 var CURRENT_USER=null;
 var CURRENT_ROLE=null;
 var CURRENT_WORKSPACE_ID=null;
-// Resolve via RPC security definer (2026-08-08_01) em vez de SELECT direto: a tabela
-// workspaces tem RLS ligada e nenhuma policy de SELECT — de propósito, para que um
-// usuário ainda não-membro consiga descobrir o workspace e pedir acesso.
-async function resolveCurrentWorkspace(){
-  var {data:wsId,error}=await sb.rpc('get_workspace_id_by_slug',{ws_slug:'default'});
-  if(error||!wsId)throw new Error('Workspace padrão não encontrado (slug "default"). Rode as migrações de workspaces.');
-  CURRENT_WORKSPACE_ID=wsId;
-  return wsId;
+var _BOOT_WORKSPACES=[];      // último resultado de bootstrap_login(): [{id,nome,slug,status},...]
+var _CAN_CREATE_WORKSPACE=false;
+
+async function bootstrapLogin(){
+  var {data,error}=await sb.rpc('bootstrap_login');
+  if(error)throw error;
+  return data||{workspaces:[],can_create:false};
+}
+function lastWorkspaceKey(){
+  return 'vs_last_workspace_'+(CURRENT_USER&&CURRENT_USER.id||'');
+}
+function pickRememberedWorkspace(list){
+  var remembered=localStorage.getItem(lastWorkspaceKey());
+  return remembered&&list.find(function(w){return w.id===remembered&&w.status==='active'})||null;
+}
+// Substitui resolveCurrentWorkspace(): agora resolve dinamicamente quantos
+// workspaces o usuário tem, em vez de sempre assumir o slug fixo 'default'.
+// Retorna o workspace escolhido, ou null se uma tela bloqueante (criar
+// workspace / sem acesso / switcher / pendente) já foi mostrada — quem chama
+// deve parar o boot nesse caso.
+async function resolveWorkspaceForLogin(){
+  var boot=await bootstrapLogin();
+  var workspaces=boot.workspaces||[];
+  _BOOT_WORKSPACES=workspaces;
+  _CAN_CREATE_WORKSPACE=!!boot.can_create;
+  if(workspaces.length===0){
+    if(_CAN_CREATE_WORKSPACE)mostrarCriarWorkspace();else mostrarSemAcesso();
+    return null;
+  }
+  var resolved=workspaces.length===1?workspaces[0]:pickRememberedWorkspace(workspaces);
+  if(!resolved){await abrirSwitcher(true);return null;}
+  CURRENT_WORKSPACE_ID=resolved.id;
+  localStorage.setItem(lastWorkspaceKey(),resolved.id);
+  if(resolved.status!=='active'){mostrarPendente();return null;}
+  return resolved;
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -5296,9 +5319,31 @@ function mostrarLogin(msg){
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('pending-screen').style.display='none';
+  document.getElementById('create-workspace-screen').style.display='none';
+  document.getElementById('no-access-screen').style.display='none';
   document.querySelector('.app').style.display='none';
   var msgEl=document.getElementById('login-msg');
   if(msgEl){if(msg){msgEl.textContent=msg;msgEl.style.display='block'}else{msgEl.style.display='none'}}
+}
+function mostrarCriarWorkspace(){
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('no-access-screen').style.display='none';
+  document.getElementById('create-workspace-screen').style.display='flex';
+  document.querySelector('.app').style.display='none';
+  document.getElementById('cw-nome').value='';
+  document.getElementById('cw-slug').value='';
+  document.getElementById('cw-error').style.display='none';
+  _cwSlugDirty=false;
+}
+function mostrarSemAcesso(){
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('create-workspace-screen').style.display='none';
+  document.getElementById('no-access-screen').style.display='flex';
+  document.querySelector('.app').style.display='none';
 }
 function mostrarPendente(user){
   document.getElementById('loading-screen').style.display='none';
@@ -5317,6 +5362,8 @@ function mostrarApp(){
 function mostrarPendente(){
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('login-screen').style.display='none';
+  document.getElementById('create-workspace-screen').style.display='none';
+  document.getElementById('no-access-screen').style.display='none';
   document.getElementById('pending-screen').style.display='flex';
   document.querySelector('.app').style.display='none';
   var el=document.getElementById('pending-user-email');
@@ -8124,10 +8171,11 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     updateUserBadge(session.user);
     setLoadingMsg('Carregando dados...');
     try{
-      await resolveCurrentWorkspace();
-      var status=await upsertCurrentUserProfile();
-      if(status!=='active'){mostrarPendente();return;}
+      await upsertCurrentUserProfile();
+      var resolved=await resolveWorkspaceForLogin();
+      if(!resolved)return;
       await load();
+      updateWorkspaceBadge();
     }catch(e){
       // Sem isso a tela de loading fica presa para sempre.
       console.error('[VS] Falha ao inicializar a sessão:',e);
@@ -8183,10 +8231,11 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       document.getElementById('loading-screen').style.display='flex';
       setLoadingMsg('Carregando dados...');
       try{
-        await resolveCurrentWorkspace();
-        var status=await upsertCurrentUserProfile();
-        if(status!=='active'){mostrarPendente();return;}
+        await upsertCurrentUserProfile();
+        var resolved=await resolveWorkspaceForLogin();
+        if(!resolved)return;
         await load();
+        updateWorkspaceBadge();
       }catch(e){
         // Sem isso a tela de loading fica presa para sempre.
         console.error('[VS] Falha ao inicializar a sessão:',e);
