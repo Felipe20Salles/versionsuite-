@@ -2271,6 +2271,33 @@ async function upsertCurrentUserProfile(){
   if(avatar)sb.from('profiles').update({avatar_url:avatar}).eq('id',CURRENT_USER.id).then(function(){}).catch(function(){});
 }
 
+// ── CRIAR WORKSPACE ──────────────────────────────────────────────────────────
+var _cwSlugDirty=false;
+function onCwNomeInput(){
+  if(_cwSlugDirty)return;
+  document.getElementById('cw-slug').value=bolSlugify(document.getElementById('cw-nome').value);
+}
+function onCwSlugInput(){_cwSlugDirty=true;}
+async function criarWorkspace(){
+  var nome=document.getElementById('cw-nome').value.trim();
+  var slug=document.getElementById('cw-slug').value.trim();
+  var errEl=document.getElementById('cw-error');
+  errEl.style.display='none';
+  if(!nome){errEl.textContent='Informe o nome do workspace.';errEl.style.display='block';return;}
+  if(!slug){errEl.textContent='Informe o identificador.';errEl.style.display='block';return;}
+  var btn=document.getElementById('cw-btn-criar');
+  btn.disabled=true;btn.textContent='Criando...';
+  var {data:wsId,error}=await sb.rpc('create_workspace',{nome:nome,slug:slug});
+  if(error){
+    errEl.textContent=(error.code==='23505')?'Já existe um workspace com esse identificador. Escolha outro.':'Erro ao criar workspace: '+error.message;
+    errEl.style.display='block';
+    btn.disabled=false;btn.textContent='Criar workspace';
+    return;
+  }
+  localStorage.setItem(lastWorkspaceKey(),wsId);
+  location.reload();
+}
+
 
 // Cada usuário recebe uma cor da paleta. Cores não se repetem entre usuários cadastrados.
 // Mapa global: primeiro_nome → índice da cor (populado por carregarProfiles)
