@@ -492,6 +492,7 @@ textarea.form-input{resize:vertical;min-height:70px}
     </div>
     <div id="cw-error" style="display:none;margin-top:6px;font-size:12px;color:var(--red-text);padding:8px 12px;background:var(--red-dim);border-radius:8px;text-align:left"></div>
     <button class="btn btn-primary" id="cw-btn-criar" onclick="criarWorkspace()" style="width:100%;margin-top:18px">Criar workspace</button>
+    <button class="btn btn-ghost" id="cw-btn-cancelar" onclick="cancelarCriarWorkspace()" style="display:none;width:100%;margin-top:8px">Cancelar</button>
     <button class="btn btn-ghost" onclick="confirmarLogout()" style="width:100%;margin-top:8px">Sair</button>
   </div>
 </div>
@@ -5396,7 +5397,14 @@ function mostrarCriarWorkspace(){
   document.getElementById('cw-nome').value='';
   document.getElementById('cw-slug').value='';
   document.getElementById('cw-error').style.display='none';
+  // Só oferece "Cancelar" quando já existe um workspace resolvido pra voltar
+  // (aberto pelo switcher) — no boot forçado (0 workspaces) não há app por trás.
+  document.getElementById('cw-btn-cancelar').style.display=CURRENT_WORKSPACE_ID?'block':'none';
   _cwSlugDirty=false;
+}
+function cancelarCriarWorkspace(){
+  document.getElementById('create-workspace-screen').style.display='none';
+  mostrarApp();
 }
 function mostrarSemAcesso(){
   document.getElementById('loading-screen').style.display='none';
