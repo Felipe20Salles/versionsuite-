@@ -477,6 +477,34 @@ textarea.form-input{resize:vertical;min-height:70px}
   <button class="btn btn-ghost btn-sm" onclick="signOut()" style="margin-top:12px">Sair</button>
 </div>
 
+<div id="create-workspace-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;flex-direction:column">
+  <div style="text-align:center;max-width:380px;width:calc(100% - 32px);padding:40px 32px;background:var(--card);border:1px solid var(--border);border-radius:20px">
+    <div style="font-family:var(--mono);font-size:20px;font-weight:500;margin-bottom:4px">Criar workspace</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px">Cada workspace isola seus produtos, versões e equipe.</div>
+    <div class="form-group" style="text-align:left">
+      <label class="form-label">Nome do workspace</label>
+      <input class="form-input" id="cw-nome" placeholder="ex.: Nome do Cliente ou Projeto" oninput="onCwNomeInput()" autocomplete="off">
+    </div>
+    <div class="form-group" style="text-align:left">
+      <label class="form-label">Identificador</label>
+      <input class="form-input" id="cw-slug" placeholder="identificador" oninput="onCwSlugInput()" autocomplete="off">
+      <div style="font-size:11px;color:var(--hint);margin-top:4px">usado internamente, sem espaços</div>
+    </div>
+    <div id="cw-error" style="display:none;margin-top:6px;font-size:12px;color:var(--red-text);padding:8px 12px;background:var(--red-dim);border-radius:8px;text-align:left"></div>
+    <button class="btn btn-primary" id="cw-btn-criar" onclick="criarWorkspace()" style="width:100%;margin-top:18px">Criar workspace</button>
+    <button class="btn btn-ghost" onclick="confirmarLogout()" style="width:100%;margin-top:8px">Sair</button>
+  </div>
+</div>
+
+<div id="no-access-screen" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;align-items:center;justify-content:center;flex-direction:column">
+  <div style="text-align:center;max-width:380px;padding:40px 32px;background:var(--card);border:1px solid var(--border);border-radius:20px">
+    <div style="font-size:40px;margin-bottom:16px">🔒</div>
+    <div style="font-family:var(--mono);font-size:18px;font-weight:500;margin-bottom:8px">Sem acesso</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6">Você ainda não tem acesso a nenhum workspace. Peça para alguém te convidar.</div>
+    <button class="btn btn-ghost" onclick="confirmarLogout()" style="width:100%">Sair</button>
+  </div>
+</div>
+
 <div class="app">
   <aside class="sidebar">
     <div class="sidebar-logo">
@@ -572,6 +600,9 @@ textarea.form-input{resize:vertical;min-height:70px}
             </div>
             <div id="bell-dd-body"></div>
           </div>
+        </div>
+        <div id="workspace-badge" style="display:none;align-items:center;gap:6px;padding:4px 10px;background:var(--card2);border-radius:20px;border:1px solid var(--border);cursor:pointer;font-size:12px;color:var(--muted)" onclick="abrirSwitcher()">
+          <span>🏢</span><span id="workspace-badge-name"></span>
         </div>
         <div id="user-badge" style="display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--card2);border-radius:20px;border:1px solid var(--border);cursor:pointer" onclick="confirmarLogout()">
           <img id="user-avatar" style="width:22px;height:22px;border-radius:50%;display:none" onerror="this.style.display='none'">
@@ -1364,6 +1395,19 @@ textarea.form-input{resize:vertical;min-height:70px}
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-visitor')">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmarVisitante()">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SWITCHER DE WORKSPACE -->
+<div class="modal-overlay" id="modal-switcher">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-title">Escolher workspace</div>
+    <div id="switcher-list" style="display:flex;flex-direction:column;gap:8px;margin:12px 0"></div>
+    <button class="btn btn-ghost" id="switcher-btn-criar" style="display:none;width:100%" onclick="closeModal('modal-switcher');mostrarCriarWorkspace()">+ Criar novo workspace</button>
+    <div class="modal-footer">
+      <button class="btn" id="switcher-btn-fechar" onclick="closeModal('modal-switcher')">Fechar</button>
+      <button class="btn btn-ghost" id="switcher-btn-sair" style="display:none" onclick="confirmarLogout()">Sair</button>
     </div>
   </div>
 </div>
@@ -2205,10 +2249,87 @@ async function upsertCurrentUserProfile(){
     await sb.from('profiles').update({prefs:newPrefs}).eq('id',CURRENT_USER.id);
   }
   if(avatar)sb.from('profiles').update({avatar_url:avatar}).eq('id',CURRENT_USER.id).then(function(){}).catch(function(){});
-  var {data:membership,error:memErr}=await sb.rpc('ensure_workspace_membership',{ws_id:CURRENT_WORKSPACE_ID});
-  if(memErr)throw memErr;
-  var row=Array.isArray(membership)?membership[0]:membership;
-  return row?row.status:'pending';
+}
+
+// ── CRIAR WORKSPACE ──────────────────────────────────────────────────────────
+var _cwSlugDirty=false;
+function onCwNomeInput(){
+  if(_cwSlugDirty)return;
+  document.getElementById('cw-slug').value=bolSlugify(document.getElementById('cw-nome').value);
+}
+function onCwSlugInput(){_cwSlugDirty=true;}
+async function criarWorkspace(){
+  var nome=document.getElementById('cw-nome').value.trim();
+  var slug=document.getElementById('cw-slug').value.trim();
+  var errEl=document.getElementById('cw-error');
+  errEl.style.display='none';
+  if(!nome){errEl.textContent='Informe o nome do workspace.';errEl.style.display='block';return;}
+  if(!slug){errEl.textContent='Informe o identificador.';errEl.style.display='block';return;}
+  var btn=document.getElementById('cw-btn-criar');
+  btn.disabled=true;btn.textContent='Criando...';
+  var {data:wsId,error}=await sb.rpc('create_workspace',{nome:nome,slug:slug});
+  if(error){
+    errEl.textContent=(error.code==='23505')?'Já existe um workspace com esse identificador. Escolha outro.':'Erro ao criar workspace: '+error.message;
+    errEl.style.display='block';
+    btn.disabled=false;btn.textContent='Criar workspace';
+    return;
+  }
+  localStorage.setItem(lastWorkspaceKey(),wsId);
+  location.reload();
+}
+
+// ── SWITCHER DE WORKSPACE ────────────────────────────────────────────────────
+var _switcherForced=false;
+// forced=true: chamado no meio do boot, antes do app existir na tela (2+
+// workspaces sem escolha lembrada em localStorage) — sem botão "Fechar",
+// porque não há nada por trás do modal para voltar.
+// forced=false (padrão): aberto pelo usuário a qualquer momento via badge do
+// topbar — busca a lista fresca (memberships podem ter mudado) e some com
+// "Fechar" normal.
+async function abrirSwitcher(forced){
+  _switcherForced=!!forced;
+  if(!forced){
+    try{
+      var boot=await bootstrapLogin();
+      _BOOT_WORKSPACES=boot.workspaces||[];
+      _CAN_CREATE_WORKSPACE=!!boot.can_create;
+    }catch(e){toast('Erro ao carregar workspaces: '+e.message,true);return;}
+  }
+  renderSwitcherList();
+  document.getElementById('switcher-btn-fechar').style.display=forced?'none':'inline-block';
+  document.getElementById('switcher-btn-sair').style.display=forced?'inline-block':'none';
+  if(forced){
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('pending-screen').style.display='none';
+    document.getElementById('create-workspace-screen').style.display='none';
+    document.getElementById('no-access-screen').style.display='none';
+    document.querySelector('.app').style.display='none';
+  }
+  openModal('modal-switcher');
+}
+function renderSwitcherList(){
+  var el=document.getElementById('switcher-list');
+  var ativos=_BOOT_WORKSPACES.filter(function(w){return w.status==='active'});
+  el.innerHTML=ativos.map(function(w){
+    var atual=w.id===CURRENT_WORKSPACE_ID;
+    return '<button class="btn'+(atual?' btn-primary':' btn-ghost')+'" style="width:100%;text-align:left" '+
+      (atual?'disabled':('onclick="selecionarWorkspace(\''+w.id+'\')"'))+'>'+
+      (atual?'✓ ':'')+escHtml(w.nome)+'</button>';
+  }).join('')||'<div style="font-size:12px;color:var(--muted)">Nenhum workspace ativo.</div>';
+  document.getElementById('switcher-btn-criar').style.display=_CAN_CREATE_WORKSPACE?'block':'none';
+}
+function selecionarWorkspace(wsId){
+  localStorage.setItem(lastWorkspaceKey(),wsId);
+  location.reload();
+}
+function updateWorkspaceBadge(){
+  var el=document.getElementById('workspace-badge');
+  if(!el)return;
+  var show=(_BOOT_WORKSPACES.length>1)||_CAN_CREATE_WORKSPACE;
+  el.style.display=show?'flex':'none';
+  var resolved=_BOOT_WORKSPACES.find(function(w){return w.id===CURRENT_WORKSPACE_ID});
+  document.getElementById('workspace-badge-name').textContent=resolved?resolved.nome:'';
 }
 
 
@@ -5201,14 +5322,41 @@ var sb=supabase.createClient(SUPA_URL,SUPA_KEY);
 var CURRENT_USER=null;
 var CURRENT_ROLE=null;
 var CURRENT_WORKSPACE_ID=null;
-// Resolve via RPC security definer (2026-08-08_01) em vez de SELECT direto: a tabela
-// workspaces tem RLS ligada e nenhuma policy de SELECT — de propósito, para que um
-// usuário ainda não-membro consiga descobrir o workspace e pedir acesso.
-async function resolveCurrentWorkspace(){
-  var {data:wsId,error}=await sb.rpc('get_workspace_id_by_slug',{ws_slug:'default'});
-  if(error||!wsId)throw new Error('Workspace padrão não encontrado (slug "default"). Rode as migrações de workspaces.');
-  CURRENT_WORKSPACE_ID=wsId;
-  return wsId;
+var _BOOT_WORKSPACES=[];      // último resultado de bootstrap_login(): [{id,nome,slug,status},...]
+var _CAN_CREATE_WORKSPACE=false;
+
+async function bootstrapLogin(){
+  var {data,error}=await sb.rpc('bootstrap_login');
+  if(error)throw error;
+  return data||{workspaces:[],can_create:false};
+}
+function lastWorkspaceKey(){
+  return 'vs_last_workspace_'+(CURRENT_USER&&CURRENT_USER.id||'');
+}
+function pickRememberedWorkspace(list){
+  var remembered=localStorage.getItem(lastWorkspaceKey());
+  return remembered&&list.find(function(w){return w.id===remembered&&w.status==='active'})||null;
+}
+// Substitui resolveCurrentWorkspace(): agora resolve dinamicamente quantos
+// workspaces o usuário tem, em vez de sempre assumir o slug fixo 'default'.
+// Retorna o workspace escolhido, ou null se uma tela bloqueante (criar
+// workspace / sem acesso / switcher / pendente) já foi mostrada — quem chama
+// deve parar o boot nesse caso.
+async function resolveWorkspaceForLogin(){
+  var boot=await bootstrapLogin();
+  var workspaces=boot.workspaces||[];
+  _BOOT_WORKSPACES=workspaces;
+  _CAN_CREATE_WORKSPACE=!!boot.can_create;
+  if(workspaces.length===0){
+    if(_CAN_CREATE_WORKSPACE)mostrarCriarWorkspace();else mostrarSemAcesso();
+    return null;
+  }
+  var resolved=workspaces.length===1?workspaces[0]:pickRememberedWorkspace(workspaces);
+  if(!resolved){await abrirSwitcher(true);return null;}
+  CURRENT_WORKSPACE_ID=resolved.id;
+  localStorage.setItem(lastWorkspaceKey(),resolved.id);
+  if(resolved.status!=='active'){mostrarPendente();return null;}
+  return resolved;
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
@@ -5232,9 +5380,31 @@ function mostrarLogin(msg){
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('pending-screen').style.display='none';
+  document.getElementById('create-workspace-screen').style.display='none';
+  document.getElementById('no-access-screen').style.display='none';
   document.querySelector('.app').style.display='none';
   var msgEl=document.getElementById('login-msg');
   if(msgEl){if(msg){msgEl.textContent=msg;msgEl.style.display='block'}else{msgEl.style.display='none'}}
+}
+function mostrarCriarWorkspace(){
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('no-access-screen').style.display='none';
+  document.getElementById('create-workspace-screen').style.display='flex';
+  document.querySelector('.app').style.display='none';
+  document.getElementById('cw-nome').value='';
+  document.getElementById('cw-slug').value='';
+  document.getElementById('cw-error').style.display='none';
+  _cwSlugDirty=false;
+}
+function mostrarSemAcesso(){
+  document.getElementById('loading-screen').style.display='none';
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('create-workspace-screen').style.display='none';
+  document.getElementById('no-access-screen').style.display='flex';
+  document.querySelector('.app').style.display='none';
 }
 function mostrarPendente(user){
   document.getElementById('loading-screen').style.display='none';
@@ -5253,6 +5423,8 @@ function mostrarApp(){
 function mostrarPendente(){
   document.getElementById('loading-screen').style.display='none';
   document.getElementById('login-screen').style.display='none';
+  document.getElementById('create-workspace-screen').style.display='none';
+  document.getElementById('no-access-screen').style.display='none';
   document.getElementById('pending-screen').style.display='flex';
   document.querySelector('.app').style.display='none';
   var el=document.getElementById('pending-user-email');
@@ -8060,10 +8232,11 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
     updateUserBadge(session.user);
     setLoadingMsg('Carregando dados...');
     try{
-      await resolveCurrentWorkspace();
-      var status=await upsertCurrentUserProfile();
-      if(status!=='active'){mostrarPendente();return;}
+      await upsertCurrentUserProfile();
+      var resolved=await resolveWorkspaceForLogin();
+      if(!resolved)return;
       await load();
+      updateWorkspaceBadge();
     }catch(e){
       // Sem isso a tela de loading fica presa para sempre.
       console.error('[VS] Falha ao inicializar a sessão:',e);
@@ -8119,10 +8292,11 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       document.getElementById('loading-screen').style.display='flex';
       setLoadingMsg('Carregando dados...');
       try{
-        await resolveCurrentWorkspace();
-        var status=await upsertCurrentUserProfile();
-        if(status!=='active'){mostrarPendente();return;}
+        await upsertCurrentUserProfile();
+        var resolved=await resolveWorkspaceForLogin();
+        if(!resolved)return;
         await load();
+        updateWorkspaceBadge();
       }catch(e){
         // Sem isso a tela de loading fica presa para sempre.
         console.error('[VS] Falha ao inicializar a sessão:',e);
