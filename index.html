@@ -1021,7 +1021,10 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div class="pref-section" id="pref-section-users">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <div class="pref-section-title" style="margin-bottom:0">Usuários da plataforma</div>
-              <span id="pref-role-badge" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(124,111,247,.15);color:#7c6ff7;border:1px solid rgba(124,111,247,.3)">—</span>
+              <div style="display:flex;gap:8px;align-items:center">
+                <button class="btn btn-sm btn-ghost" id="btn-convidar-usuario" onclick="abrirConvidarModal()" style="display:none">+ Convidar</button>
+                <span id="pref-role-badge" style="font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;background:rgba(124,111,247,.15);color:#7c6ff7;border:1px solid rgba(124,111,247,.3)">—</span>
+              </div>
             </div>
             <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.5">
               Gerencie quem pode acessar a VersionSuite e seus níveis de permissão. Somente <strong>Admins</strong> podem alterar roles.
@@ -1038,6 +1041,17 @@ textarea.form-input{resize:vertical;min-height:70px}
                 <span id="pending-access-subtitle" style="display:block;font-size:11px;color:var(--muted);margin-top:2px">Nenhuma solicitação aguardando aprovação.</span>
               </span>
               <span id="pending-access-badge" class="bell-badge" style="display:none;position:static;border-color:var(--card2)">0</span>
+              <span style="color:var(--muted);font-size:18px">›</span>
+            </button>
+          </div>
+
+          <div class="pref-section" id="pref-section-invites-sent">
+            <button type="button" onclick="openPendingInvites()" style="width:100%;display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--card2);border:1px solid var(--border);border-radius:10px;color:var(--text);cursor:pointer;text-align:left">
+              <span style="font-size:18px">✉️</span>
+              <span style="flex:1">
+                <span style="display:block;font-size:13px;font-weight:600">Convites pendentes</span>
+                <span id="pending-invites-subtitle" style="display:block;font-size:11px;color:var(--muted);margin-top:2px">Nenhum convite pendente.</span>
+              </span>
               <span style="color:var(--muted);font-size:18px">›</span>
             </button>
           </div>
@@ -1174,6 +1188,41 @@ textarea.form-input{resize:vertical;min-height:70px}
     <div id="pending-requests-list" style="display:flex;flex-direction:column;gap:8px"></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-pending-requests')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-pending-invites">
+  <div class="modal" style="max-width:580px;width:calc(100% - 32px)">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Convites pendentes</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:3px">Pessoas convidadas que ainda não fizeram o primeiro login.</div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-pending-invites')">×</button>
+    </div>
+    <div id="pending-invites-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-pending-invites')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-convidar">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-title">Convidar usuário</div>
+    <div class="form-group">
+      <label class="form-label">E-mail (Google)</label>
+      <input class="form-input" id="cv-email" placeholder="pessoa@email.com" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Perfil</label>
+      <select class="form-input" id="cv-role"></select>
+    </div>
+    <div id="cv-error" style="display:none;font-size:12px;color:var(--red-text);padding:8px 12px;background:var(--red-dim);border-radius:8px;margin-top:4px"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-convidar')">Cancelar</button>
+      <button class="btn btn-primary" id="cv-btn-convidar" onclick="enviarConvite()">Convidar</button>
     </div>
   </div>
 </div>
