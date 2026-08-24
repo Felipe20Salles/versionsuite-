@@ -1814,6 +1814,82 @@ function openPendingRequests(){
   openModal('modal-pending-requests');
 }
 
+// ── CONVITES DE WORKSPACE ────────────────────────────────────────────────────
+var S_INVITES=[];
+async function carregarConvitesPendentes(){
+  if(!isAdmin()||!CURRENT_WORKSPACE_ID){S_INVITES=[];updatePendingInvitesUI();return;}
+  var {data,error}=await sb.from('workspace_invites').select('id,email,role_id').eq('workspace_id',CURRENT_WORKSPACE_ID);
+  if(error){S_INVITES=[];updatePendingInvitesUI();return;}
+  S_INVITES=data||[];
+  updatePendingInvitesUI();
+}
+function updatePendingInvitesUI(){
+  var subtitle=document.getElementById('pending-invites-subtitle');
+  if(!subtitle)return;
+  var count=S_INVITES.length;
+  subtitle.textContent=count
+    ?count+' '+(count===1?'convite pendente':'convites pendentes')
+    :'Nenhum convite pendente.';
+}
+function renderPendingInvitesList(){
+  var list=document.getElementById('pending-invites-list');if(!list)return;
+  if(!S_INVITES.length){
+    list.innerHTML='<div style="padding:28px 16px;text-align:center;color:var(--hint);font-size:12px">Nenhum convite pendente.</div>';
+    return;
+  }
+  list.innerHTML=S_INVITES.map(function(inv){
+    var roleRow=S_ROLES.find(function(r){return r.id===inv.role_id});
+    var roleLabel=roleRow?(roleRow.label||roleRow.nome):'—';
+    return'<div class="user-card">'+
+      '<div style="flex:1;min-width:0">'+
+        '<div style="font-size:13px;font-weight:500;color:var(--text)">'+escHtml(inv.email)+'</div>'+
+        '<div style="font-size:11px;color:var(--hint)">'+escHtml(roleLabel)+'</div>'+
+      '</div>'+
+      '<button class="btn btn-sm btn-ghost" onclick="cancelarConvite(\''+inv.id+'\')" title="Cancelar convite">×</button>'+
+    '</div>';
+  }).join('');
+}
+async function openPendingInvites(){
+  if(!isAdmin()){toast('Apenas admins podem gerenciar convites','err');return;}
+  await carregarConvitesPendentes();
+  renderPendingInvitesList();
+  openModal('modal-pending-invites');
+}
+async function cancelarConvite(inviteId){
+  var {error}=await sb.from('workspace_invites').delete().eq('id',inviteId);
+  if(error){toast('Erro ao cancelar convite: '+error.message,'err');return;}
+  await carregarConvitesPendentes();
+  renderPendingInvitesList();
+  toast('Convite cancelado');
+}
+function abrirConvidarModal(){
+  document.getElementById('cv-email').value='';
+  document.getElementById('cv-error').style.display='none';
+  var roleEl=document.getElementById('cv-role');
+  roleEl.innerHTML=S_ROLES.map(function(r){return'<option value="'+r.id+'">'+escHtml(r.label||r.nome)+'</option>';}).join('');
+  openModal('modal-convidar');
+}
+async function enviarConvite(){
+  var email=document.getElementById('cv-email').value.trim();
+  var roleId=document.getElementById('cv-role').value;
+  var errEl=document.getElementById('cv-error');
+  errEl.style.display='none';
+  if(!email){errEl.textContent='Informe o e-mail.';errEl.style.display='block';return;}
+  if(!roleId){errEl.textContent='Escolha um perfil.';errEl.style.display='block';return;}
+  var btn=document.getElementById('cv-btn-convidar');
+  btn.disabled=true;btn.textContent='Convidando...';
+  var {error}=await sb.from('workspace_invites').insert({workspace_id:CURRENT_WORKSPACE_ID,email:email,role_id:roleId});
+  btn.disabled=false;btn.textContent='Convidar';
+  if(error){
+    errEl.textContent=(error.code==='23505')?'Já existe um convite pendente pra esse e-mail.':'Erro ao convidar: '+error.message;
+    errEl.style.display='block';
+    return;
+  }
+  closeModal('modal-convidar');
+  await carregarConvitesPendentes();
+  toast('Convite enviado ✓');
+}
+
 function _avatarFallback(imgEl,initials,bgColor){
   var d=document.createElement('div');
   d.className='user-avatar-initials';d.style.background=bgColor;d.textContent=initials;
@@ -1829,6 +1905,9 @@ function renderUsersPrefs(){
     if(myRole==='admin')badge.style.cssText+='background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.3)';
     else badge.style.cssText+='background:rgba(124,111,247,.15);color:#7c6ff7;border:1px solid rgba(124,111,247,.3)';
   }
+  var btnConvidar=document.getElementById('btn-convidar-usuario');
+  if(btnConvidar)btnConvidar.style.display=isAdmin()?'inline-block':'none';
+  carregarConvitesPendentes();
 
   var el=document.getElementById('users-list');if(!el)return;
   if(!S_USERS.length){el.innerHTML='<div style="font-size:12px;color:var(--hint)">Nenhum usuário registrado ainda.</div>';return;}
