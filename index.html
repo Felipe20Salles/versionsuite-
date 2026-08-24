@@ -2419,6 +2419,7 @@ async function abrirSwitcher(forced){
   _switcherForced=!!forced;
   if(!forced){
     try{
+      await claimPendingInvites();
       var boot=await bootstrapLogin();
       _BOOT_WORKSPACES=boot.workspaces||[];
       _CAN_CREATE_WORKSPACE=!!boot.can_create;
@@ -5471,9 +5472,26 @@ function pickRememberedWorkspace(list){
 // Retorna o workspace escolhido, ou null se uma tela bloqueante (criar
 // workspace / sem acesso / switcher / pendente) já foi mostrada — quem chama
 // deve parar o boot nesse caso.
+// Chamada só aqui e em abrirSwitcher() (nunca dentro de bootstrap_login()) —
+// mantém a RPC de todo login intocada. Resgata convite(s) pendente(s) do
+// e-mail logado; retorna true se algum foi resgatado.
+async function claimPendingInvites(){
+  try{
+    var {data,error}=await sb.rpc('claim_invite');
+    if(error)return false;
+    return Array.isArray(data)&&data.length>0;
+  }catch(e){return false;}
+}
 async function resolveWorkspaceForLogin(){
   var boot=await bootstrapLogin();
   var workspaces=boot.workspaces||[];
+  if(workspaces.length===0){
+    var claimed=await claimPendingInvites();
+    if(claimed){
+      boot=await bootstrapLogin();
+      workspaces=boot.workspaces||[];
+    }
+  }
   _BOOT_WORKSPACES=workspaces;
   _CAN_CREATE_WORKSPACE=!!boot.can_create;
   if(workspaces.length===0){
