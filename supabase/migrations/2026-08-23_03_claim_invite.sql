@@ -13,11 +13,13 @@ declare
   claimed jsonb := '[]'::jsonb;
 begin
   for inv in
-    select * from workspace_invites where email = auth.jwt()->>'email'
+    select * from workspace_invites where lower(email) = lower(auth.jwt()->>'email')
   loop
     insert into workspace_members (workspace_id, user_id, role_id, status)
     values (inv.workspace_id, auth.uid(), inv.role_id, 'active')
-    on conflict (workspace_id, user_id) do nothing;
+    on conflict (workspace_id, user_id) do update
+      set status='active', role_id=excluded.role_id
+      where workspace_members.status<>'active';
     delete from workspace_invites where id = inv.id;
     claimed := claimed || jsonb_build_object('workspace_id', inv.workspace_id);
   end loop;

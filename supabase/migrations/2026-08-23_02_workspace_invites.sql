@@ -6,7 +6,7 @@
 -- a linha existe enquanto o convite está pendente, some ao ser aceita ou
 -- cancelada.
 
-create table workspace_invites (
+create table if not exists workspace_invites (
   id uuid primary key default gen_random_uuid(),
   workspace_id uuid not null references workspaces(id),
   email text not null,
@@ -18,9 +18,12 @@ create table workspace_invites (
 
 alter table workspace_invites enable row level security;
 
+grant select, insert, delete on table workspace_invites to authenticated;
+
 -- Gerenciado direto pelo client (sem RPC pra criar/listar/cancelar) — só
 -- admin do workspace mexe nos convites do próprio workspace. Mesmo padrão
 -- de roles_write/equipes_isolation (2026-07-30_04_rls_policies.sql).
+drop policy if exists workspace_invites_admin_all on workspace_invites;
 create policy workspace_invites_admin_all on workspace_invites for all
   using (is_workspace_admin(workspace_id))
   with check (is_workspace_admin(workspace_id));

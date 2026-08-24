@@ -1819,7 +1819,7 @@ var S_INVITES=[];
 async function carregarConvitesPendentes(){
   if(!isAdmin()||!CURRENT_WORKSPACE_ID){S_INVITES=[];updatePendingInvitesUI();return;}
   var {data,error}=await sb.from('workspace_invites').select('id,email,role_id').eq('workspace_id',CURRENT_WORKSPACE_ID);
-  if(error){S_INVITES=[];updatePendingInvitesUI();return;}
+  if(error){console.warn('[VS] Erro ao carregar convites pendentes:',error);S_INVITES=[];updatePendingInvitesUI();return;}
   S_INVITES=data||[];
   updatePendingInvitesUI();
 }
@@ -1856,8 +1856,9 @@ async function openPendingInvites(){
   openModal('modal-pending-invites');
 }
 async function cancelarConvite(inviteId){
-  var {error}=await sb.from('workspace_invites').delete().eq('id',inviteId);
+  var {data,error}=await sb.from('workspace_invites').delete().eq('id',inviteId).eq('workspace_id',CURRENT_WORKSPACE_ID).select('id');
   if(error){toast('Erro ao cancelar convite: '+error.message,'err');return;}
+  if(!data||!data.length){toast('Convite não encontrado ou já cancelado.','err');return;}
   await carregarConvitesPendentes();
   renderPendingInvitesList();
   toast('Convite cancelado');
@@ -1870,15 +1871,15 @@ function abrirConvidarModal(){
   openModal('modal-convidar');
 }
 async function enviarConvite(){
-  var email=document.getElementById('cv-email').value.trim();
+  var email=document.getElementById('cv-email').value.trim().toLowerCase();
   var roleId=document.getElementById('cv-role').value;
   var errEl=document.getElementById('cv-error');
   errEl.style.display='none';
-  if(!email){errEl.textContent='Informe o e-mail.';errEl.style.display='block';return;}
+  if(!email||email.indexOf('@')===-1){errEl.textContent='Informe um e-mail válido.';errEl.style.display='block';return;}
   if(!roleId){errEl.textContent='Escolha um perfil.';errEl.style.display='block';return;}
   var btn=document.getElementById('cv-btn-convidar');
   btn.disabled=true;btn.textContent='Convidando...';
-  var {error}=await sb.from('workspace_invites').insert({workspace_id:CURRENT_WORKSPACE_ID,email:email,role_id:roleId});
+  var {error}=await sb.from('workspace_invites').insert({workspace_id:CURRENT_WORKSPACE_ID,email:email,role_id:roleId,invited_by:CURRENT_USER.id});
   btn.disabled=false;btn.textContent='Convidar';
   if(error){
     errEl.textContent=(error.code==='23505')?'Já existe um convite pendente pra esse e-mail.':'Erro ao convidar: '+error.message;
@@ -2456,7 +2457,7 @@ function selecionarWorkspace(wsId){
 function updateWorkspaceBadge(){
   var el=document.getElementById('workspace-badge');
   if(!el)return;
-  var show=(_BOOT_WORKSPACES.length>1)||_CAN_CREATE_WORKSPACE;
+  var show=(_BOOT_WORKSPACES.length>=1)||_CAN_CREATE_WORKSPACE;
   el.style.display=show?'flex':'none';
   var resolved=_BOOT_WORKSPACES.find(function(w){return w.id===CURRENT_WORKSPACE_ID});
   document.getElementById('workspace-badge-name').textContent=resolved?resolved.nome:'';
@@ -5467,11 +5468,6 @@ function pickRememberedWorkspace(list){
   var remembered=localStorage.getItem(lastWorkspaceKey());
   return remembered&&list.find(function(w){return w.id===remembered&&w.status==='active'})||null;
 }
-// Substitui resolveCurrentWorkspace(): agora resolve dinamicamente quantos
-// workspaces o usuário tem, em vez de sempre assumir o slug fixo 'default'.
-// Retorna o workspace escolhido, ou null se uma tela bloqueante (criar
-// workspace / sem acesso / switcher / pendente) já foi mostrada — quem chama
-// deve parar o boot nesse caso.
 // Chamada só aqui e em abrirSwitcher() (nunca dentro de bootstrap_login()) —
 // mantém a RPC de todo login intocada. Resgata convite(s) pendente(s) do
 // e-mail logado; retorna true se algum foi resgatado.
@@ -5482,6 +5478,11 @@ async function claimPendingInvites(){
     return Array.isArray(data)&&data.length>0;
   }catch(e){return false;}
 }
+// Substitui resolveCurrentWorkspace(): agora resolve dinamicamente quantos
+// workspaces o usuário tem, em vez de sempre assumir o slug fixo 'default'.
+// Retorna o workspace escolhido, ou null se uma tela bloqueante (criar
+// workspace / sem acesso / switcher / pendente) já foi mostrada — quem chama
+// deve parar o boot nesse caso.
 async function resolveWorkspaceForLogin(){
   var boot=await bootstrapLogin();
   var workspaces=boot.workspaces||[];
