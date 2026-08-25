@@ -4499,7 +4499,7 @@ function _executarApropriacao(ossDisp){
       return{osId:os.id,horas:parseFloat((p.horasTrabalhadas*pct/100).toFixed(2))};
     });
     p.apropriacoes=novasAprop;
-    if(_apropState[p.id])_apropState[p.id].oss=ossDisp.map(function(os,i){return{osId:os.id,pct:base+(i<rem?1:0)}});
+    if(_apropState[p.id])_apropState[p.id].oss=novasAprop.map(function(a){return{osId:a.osId,horas:a.horas,breakdown:[],bkExpanded:false};});
     salvos++;
     return dbSalvarPonto(p).catch(function(){});
   });
@@ -4510,10 +4510,8 @@ function _executarApropriacao(ossDisp){
 }
 function getApropState(p){
   if(!_apropState[p.id]){
-    var h=p.horasTrabalhadas||0;
     var oss=(p.apropriacoes||[]).map(function(a){
-      var osPct=h>0?Math.round(a.horas/h*100):0;
-      var hItem=parseFloat((h*osPct/100).toFixed(2));
+      var hItem=a.horas||0;
       var breakdown=(a.breakdown||[]).map(function(b){
         return{activityTypeId:b.activityTypeId,pct:hItem>0?Math.round(b.horas/hItem*100):0};
       });
@@ -4525,7 +4523,7 @@ function getApropState(p){
           breakdown[maxIdx].pct+=100-bkSum;
         }
       }
-      return{osId:a.osId,pct:osPct,breakdown:breakdown,bkExpanded:false};
+      return{osId:a.osId,horas:hItem,breakdown:breakdown,bkExpanded:false};
     });
     _apropState[p.id]={oss:oss,editing:false};
   }
@@ -4597,7 +4595,7 @@ function updateBkLine(pid,osIdx,bIdx,field,value){
   redrawApropDay(p);
 }
 function _redrawBkSection(pid,osIdx,p,st){
-  var h=p.horasTrabalhadas||0;var hItem=parseFloat((h*(st.oss[osIdx]?st.oss[osIdx].pct:0)/100).toFixed(2));
+  var hItem=st.oss[osIdx]?st.oss[osIdx].horas:0;
   var el=document.getElementById('bk-'+pid+'-'+osIdx);
   if(el)el.outerHTML=renderApropBreakdown(pid,osIdx,hItem);
 }
@@ -4674,8 +4672,8 @@ function renderApropDay(p,st,ossDisp){
       var os=S.oss.find(function(o){return o.id===item.osId});
       return'<div class="rateio-os-row"><div class="rateio-os-dot" style="background:'+SEG_COLORS[i%SEG_COLORS.length]+'"></div>'+
         '<div class="rateio-os-name">'+(os?'OS '+os.num+' – '+os.titulo.slice(0,30):item.osId)+'</div>'+
-        '<div class="rateio-os-pct">'+item.pct+'%</div>'+
-        '<div class="rateio-os-h">'+(h*item.pct/100).toFixed(2)+'h</div></div>';
+        '<div class="rateio-os-pct">'+(h>0?Math.round(item.horas/h*100):0)+'%</div>'+
+        '<div class="rateio-os-h">'+item.horas.toFixed(2)+'h</div></div>';
     }).join('')):
     '<div style="font-size:12px;color:var(--hint)">Nenhuma OS apropriada.</div>';
     var btns='<div style="display:flex;gap:6px;margin-top:10px">'+
@@ -4685,7 +4683,8 @@ function renderApropDay(p,st,ossDisp){
     return header+'<div class="aprop-section-day">'+rows+btns+'</div>';
   }
   var osRows=st.oss.map(function(item,i){
-    var hItem=parseFloat((h*item.pct/100).toFixed(2));
+    var hItem=item.horas;
+    var pctDisplay=h>0?Math.round(item.horas/h*100):0;
     var curOs=item.osId?S.oss.find(function(o){return o.id===item.osId}):null;
     var curLabel=curOs?('#'+curOs.num+' · '+curOs.titulo):'';
     var pid=p.id;
@@ -4697,8 +4696,8 @@ function renderApropDay(p,st,ossDisp){
         ' onblur="setTimeout(function(){var r=document.getElementById(\'aprop-os-res-'+pid+'-'+i+'\');if(r)r.style.display=\'none\'},160)">'+
         '<div id="aprop-os-res-'+pid+'-'+i+'" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);z-index:30;max-height:140px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.3)"></div>'+
       '</div>'+
-      '<div class="rateio-os-pct" id="pct-'+pid+'-'+i+'">'+item.pct+'%</div>'+
-      '<div class="rateio-os-h" id="h-'+pid+'-'+i+'">'+hItem+'h</div>'+
+      '<div class="rateio-os-pct" id="pct-'+pid+'-'+i+'">'+pctDisplay+'%</div>'+
+      '<div class="rateio-os-h" id="h-'+pid+'-'+i+'" onclick="editApropHoras(\''+pid+'\','+i+')" title="Clique para editar as horas direto" style="cursor:pointer">'+hItem.toFixed(2)+'h</div>'+
       (function(){
         var bk=item.breakdown||[];
         var pctSum=bk.reduce(function(s,b){return s+(b.pct||0);},0);
@@ -4725,7 +4724,7 @@ function startEditAprop(pontoId,ossDisp,focusOsId){
   var p=S.pontos.find(function(p){return p.id===pontoId});if(!p)return;
   if(!ossDisp)ossDisp=ossParaApropriar();
   var st=getApropState(p);st._backup=JSON.parse(JSON.stringify(st.oss));st.editing=true;
-  if(focusOsId&&!st.oss.find(function(x){return x.osId===focusOsId})){st.oss.push({osId:focusOsId,pct:0});rateioIgualSt(st)}
+  if(focusOsId&&!st.oss.find(function(x){return x.osId===focusOsId})){st.oss.push({osId:focusOsId,horas:0});rateioIgualSt(st,p.horasTrabalhadas||0)}
   redrawApropDay(p,ossDisp);setTimeout(function(){attachSlider(pontoId)},50);
 }
 function redrawApropDay(p,ossDisp){
@@ -4735,16 +4734,15 @@ function redrawApropDay(p,ossDisp){
   if(st.editing)setTimeout(function(){attachSlider(p.id);attachAllBkSliders(p);},30);
 }
 function attachAllBkSliders(p){
-  var st=getApropState(p);var h=p.horasTrabalhadas||0;
+  var st=getApropState(p);
   st.oss.forEach(function(item,osIdx){
     if(item.bkExpanded&&item.breakdown&&item.breakdown.length>1){
-      var hItem=parseFloat((h*item.pct/100).toFixed(2));
-      attachBkSlider(p.id,osIdx,hItem);
+      attachBkSlider(p.id,osIdx,item.horas);
     }
   });
 }
-function addApropOS(pid){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);st.oss.push({osId:'',pct:0});rateioIgualSt(st);redrawApropDay(p)}
-function removeApropOS(pid,idx){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);st.oss.splice(idx,1);rateioIgualSt(st);redrawApropDay(p)}
+function addApropOS(pid){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);st.oss.push({osId:'',horas:0});rateioIgualSt(st,p.horasTrabalhadas||0);redrawApropDay(p)}
+function removeApropOS(pid,idx){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);st.oss.splice(idx,1);rateioIgualSt(st,p.horasTrabalhadas||0);redrawApropDay(p)}
 function updateApropOS(pid,idx,osId){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);st.oss[idx].osId=osId;redrawApropDay(p)}
 function searchApropOS(pid,idx,q){
   var resEl=document.getElementById('aprop-os-res-'+pid+'-'+idx);if(!resEl)return;
@@ -4772,14 +4770,42 @@ function selectApropOS(pid,idx,osId,encodedLabel){
   var st=getApropState(p);st.oss[idx].osId=osId;
   // atualiza só horas/percentual, sem re-renderizar toda a linha (evita perda de foco)
   var h=p.horasTrabalhadas||0;
-  var pctEl=document.getElementById('pct-'+pid+'-'+idx);if(pctEl)pctEl.textContent=st.oss[idx].pct+'%';
-  var hEl=document.getElementById('h-'+pid+'-'+idx);if(hEl)hEl.textContent=parseFloat((h*st.oss[idx].pct/100).toFixed(2))+'h';
+  var pctEl=document.getElementById('pct-'+pid+'-'+idx);if(pctEl)pctEl.textContent=(h>0?Math.round(st.oss[idx].horas/h*100):0)+'%';
+  var hEl=document.getElementById('h-'+pid+'-'+idx);if(hEl)hEl.textContent=st.oss[idx].horas.toFixed(2)+'h';
 }
-function rateioIgual(pid){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;rateioIgualSt(getApropState(p));redrawApropDay(p)}
-function rateioIgualSt(st){var n=st.oss.length;if(!n)return;var base=Math.floor(100/n),rem=100-base*n;st.oss.forEach(function(item,i){item.pct=base+(i<rem?1:0)})}
+// Clique no valor "Xh" de uma OS: edita as horas dela direto, sem rebalancear
+// as outras OSs do dia — a única forma de ajuste que não mexe em ninguém mais.
+function editApropHoras(pid,idx){
+  var el=document.getElementById('h-'+pid+'-'+idx);if(!el)return;
+  var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;
+  var st=getApropState(p);var item=st.oss[idx];if(!item)return;
+  el.innerHTML='<input type="number" step="0.25" min="0" value="'+item.horas+'" '+
+    'style="width:56px;font-family:var(--mono);font-size:12px;text-align:right;background:var(--card);border:1px solid var(--accent);border-radius:4px;padding:1px 4px" '+
+    'onblur="commitApropHoras(\''+pid+'\','+idx+',this.value)" '+
+    'onkeydown="if(event.key===\'Enter\')this.blur()">';
+  var input=el.querySelector('input');if(input){input.focus();input.select();}
+}
+function commitApropHoras(pid,idx,value){
+  var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;
+  var st=getApropState(p);var item=st.oss[idx];if(!item)return;
+  var novo=parseFloat(value);
+  item.horas=isNaN(novo)||novo<0?0:parseFloat(novo.toFixed(2));
+  redrawApropDay(p);
+}
+function rateioIgual(pid){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;rateioIgualSt(getApropState(p),p.horasTrabalhadas||0);redrawApropDay(p)}
+// Divide h horas igualmente entre as OSs do estado (usado por "Rateio igual" e por
+// add/remove de linha). Arredonda cada parte em 2 casas e ajusta a primeira linha
+// pelo resto do arredondamento, pra soma fechar exatamente em h.
+function rateioIgualSt(st,h){
+  var n=st.oss.length;if(!n)return;
+  var each=parseFloat((h/n).toFixed(2));
+  st.oss.forEach(function(item){item.horas=each;});
+  var falta=parseFloat((h-each*n).toFixed(2));
+  if(falta!==0)st.oss[0].horas=parseFloat((st.oss[0].horas+falta).toFixed(2));
+}
 function saveAprop(pid){
   var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;
-  var st=getApropState(p);var h=p.horasTrabalhadas||0;
+  var st=getApropState(p);
   // Valida breakdown antes de salvar
   var erros=[];
   st.oss.filter(function(x){return x.osId;}).forEach(function(x){
@@ -4793,7 +4819,7 @@ function saveAprop(pid){
   });
   if(erros.length){toast('⚠ '+erros.join(' · '),'err');return;}
   p.apropriacoes=st.oss.filter(function(x){return x.osId}).map(function(x){
-    var horas=parseFloat((h*x.pct/100).toFixed(2));
+    var horas=parseFloat((x.horas||0).toFixed(2));
     var entry={osId:x.osId,horas:horas};
     var hItem=horas;
     var validBk=(x.breakdown||[]).filter(function(b){return b.activityTypeId&&b.pct>0;});
@@ -4811,21 +4837,23 @@ function cancelAprop(pid){var p=S.pontos.find(function(p){return p.id===pid});if
 function attachSlider(pontoId){
   var el=document.getElementById('slider-'+pontoId);if(!el)return;
   var p=S.pontos.find(function(p){return p.id===pontoId});if(!p)return;
+  var h=p.horasTrabalhadas||0;
   var st=getApropState(p);renderSliderTrack(el,st,p);
   el.querySelectorAll('.rateio-handle').forEach(function(handle,hi){
     handle.addEventListener('mousedown',function(e){
       e.preventDefault();var startX=e.clientX,rect=el.getBoundingClientRect(),w=rect.width;
-      var origPcts=st.oss.map(function(x){return x.pct});
+      var origA=st.oss[hi].horas,origB=st.oss[hi+1].horas;
       function onMove(ev){
-        var dx=ev.clientX-startX,dpct=Math.round(dx/w*100);
-        var np=origPcts.slice();np[hi]=Math.max(5,origPcts[hi]+dpct);np[hi+1]=Math.max(5,origPcts[hi+1]-dpct);
-        if(np.reduce(function(a,b){return a+b},0)!==100)return;
-        st.oss.forEach(function(item,i){item.pct=np[i]});
+        var dx=ev.clientX-startX,dh=h>0?parseFloat((dx/w*h).toFixed(2)):0;
+        // Só troca horas entre as duas OSs vizinhas da alça — clampa em 0 pra
+        // nenhuma ficar negativa, mas nunca mexe nas outras linhas do dia.
+        dh=Math.max(-origA,Math.min(origB,dh));
+        st.oss[hi].horas=parseFloat((origA+dh).toFixed(2));
+        st.oss[hi+1].horas=parseFloat((origB-dh).toFixed(2));
         renderSliderTrack(el,st,p);
-        var h=p.horasTrabalhadas||0;
         st.oss.forEach(function(item,i){
-          var lbl=document.getElementById('pct-'+pontoId+'-'+i);if(lbl)lbl.textContent=item.pct+'%';
-          var hl=document.getElementById('h-'+pontoId+'-'+i);if(hl)hl.textContent=parseFloat((h*item.pct/100).toFixed(2))+'h';
+          var lbl=document.getElementById('pct-'+pontoId+'-'+i);if(lbl)lbl.textContent=(h>0?Math.round(item.horas/h*100):0)+'%';
+          var hl=document.getElementById('h-'+pontoId+'-'+i);if(hl)hl.textContent=item.horas.toFixed(2)+'h';
         });
       }
       function onUp(){document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);attachSlider(pontoId);}
@@ -4834,14 +4862,22 @@ function attachSlider(pontoId){
   });
 }
 function renderSliderTrack(el,st,p){
+  var h=p.horasTrabalhadas||0;
+  var pcts=st.oss.map(function(item){return h>0?item.horas/h*100:0;});
+  var totalPct=pcts.reduce(function(a,b){return a+b;},0);
+  // Se a soma passar de 100% (mais horas apropriadas que o ponto), encolhe a
+  // renderização proporcionalmente pra caber na barra — os números reais
+  // (label %, horas, handles) continuam mostrando o valor de verdade.
+  var scale=totalPct>100?100/totalPct:1;
   var cum=0;
   var segs=st.oss.map(function(item,i){
-    var left=cum,w=item.pct;cum+=w;
+    var left=cum,w=pcts[i]*scale;cum+=w;
     var os=S.oss.find(function(o){return o.id===item.osId});
-    return'<div class="rateio-segment" style="left:'+left+'%;width:'+w+'%;background:'+SEG_COLORS[i%SEG_COLORS.length]+'" title="'+(os?os.num:'?')+' '+item.pct+'%">'+(w>8?(os?'OS '+os.num:'?'):'')+'</div>';
+    var pctLbl=h>0?Math.round(item.horas/h*100):0;
+    return'<div class="rateio-segment" style="left:'+left+'%;width:'+w+'%;background:'+SEG_COLORS[i%SEG_COLORS.length]+'" title="'+(os?os.num:'?')+' '+pctLbl+'%">'+(w>8?(os?'OS '+os.num:'?'):'')+'</div>';
   }).join('');
   var hcum=0;
-  var handles=st.oss.slice(0,-1).map(function(item){hcum+=item.pct;return'<div class="rateio-handle" style="left:calc('+hcum+'% - 9px)" title="Arraste para ajustar"></div>'}).join('');
+  var handles=st.oss.slice(0,-1).map(function(item,i){hcum+=pcts[i]*scale;return'<div class="rateio-handle" style="left:calc('+hcum+'% - 9px)" title="Arraste para ajustar"></div>'}).join('');
   el.innerHTML='<div class="rateio-track-inner">'+segs+'</div>'+handles;
 }
 
