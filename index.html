@@ -262,6 +262,12 @@ textarea.form-input{resize:vertical;min-height:70px}
 .pref-flow-label{font-size:13px;font-weight:500}
 .pref-flow-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .pref-time-input{width:70px;padding:5px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text);text-align:center}
+.pref-seg-block{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.pref-seg-control{display:flex;background:var(--card2);border:1px solid var(--border2);border-radius:var(--radius);padding:2px;flex-shrink:0}
+.pref-seg-opt{padding:5px 12px;font-size:12px;border-radius:calc(var(--radius) - 2px);cursor:pointer;color:var(--muted);user-select:none}
+.pref-seg-opt.active{background:var(--accent);color:#fff;font-weight:600}
+.pref-seg-example{font-size:11px;color:var(--muted);margin-top:8px}
+.pref-seg-example b{color:var(--text);font-family:var(--mono)}
 
 /* ── SINO ── */
 @keyframes bell-ring{0%{transform:rotate(0)}10%{transform:rotate(15deg)}20%{transform:rotate(-12deg)}30%{transform:rotate(10deg)}40%{transform:rotate(-8deg)}50%{transform:rotate(5deg)}70%{transform:rotate(-2deg)}100%{transform:rotate(0)}}
@@ -985,6 +991,16 @@ textarea.form-input{resize:vertical;min-height:70px}
             <div class="pref-flow-row">
               <div><div class="pref-flow-label">WIP Limit</div><div class="pref-flow-sub">Máx. de OSs simultâneas em "Em andamento"</div></div>
               <input class="pref-time-input" id="pref-wip-limit" type="number" min="1" max="20" value="5" style="width:60px" onchange="saveSchedule()">
+            </div>
+            <div class="pref-seg-block">
+              <div style="display:flex;align-items:center;justify-content:space-between">
+                <div><div class="pref-flow-label">Formato de horas na apropriação</div><div class="pref-flow-sub">Vale para exibição e edição de horas</div></div>
+                <div class="pref-seg-control" id="pref-formato-horas">
+                  <div class="pref-seg-opt" data-fmt="decimal" onclick="setFormatoHoras('decimal')">Decimal</div>
+                  <div class="pref-seg-opt" data-fmt="hhmm" onclick="setFormatoHoras('hhmm')">HH:MM</div>
+                </div>
+              </div>
+              <div class="pref-seg-example" id="pref-formato-horas-exemplo"></div>
             </div>
           </div>
         </div>
@@ -4298,7 +4314,7 @@ function openNovoRegistro(){
   calcTotal();
   var acum=_horasHojeAcumuladas();
   var acumEl=document.getElementById('ponto-modal-acumulado');
-  if(acumEl){if(acum>0){acumEl.style.display='block';acumEl.textContent='⏱ Horas já registradas hoje: '+acum.toFixed(2)+'h';}else{acumEl.style.display='none';}}
+  if(acumEl){if(acum>0){acumEl.style.display='block';acumEl.textContent='⏱ Horas já registradas hoje: '+fmtHoras(acum);}else{acumEl.style.display='none';}}
   openModal('modal-ponto');
 }
 function onDataChange(){var v=document.getElementById('p-data').value;if(!v)return;document.getElementById('p-dia').value=DIAS[new Date(v+'T12:00:00').getDay()]}
@@ -4306,7 +4322,7 @@ function fmtTime(el){var v=el.value.replace(/\D/g,'');if(v.length>=3)v=v.slice(0
 function calcTotal(){
   var vs=['p-m1','p-m2','p-m3','p-m4'].map(function(id){return document.getElementById(id).value});
   var ok=function(v){return/^\d{2}:\d{2}$/.test(v);};
-  if(vs.every(ok)){var h=((toMin(vs[3])-toMin(vs[0]))-(toMin(vs[2])-toMin(vs[1])))/60;document.getElementById('p-total').textContent=h>0?h.toFixed(2)+'h':'--';}
+  if(vs.every(ok)){var h=((toMin(vs[3])-toMin(vs[0]))-(toMin(vs[2])-toMin(vs[1])))/60;document.getElementById('p-total').textContent=h>0?fmtHoras(h):'--';}
   else if(ok(vs[0])&&ok(vs[1])&&!ok(vs[2])&&!ok(vs[3])){var h2=(toMin(vs[1])-toMin(vs[0]))/60;document.getElementById('p-total').textContent=h2>0?h2.toFixed(2)+'h (sem almoço)':'--';}
   else document.getElementById('p-total').textContent='--';
 }
@@ -4354,8 +4370,8 @@ function renderPontoList(){
     var diff=h-apTotal,pct=h>0?Math.min(100,Math.round(apTotal/h*100)):0;
     var barCls=Math.abs(diff)<0.1?'aprop-bar-ok':diff>0?'aprop-bar-under':'aprop-bar-over';
     var diffStr=Math.abs(diff)<0.05?'<span style="font-size:11px;color:var(--green-text)">✓ balanceado</span>':
-      diff>0?'<span style="font-size:11px;color:var(--amber-text)">+'+diff.toFixed(1)+'h sem apropriar</span>':
-      '<span style="font-size:11px;color:var(--red-text)">'+diff.toFixed(1)+'h acima</span>';
+      diff>0?'<span style="font-size:11px;color:var(--amber-text)">+'+fmtHoras(diff)+' sem apropriar</span>':
+      '<span style="font-size:11px;color:var(--red-text)">'+fmtHoras(diff)+' acima</span>';
     return'<div class="ponto-day" id="pday-'+p.id+'"><div class="ponto-day-header">'+
       '<div style="display:flex;align-items:center;gap:8px;flex:1">'+
         '<input type="checkbox" class="ponto-sel-cb" data-id="'+p.id+'" onchange="pontoSelChange()" style="accent-color:var(--accent);flex-shrink:0">'+
@@ -4364,8 +4380,8 @@ function renderPontoList(){
         (p.marcacoes?'<span style="font-family:var(--mono);font-size:11px;color:var(--hint)">'+p.marcacoes.trim()+'</span>':'')+
       '</div>'+
       '<div style="display:flex;align-items:center;gap:10px">'+
-        '<span class="ponto-day-horas">'+h.toFixed(2)+'h</span>'+
-        '<span style="font-size:11px;color:var(--hint)">apropr: '+apTotal.toFixed(1)+'h</span>'+diffStr+
+        '<span class="ponto-day-horas">'+fmtHoras(h)+'</span>'+
+        '<span style="font-size:11px;color:var(--hint)">apropr: '+fmtHoras(apTotal)+'</span>'+diffStr+
         '<button class="btn btn-xs btn-ghost" onclick="editarPonto(\''+p.id+'\')" title="Editar">✏</button>'+
         '<button class="btn btn-xs btn-danger" onclick="excluirPonto(\''+p.id+'\')" title="Excluir">✕</button>'+
       '</div>'+
@@ -4664,7 +4680,7 @@ function renderApropDay(p,st,ossDisp){
   var barCls=Math.abs(diff)<0.1?'aprop-bar-ok':diff>0?'aprop-bar-under':'aprop-bar-over';
   var header='<div class="ponto-day-header" style="margin-bottom:8px">'+
     '<div style="display:flex;align-items:center;gap:8px"><span class="ponto-day-date">'+fmtDate(p.data)+'</span><span style="font-size:11px;color:var(--muted)">'+p.dia+'</span></div>'+
-    '<span class="ponto-day-horas">'+h.toFixed(2)+'h disponíveis</span></div>'+
+    '<span class="ponto-day-horas">'+fmtHoras(h)+' disponíveis</span></div>'+
     '<div class="aprop-bar-wrap"><div class="aprop-bar-fill '+barCls+'" style="width:'+pct+'%"></div></div>';
   if(!st.editing){
     var hasAprop=st.oss.length>0;
@@ -4673,7 +4689,7 @@ function renderApropDay(p,st,ossDisp){
       return'<div class="rateio-os-row"><div class="rateio-os-dot" style="background:'+SEG_COLORS[i%SEG_COLORS.length]+'"></div>'+
         '<div class="rateio-os-name">'+(os?'OS '+os.num+' – '+os.titulo.slice(0,30):item.osId)+'</div>'+
         '<div class="rateio-os-pct">'+(h>0?Math.round(item.horas/h*100):0)+'%</div>'+
-        '<div class="rateio-os-h">'+item.horas.toFixed(2)+'h</div></div>';
+        '<div class="rateio-os-h">'+fmtHoras(item.horas)+'</div></div>';
     }).join('')):
     '<div style="font-size:12px;color:var(--hint)">Nenhuma OS apropriada.</div>';
     var btns='<div style="display:flex;gap:6px;margin-top:10px">'+
@@ -4697,7 +4713,7 @@ function renderApropDay(p,st,ossDisp){
         '<div id="aprop-os-res-'+pid+'-'+i+'" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);z-index:30;max-height:140px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.3)"></div>'+
       '</div>'+
       '<div class="rateio-os-pct" id="pct-'+pid+'-'+i+'">'+pctDisplay+'%</div>'+
-      '<div class="rateio-os-h" id="h-'+pid+'-'+i+'" onclick="editApropHoras(\''+pid+'\','+i+')" title="Clique para editar as horas direto" style="cursor:pointer">'+hItem.toFixed(2)+'h</div>'+
+      '<div class="rateio-os-h" id="h-'+pid+'-'+i+'" onclick="editApropHoras(\''+pid+'\','+i+')" title="Clique para editar as horas direto" style="cursor:pointer">'+fmtHoras(hItem)+'</div>'+
       (function(){
         var bk=item.breakdown||[];
         var pctSum=bk.reduce(function(s,b){return s+(b.pct||0);},0);
@@ -4771,7 +4787,7 @@ function selectApropOS(pid,idx,osId,encodedLabel){
   // atualiza só horas/percentual, sem re-renderizar toda a linha (evita perda de foco)
   var h=p.horasTrabalhadas||0;
   var pctEl=document.getElementById('pct-'+pid+'-'+idx);if(pctEl)pctEl.textContent=(h>0?Math.round(st.oss[idx].horas/h*100):0)+'%';
-  var hEl=document.getElementById('h-'+pid+'-'+idx);if(hEl)hEl.textContent=st.oss[idx].horas.toFixed(2)+'h';
+  var hEl=document.getElementById('h-'+pid+'-'+idx);if(hEl)hEl.textContent=fmtHoras(st.oss[idx].horas);
 }
 // Clique no valor "Xh" de uma OS: edita as horas dela direto, sem rebalancear
 // as outras OSs do dia — a única forma de ajuste que não mexe em ninguém mais.
@@ -4779,17 +4795,23 @@ function editApropHoras(pid,idx){
   var el=document.getElementById('h-'+pid+'-'+idx);if(!el)return;
   var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;
   var st=getApropState(p);var item=st.oss[idx];if(!item)return;
-  el.innerHTML='<input type="number" step="0.25" min="0" value="'+item.horas+'" '+
-    'style="width:56px;font-family:var(--mono);font-size:12px;text-align:right;background:var(--card);border:1px solid var(--accent);border-radius:4px;padding:1px 4px" '+
-    'onblur="commitApropHoras(\''+pid+'\','+idx+',this.value)" '+
-    'onkeydown="if(event.key===\'Enter\')this.blur()">';
+  var isHHMM=getFormatoHoras()==='hhmm';
+  el.innerHTML=isHHMM
+    ?'<input type="text" inputmode="numeric" pattern="[0-9]{1,3}:[0-5][0-9]" placeholder="H:MM" value="'+fmtHorasAs(item.horas,'hhmm')+'" '+
+      'style="width:56px;font-family:var(--mono);font-size:12px;text-align:right;background:var(--card);border:1px solid var(--accent);border-radius:4px;padding:1px 4px" '+
+      'onblur="commitApropHoras(\''+pid+'\','+idx+',this.value)" '+
+      'onkeydown="if(event.key===\'Enter\')this.blur()">'
+    :'<input type="number" step="0.25" min="0" value="'+item.horas+'" '+
+      'style="width:56px;font-family:var(--mono);font-size:12px;text-align:right;background:var(--card);border:1px solid var(--accent);border-radius:4px;padding:1px 4px" '+
+      'onblur="commitApropHoras(\''+pid+'\','+idx+',this.value)" '+
+      'onkeydown="if(event.key===\'Enter\')this.blur()">';
   var input=el.querySelector('input');if(input){input.focus();input.select();}
 }
 function commitApropHoras(pid,idx,value){
   var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;
   var st=getApropState(p);var item=st.oss[idx];if(!item)return;
-  var novo=parseFloat(value);
-  item.horas=isNaN(novo)||novo<0?0:parseFloat(novo.toFixed(2));
+  var novo=parseHoras(value);
+  item.horas=(novo===null||novo<0)?0:parseFloat(novo.toFixed(2));
   redrawApropDay(p);
 }
 function rateioIgual(pid){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;rateioIgualSt(getApropState(p),p.horasTrabalhadas||0);redrawApropDay(p)}
@@ -4853,7 +4875,7 @@ function attachSlider(pontoId){
         renderSliderTrack(el,st,p);
         st.oss.forEach(function(item,i){
           var lbl=document.getElementById('pct-'+pontoId+'-'+i);if(lbl)lbl.textContent=(h>0?Math.round(item.horas/h*100):0)+'%';
-          var hl=document.getElementById('h-'+pontoId+'-'+i);if(hl)hl.textContent=item.horas.toFixed(2)+'h';
+          var hl=document.getElementById('h-'+pontoId+'-'+i);if(hl)hl.textContent=fmtHoras(item.horas);
         });
       }
       function onUp(){document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);attachSlider(pontoId);}
@@ -5790,7 +5812,15 @@ async function load(){
       tipo:p.tipo||'inline',produto:p.produto||'Todos',desc:p.descricao||''
     }});
 
-    if(!S.versaoK&&S.versoes.length)S.versaoK=S.versoes[0].id;
+    if(!S.versaoK&&S.versoes.length){
+      var hoje=new Date().toISOString().slice(0,10);
+      var vigente=S.versoes.find(function(v){
+        if(!v.ativa)return false;
+        var per=calcPeriodoVersao(v);
+        return per&&hoje>=per.inicio&&hoje<=per.fim;
+      });
+      S.versaoK=vigente?vigente.id:S.versoes[0].id;
+    }
     _loadedAt=Date.now();
     await loadUsers();
     // Recupera avatar do usuário atual caso DB esteja zerado mas metadata do Google tem a URL
@@ -6200,14 +6230,13 @@ function getSchedule(){
   try{return JSON.parse(localStorage.getItem('vs_schedule'))||{}}catch(e){return{}}
 }
 function saveSchedule(){
-  var s={
-    entrada:document.getElementById('pref-hora-entrada').value||'08:00',
-    almoco:document.getElementById('pref-hora-almoco').value||'12:00',
-    retorno:document.getElementById('pref-hora-retorno').value||'13:00',
-    saida:document.getElementById('pref-hora-saida').value||'17:00',
-    cargaDiaria:parseFloat(document.getElementById('pref-carga-diaria').value)||8,
-    wipLimit:parseInt(document.getElementById('pref-wip-limit').value)||5,
-  };
+  var s=getSchedule();
+  s.entrada=document.getElementById('pref-hora-entrada').value||'08:00';
+  s.almoco=document.getElementById('pref-hora-almoco').value||'12:00';
+  s.retorno=document.getElementById('pref-hora-retorno').value||'13:00';
+  s.saida=document.getElementById('pref-hora-saida').value||'17:00';
+  s.cargaDiaria=parseFloat(document.getElementById('pref-carga-diaria').value)||8;
+  s.wipLimit=parseInt(document.getElementById('pref-wip-limit').value)||5;
   localStorage.setItem('vs_schedule',JSON.stringify(s));
 }
 function loadSchedulePrefs(){
@@ -6219,6 +6248,43 @@ function loadSchedulePrefs(){
   if(el('pref-hora-saida'))el('pref-hora-saida').value=s.saida||'17:00';
   if(el('pref-carga-diaria'))el('pref-carga-diaria').value=s.cargaDiaria||8;
   if(el('pref-wip-limit'))el('pref-wip-limit').value=s.wipLimit||5;
+  renderFormatoHorasControl();
+}
+
+// ── FORMATO DE HORAS (decimal vs HH:MM) — vale para ponto e apropriação ───────
+function getFormatoHoras(){return getSchedule().formatoHoras||'decimal'}
+function fmtHorasAs(h,fmt){
+  h=h||0;
+  if(fmt==='hhmm'){
+    var neg=h<0;h=Math.abs(h);
+    var totalMin=Math.round(h*60);
+    return(neg?'-':'')+Math.floor(totalMin/60)+':'+String(totalMin%60).padStart(2,'0');
+  }
+  return h.toFixed(2)+'h';
+}
+function fmtHoras(h){return fmtHorasAs(h,getFormatoHoras())}
+// Aceita "H:MM"/"HH:MM" ou decimal (com , ou .); retorna null se inválido.
+function parseHoras(str){
+  str=(str||'').trim();
+  if(!str)return 0;
+  var m=str.match(/^(\d{1,3}):([0-5]\d)$/);
+  if(m)return parseInt(m[1],10)+parseInt(m[2],10)/60;
+  var n=parseFloat(str.replace(',','.'));
+  return isNaN(n)?null:n;
+}
+function setFormatoHoras(fmt){
+  var s=getSchedule();s.formatoHoras=fmt;
+  localStorage.setItem('vs_schedule',JSON.stringify(s));
+  renderFormatoHorasControl();
+  if(document.getElementById('ponto-list'))renderPontoList();
+}
+function renderFormatoHorasControl(){
+  var fmt=getFormatoHoras();
+  var wrap=document.getElementById('pref-formato-horas');
+  if(wrap)wrap.querySelectorAll('.pref-seg-opt').forEach(function(el){el.classList.toggle('active',el.getAttribute('data-fmt')===fmt)});
+  var ex=document.getElementById('pref-formato-horas-exemplo');
+  var outro=fmt==='hhmm'?'decimal':'hhmm';
+  if(ex)ex.innerHTML='Exemplo: <b>'+fmtHorasAs(7.5,fmt)+'</b> em vez de <b>'+fmtHorasAs(7.5,outro)+'</b>';
 }
 
 // ── PESO INTELIGENTE ─────────────────────────────────────────────────────────
@@ -6486,7 +6552,7 @@ function openDayResumeModal(){
   var hoje=now.toLocaleDateString('sv');
   var pontoHoje=S.pontos.find(function(p){return p.data===hoje;});
   var phEl=document.getElementById('resume-ponto-horas');
-  if(phEl)phEl.textContent=pontoHoje&&pontoHoje.horasTrabalhadas>0?pontoHoje.horasTrabalhadas.toFixed(2)+'h':'—';
+  if(phEl)phEl.textContent=pontoHoje&&pontoHoje.horasTrabalhadas>0?fmtHoras(pontoHoje.horasTrabalhadas):'—';
   renderResumeOsList(planEntries,trackedByOs,extraOsIds);
   openModal('modal-dayresume');
 }
