@@ -6347,7 +6347,7 @@ function openDayPlanModal(force){
 function renderDayPlanOsList(){
   var plan=getDayPlan();
   var meuNome=getDisplayName().trim();
-  var andamento=S.oss.filter(function(o){return o.status==='andamento'||o.status==='afazer'});
+  var andamento=S.oss.filter(function(o){return(o.status==='andamento'||o.status==='afazer')&&o.versaoId===S.versaoK});
   if(meuNome)andamento=andamento.filter(function(o){return(o.atribuicao||'').trim()===meuNome;});
   var ordemPorte={epico:0,grande:1,normal:2,rapida:3};
   andamento.sort(function(a,b){
