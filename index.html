@@ -7213,6 +7213,31 @@ function _desfazerAprop(){
   document.getElementById('toast').classList.remove('show');
 }
 
+// Chamada sempre que uma OS SAI de 'andamento' pra 'concluido' ou 'afazer',
+// não importa o caminho (botão do card, dropdown de foco, ou checklist de
+// entregas). Fecha a sessão de foco corrente (se essa OS estava em foco,
+// commitando o tempo decorrido no log ANTES de somar), decide se há tempo
+// suficiente pra apropriar automaticamente, e só depois transfere o foco
+// pra próxima OS em andamento.
+function _finalizarAndamento(osId,newStatus){
+  var st=getFocusState();
+  var eraFocal=st&&st.osId===osId;
+  if(eraFocal)closeFocusSession(st);
+
+  var totalSeg=focusAccumulatedToday(osId);
+  if(totalSeg>=APROP_MIN_SECONDS){
+    _autoApropriar(osId,totalSeg,newStatus);
+  }else{
+    _doMoveOS(osId,newStatus);
+  }
+
+  if(eraFocal){
+    var next=_proxOssAndamento(osId);
+    if(next){startFocus(next.id);}
+    else{saveFocusState(null);updateFocusUI();updatePipUI();}
+  }
+}
+
 // Retorna próxima OS em andamento que pertence ao usuário atual.
 // Nunca pula para card de outro usuário.
 function _proxOssAndamento(excludeId){
