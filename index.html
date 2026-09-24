@@ -6103,12 +6103,23 @@ function toggleE(osId,key){
   var os=S.oss.find(function(o){return o.id===osId});
   if(!os||!os.entregas||!os.entregas[key]||!os.entregas[key].aplicavel)return;
   os.entregas[key].feito=!os.entregas[key].feito;
+  var statusAnterior=os.status;
   if(os.entregas[key].feito&&os.status==='afazer')os.status='andamento';
-  if(Object.values(os.entregas).filter(function(e){return e.aplicavel}).every(function(e){return e.feito}))os.status='concluido';
+  var fechaAgora=Object.values(os.entregas).filter(function(e){return e.aplicavel}).every(function(e){return e.feito});
+
   dbToggleEntrega(osId,os.entregas).then(function(){
+    // Fechando a partir de 'andamento': não persiste o status aqui —
+    // _finalizarAndamento cuida de mover (e possivelmente apropriar) depois.
+    if(fechaAgora&&statusAnterior==='andamento')return;
+    os.status=fechaAgora?'concluido':os.status;
     return dbMoverOS(osId,os.status);
   }).then(function(){
-    renderKanban();renderDash();
+    if(fechaAgora&&statusAnterior==='andamento'){
+      _finalizarAndamento(osId,'concluido');
+      renderDash();
+    }else{
+      renderKanban();renderDash();
+    }
   }).catch(function(e){toast('Erro: '+e.message,'err')});
 }
 
