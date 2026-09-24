@@ -7126,7 +7126,7 @@ function concludeOS(osId){
   closeFocoDropdown();
 }
 
-function _autoApropriar(osId,totalSeg){
+function _autoApropriar(osId,totalSeg,newStatus){
   var horas=parseFloat((totalSeg/3600).toFixed(2));
   var hoje=new Date().toISOString().slice(0,10);
   var diaSem=DIAS_SEMANA[new Date().getDay()];
@@ -7163,8 +7163,9 @@ function _autoApropriar(osId,totalSeg){
     if(isNovo)ponto.id=saved.id;
   }).catch(function(e){toast('Erro ao apropriar: '+e.message,'err')});
 
-  // Move OS
-  moveOS(osId,'concluido');
+  // Move OS — _doMoveOS direto, nunca moveOS: evita reentrar em
+  // _finalizarAndamento (que chamaria _autoApropriar de novo e duplicaria a apropriação)
+  _doMoveOS(osId,newStatus);
 
   // Prepara undo state
   if(_undoAprop&&_undoAprop.timeoutId)clearTimeout(_undoAprop.timeoutId);
