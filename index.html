@@ -6078,15 +6078,14 @@ function moveOS(osId,newStatus){
       saveTodayLog(getTodayLog().filter(function(s){return s.osId!==osId}));
     }
     if(!getFocusState())setTimeout(function(){startFocus(osId);},80);
+    _doMoveOS(osId,newStatus);
+    return;
   }
-  // Se a OS focal sai de "andamento", transfere foco para próxima em andamento
-  if(newStatus!=='andamento'){
-    var st=getFocusState();
-    if(st&&st.osId===osId){
-      var next=_proxOssAndamento(osId);
-      if(next){startFocus(next.id);}
-      else{saveFocusState(null);updateFocusUI();updatePipUI();}
-    }
+  // Saindo de 'andamento' pra 'concluido' ou 'afazer': fecha a sessão de
+  // foco corretamente e tenta auto-apropriar o tempo rastreado antes de mover.
+  if(os.status==='andamento'&&(newStatus==='concluido'||newStatus==='afazer')){
+    _finalizarAndamento(osId,newStatus);
+    return;
   }
   _doMoveOS(osId,newStatus);
 }
