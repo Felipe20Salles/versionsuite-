@@ -7108,18 +7108,7 @@ function closeFocusSession(st){
 }
 
 function concludeOS(osId){
-  var st=getFocusState();
-  if(st&&st.osId===osId&&!st.pausedAt)closeFocusSession(st);
-  saveFocusState(null);
-  var totalSeg=focusAccumulatedToday(osId);
-  if(totalSeg>=APROP_MIN_SECONDS){
-    _autoApropriar(osId,totalSeg);
-  }else{
-    moveOS(osId,'concluido');
-  }
-  // Auto-switch: próxima OS em andamento do usuário atual
-  var nxt=_proxOssAndamento(osId);
-  if(nxt)startFocus(nxt.id);
+  moveOS(osId,'concluido');
   updateFocusUI();
   renderKanban();
   closeFocoDropdown();
