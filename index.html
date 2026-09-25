@@ -358,31 +358,28 @@ textarea.form-input{resize:vertical;min-height:70px}
 .resume-cell-val{font-size:15px;font-weight:600;font-family:var(--mono)}
 .resume-h-input{width:70px;background:var(--surface);border:1px solid var(--accent);border-radius:5px;padding:4px 6px;color:var(--text);font-size:13px;text-align:center;font-family:var(--mono);font-weight:600}
 .resume-search-input{width:100%;padding:7px 10px;font-size:12px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text)}
-/* ── FOCO / TIMER ── */
+/* ── FOCO / WIDGET SEMPRE VISÍVEL ── */
 @keyframes dot-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
-.foco-pill{display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:5px 12px 5px 10px;cursor:pointer;transition:border-color .15s;max-width:280px;min-width:160px;position:relative}
-.foco-pill:hover{border-color:var(--accent)}
-.foco-pill.foco-active{border-color:#10b981}
-.foco-pill.foco-paused{border-color:#f59e0b}
-.foco-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.foco-dot.active{background:#10b981;animation:dot-pulse 1.4s ease infinite}
-.foco-dot.paused{background:#f59e0b}
-.foco-dot.idle{background:var(--border2)}
-.foco-info{flex:1;min-width:0}
-.foco-os-label{font-size:11px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.foco-timer-label{font-size:11px;font-family:var(--mono);color:#10b981;font-weight:600}
-.foco-timer-label.paused{color:#f59e0b}
-.foco-empty-label{font-size:12px;color:var(--hint);white-space:nowrap}
-/* dropdown de foco */
-.foco-dropdown{position:absolute;top:calc(100% + 8px);left:0;min-width:300px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:500;overflow:hidden}
-.foco-dd-section{padding:8px 12px;font-size:10px;font-weight:600;color:var(--hint);text-transform:uppercase;letter-spacing:.6px;border-bottom:1px solid var(--border)}
-.foco-dd-row{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;transition:background .1s}
-.foco-dd-row:hover{background:var(--card2)}
-.foco-dd-row.current-row{background:rgba(16,185,129,.06);border-left:2px solid #10b981}
-.foco-dd-actions{display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--border)}
-.foco-dd-btn{flex:1;font-size:11px;padding:6px;border-radius:6px;cursor:pointer;font-weight:500;border:1px solid var(--border2);background:none;color:var(--muted);font-family:var(--font)}
-.foco-dd-btn:hover{background:var(--card2)}
-.foco-dd-btn.success{color:#10b981;border-color:rgba(16,185,129,.3)}
+#foco-widget{position:fixed;right:14px;top:50%;transform:translateY(-50%);z-index:9000;display:none}
+.fcw-card{width:236px;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.35);overflow:hidden}
+.fcw-head{display:flex;align-items:center;gap:8px;padding:10px 8px 8px 12px}
+.fcw-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;background:#10b981;animation:dot-pulse 1.4s ease infinite}
+.fcw-dot.paused{background:#f59e0b;animation:none}
+.fcw-title{flex:1;font-size:11px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fcw-min{width:20px;height:20px;border-radius:5px;border:none;background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;font-family:var(--font)}
+.fcw-min:hover{background:var(--card2);color:var(--text)}
+.fcw-body{padding:2px 14px 12px}
+.fcw-timer{font-family:var(--mono);font-size:24px;font-weight:700;color:#10b981;letter-spacing:-.5px}
+.fcw-timer.paused{color:#f59e0b}
+.fcw-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.fcw-acts{display:flex;gap:6px;padding:0 10px 10px}
+.fcw-btn{flex:1;height:32px;border-radius:8px;border:1px solid var(--border2);background:none;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .12s;font-family:var(--font)}
+.fcw-btn:hover{background:var(--card2);color:var(--text)}
+.fcw-btn.g{color:#10b981;border-color:rgba(16,185,129,.3)}
+.fcw-btn.g:hover{background:rgba(16,185,129,.12)}
+.fcw-badge{width:40px;height:40px;border-radius:50%;background:var(--surface);border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.fcw-badge-dot{width:9px;height:9px;border-radius:50%;background:#10b981;animation:dot-pulse 1.4s ease infinite}
+.fcw-badge-dot.paused{background:#f59e0b;animation:none}
 /* ── LIGHT MODE OVERRIDES ── */
 .light-mode .resume-cell{background:var(--card2)}
 .light-mode .resume-stat-box{background:var(--card2)}
@@ -393,7 +390,6 @@ textarea.form-input{resize:vertical;min-height:70px}
 .light-mode .admin-role-card:hover{box-shadow:0 0 0 1px rgba(var(--accent-rgb),.25),0 4px 16px rgba(0,0,0,.1)}
 .light-mode .admin-equipe-row:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
 .light-mode .dayplan-h-input{background:var(--surface);border-color:var(--border2)}
-.light-mode .foco-pill{box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .light-mode .bell-dropdown{box-shadow:0 8px 32px rgba(0,0,0,.15)}
 /* ── KANBAN FOCO AURA ── */
 @keyframes foco-pulse{
@@ -402,32 +398,6 @@ textarea.form-input{resize:vertical;min-height:70px}
 }
 .os-card-foco{animation:foco-pulse 2.4s ease infinite}
 .os-foco-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:#f97316;padding:5px 12px;background:rgba(239,68,68,.07);border-bottom:1px solid rgba(239,68,68,.14);letter-spacing:.02em}
-/* ── FOCO PiP SIDEBAR ── */
-#foco-pip{position:fixed;top:0;right:0;height:100vh;width:14px;z-index:9000;overflow:hidden;transition:width .22s cubic-bezier(.4,0,.2,1);display:flex;pointer-events:auto}
-#foco-pip:hover{width:228px}
-.pip-strip{position:absolute;right:0;top:0;bottom:0;width:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;cursor:pointer;z-index:1}
-.pip-strip-dot{width:5px;height:5px;border-radius:50%;background:rgba(16,185,129,.5);transition:background .2s}
-.pip-strip-dot.paused{background:rgba(245,158,11,.5)}
-.pip-strip-dot.idle{background:rgba(255,255,255,.08)}
-.pip-panel{position:absolute;left:0;top:0;bottom:0;width:228px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;opacity:0;transition:opacity .15s .06s;pointer-events:none;overflow:hidden;box-shadow:-6px 0 24px rgba(0,0,0,.35)}
-#foco-pip:hover .pip-panel{opacity:1;pointer-events:auto}
-.pip-header{padding:16px 14px 12px;border-bottom:1px solid var(--border);flex-shrink:0}
-.pip-badge-row{margin-bottom:6px}
-.pip-os-title{font-size:12px;font-weight:500;color:var(--text);overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-bottom:6px;line-height:1.4}
-.pip-timer{font-size:22px;font-weight:700;font-family:var(--mono);color:#10b981;letter-spacing:-1px}
-.pip-timer.paused{color:#f59e0b}
-.pip-timer.idle{color:var(--hint);font-size:13px;font-weight:400;letter-spacing:0}
-.pip-actions{display:flex;flex-direction:column;gap:6px;padding:12px 14px;flex:1}
-.pip-btn{width:100%;padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border2);background:none;color:var(--muted);font-size:11px;font-weight:500;cursor:pointer;font-family:var(--font);text-align:left;transition:background .12s;display:flex;align-items:center;gap:7px}
-.pip-btn:hover{background:var(--card2)}
-.pip-btn.pip-success{color:#10b981;border-color:rgba(16,185,129,.3)}
-.pip-btn.pip-primary{background:var(--accent);color:#fff;border-color:transparent}
-.pip-btn.pip-primary:hover{opacity:.88}
-.pip-footer{padding:10px 14px;border-top:1px solid var(--border);font-size:11px;color:var(--hint);cursor:pointer;display:flex;align-items:center;gap:6px;flex-shrink:0;transition:color .12s}
-.pip-footer:hover{color:var(--accent)}
-#pip-strip-indicator:hover{background:rgba(16,185,129,.55)!important}
-#pip-strip-indicator.pip-paused{background:rgba(245,158,11,.35)!important}
-#pip-strip-indicator.pip-paused:hover{background:rgba(245,158,11,.55)!important}
 </style>
 </head>
 <body>
@@ -583,16 +553,6 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div><div class="topbar-title" id="topbar-title">Dashboard</div><div class="topbar-sub" id="topbar-sub"></div></div>
       <div style="display:flex;align-items:center;gap:12px">
         <div class="topbar-actions" id="topbar-actions"></div>
-        <div style="display:none" id="foco-container">
-          <div class="foco-pill" id="foco-pill" onclick="toggleFocoDropdown()">
-            <div class="foco-dot idle" id="foco-dot"></div>
-            <div class="foco-info">
-              <div id="foco-label"><span class="foco-empty-label">▶ Nenhuma OS em foco</span></div>
-            </div>
-            <span style="font-size:10px;color:var(--hint)">▾</span>
-          </div>
-          <div class="foco-dropdown" id="foco-dropdown" style="display:none"></div>
-        </div>
         <button class="btn btn-sm btn-ghost" id="btn-revisar-plano" onclick="openPlanOrResume()" style="font-size:11px;padding:4px 10px;white-space:nowrap">📋 Revisar plano</button>
         <button class="btn btn-sm btn-ghost" onclick="goScreen('ponto');openNovoRegistro()" style="font-size:11px;padding:4px 10px;white-space:nowrap">🕐 Ponto</button>
         <div style="position:relative" id="bell-container">
@@ -7100,7 +7060,6 @@ function startFocus(osId){
   saveFocusState(newSt);
   updateFocusUI();
   renderKanban();
-  closeFocoDropdown();
 }
 
 function pauseFocus(){
@@ -7110,7 +7069,6 @@ function pauseFocus(){
   var paused={osId:st.osId,startedAt:null,pausedAt:Date.now(),accumulated:accumulated};
   saveFocusState(paused);
   updateFocusUI();
-  closeFocoDropdown();
 }
 
 function resumeFocus(){
@@ -7134,7 +7092,6 @@ function concludeOS(osId){
   moveOS(osId,'concluido');
   updateFocusUI();
   renderKanban();
-  closeFocoDropdown();
 }
 
 function _autoApropriar(osId,totalSeg,newStatus){
@@ -7245,7 +7202,7 @@ function _finalizarAndamento(osId,newStatus){
   if(eraFocal){
     var next=_proxOssAndamento(osId);
     if(next){startFocus(next.id);}
-    else{saveFocusState(null);updateFocusUI();updatePipUI();}
+    else{saveFocusState(null);updateFocusUI();}
   }
 }
 
@@ -7270,7 +7227,7 @@ function trocarFoco(){
   var os=S.oss.find(function(o){return o.id===st.osId;});
   if(os){var idx=S.oss.indexOf(os);if(idx>-1){S.oss.splice(idx,1);S.oss.push(os);}}
   if(next){startFocus(next.id);}
-  else{saveFocusState(null);updateFocusUI();renderKanban();updatePipUI();toast('Fila de andamento vazia');}
+  else{saveFocusState(null);updateFocusUI();renderKanban();toast('Fila de andamento vazia');}
 }
 function voltarParaAfazer(){
   var st=getFocusState();if(!st)return;
@@ -7305,155 +7262,75 @@ function alternarFoco(){
   startFocus(ordered[(idx+1)%ordered.length].id);
 }
 
-var _pipWindow=null;
-
-function updatePipUI(){
-  var st=getFocusState();
-  var strip=document.getElementById('pip-strip-indicator');
-  var dot=document.getElementById('pip-si-dot');
-  if(!strip)return;
-  if(!st){
-    strip.style.display='none';
-    strip.classList.remove('pip-paused');
-    if(dot){dot.style.background='rgba(255,255,255,.2)';}
-  }else{
-    strip.style.display='flex';
-    if(st.pausedAt){
-      strip.classList.add('pip-paused');
-      if(dot)dot.style.background='#f59e0b';
-    }else{
-      strip.classList.remove('pip-paused');
-      if(dot)dot.style.background='#10b981';
-    }
-  }
-  // Atualiza popup se estiver aberto
-  if(_pipWindow&&!_pipWindow.closed&&_pipWindow._update)_pipWindow._update();
-}
-
-function openPipWindow(){
-  if(_pipWindow&&!_pipWindow.closed){_pipWindow.focus();return;}
-  var w=window.open('pip.html','foco_pip','width=280,height=240,resizable=yes,location=no,menubar=no,toolbar=no,status=no');
-  if(!w){toast('Popup bloqueado pelo browser. Libere popups para este site.','err');return;}
-  _pipWindow=w;
-  var strip=document.getElementById('pip-strip-indicator');
-  if(strip)strip.style.display='none';
-}
-
-function _pipMinimize(){
-  _pipWindow=null;
-  updatePipUI(); // reexibe strip se há foco ativo
-}
-
-function _pipClose(){
-  _pipWindow=null;
-  var strip=document.getElementById('pip-strip-indicator');
-  if(strip)strip.style.display='none';
-}
-
 function formatFocusTime(seconds){
   var h=Math.floor(seconds/3600);
   var m=Math.floor((seconds%3600)/60);
   return h>0?(h+'h'+m.toString().padStart(2,'0')+'m'):(m+'m');
 }
 
+// Widget sempre visível (borda direita), com estado completo (card) ou
+// minimizado (badge). _focoWidgetMin não persiste entre reloads — a
+// prioridade é nunca esconder de vez que há foco ativo sem avisar.
+var _focoWidgetMin=false;
+function toggleFocoWidgetMin(){
+  _focoWidgetMin=!_focoWidgetMin;
+  updateFocusUI();
+}
+
 function updateFocusUI(){
   var st=getFocusState();
-  var pill=document.getElementById('foco-pill');
-  var dot=document.getElementById('foco-dot');
-  var label=document.getElementById('foco-label');
-  if(!pill||!dot||!label)return;
+  var wrap=document.getElementById('foco-widget');
+  if(!wrap)return;
+  clearInterval(_focusInterval);_focusInterval=null;
 
   if(!st){
-    pill.className='foco-pill';
-    dot.className='foco-dot idle';
-    label.innerHTML='<span class="foco-empty-label">▶ Nenhuma OS em foco</span>';
-    clearInterval(_focusInterval);_focusInterval=null;
+    wrap.style.display='none';
+    wrap.innerHTML='';
     return;
   }
+  wrap.style.display='block';
+
   var os=S.oss.find(function(o){return o.id===st.osId});
   var osTitle=os?('#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)):'OS desconhecida';
+  var isPaused=!!st.pausedAt;
+  var acc=focusAccumulatedToday(st.osId);
 
-  if(st.pausedAt){
-    pill.className='foco-pill foco-paused';
-    dot.className='foco-dot paused';
-    var acc=focusAccumulatedToday(st.osId);
-    label.innerHTML='<div class="foco-os-label">'+osTitle+'</div>'
-      +'<div class="foco-timer-label paused">pausado · '+formatFocusTime(acc)+'</div>';
-    clearInterval(_focusInterval);_focusInterval=null;
-  }else{
-    pill.className='foco-pill foco-active';
-    dot.className='foco-dot active';
-    clearInterval(_focusInterval);
+  if(_focoWidgetMin){
+    wrap.innerHTML='<div class="fcw-badge" onclick="toggleFocoWidgetMin()" title="'+osTitle+'"><div class="fcw-badge-dot'+(isPaused?' paused':'')+'"></div></div>';
+    return;
+  }
+
+  wrap.innerHTML=
+    '<div class="fcw-card">'
+    +'<div class="fcw-head">'
+      +'<div class="fcw-dot'+(isPaused?' paused':'')+'"></div>'
+      +'<div class="fcw-title">'+osTitle+'</div>'
+      +'<button class="fcw-min" onclick="toggleFocoWidgetMin()" title="Minimizar">‒</button>'
+    +'</div>'
+    +'<div class="fcw-body">'
+      +'<div class="fcw-timer'+(isPaused?' paused':'')+'" id="foco-widget-timer">'+formatFocusTime(acc)+'</div>'
+      +'<div class="fcw-sub">'+(isPaused?'pausado':'em foco hoje')+'</div>'
+    +'</div>'
+    +'<div class="fcw-acts">'
+      +(isPaused
+        ?'<button class="fcw-btn g" onclick="resumeFocus()" title="Retomar">▶</button>'
+        :'<button class="fcw-btn" onclick="pauseFocus()" title="Pausar">⏸</button>')
+      +'<button class="fcw-btn" onclick="trocarFoco()" title="Trocar OS">↻</button>'
+      +'<button class="fcw-btn" onclick="voltarParaAfazer()" title="Voltar para A Fazer">←</button>'
+      +'<button class="fcw-btn g" onclick="concludeOS(\''+st.osId+'\')" title="Concluir OS">✓</button>'
+    +'</div>'
+    +'</div>';
+
+  if(!isPaused){
     _focusInterval=setInterval(function(){
       var elapsed=Math.floor((Date.now()-st.startedAt)/1000);
-      var acc=st.accumulated+elapsed;
-      var timerEl=label.querySelector('.foco-timer-label');
-      if(timerEl)timerEl.textContent=formatFocusTime(acc)+' nesta sessão';
+      var accLive=st.accumulated+elapsed;
+      var timerEl=document.getElementById('foco-widget-timer');
+      if(timerEl)timerEl.textContent=formatFocusTime(accLive);
       var kspan=document.getElementById('kanban-foco-timer-text');
-      if(kspan)kspan.textContent='🔥 Em foco · '+formatFocusTime(acc);
+      if(kspan)kspan.textContent='🔥 Em foco · '+formatFocusTime(accLive);
     },1000);
-    var initAcc=st.accumulated;
-    label.innerHTML='<div class="foco-os-label">'+osTitle+'</div>'
-      +'<div class="foco-timer-label">'+formatFocusTime(initAcc)+'</div>';
   }
-  updatePipUI();
-}
-
-function toggleFocoDropdown(){
-  var dd=document.getElementById('foco-dropdown');
-  if(!dd)return;
-  if(dd.style.display==='none'){dd.style.display='block';renderFocoDropdown();}
-  else{dd.style.display='none';}
-}
-function closeFocoDropdown(){var dd=document.getElementById('foco-dropdown');if(dd)dd.style.display='none';}
-
-function renderFocoDropdown(){
-  var st=getFocusState();
-  var planKey=getDayKey();
-  var plan=null;try{plan=JSON.parse(localStorage.getItem(planKey))}catch(e){}
-  var planOsIds=(plan&&plan.entries)?plan.entries.map(function(e){return e.osId}):[];
-  var planOss=S.oss.filter(function(o){return planOsIds.indexOf(o.id)>-1});
-
-  var html='';
-  if(st){
-    var curOs=S.oss.find(function(o){return o.id===st.osId});
-    var acc=focusAccumulatedToday(st.osId);
-    html+='<div class="foco-dd-section">Foco atual</div>';
-    html+='<div class="foco-dd-row current-row">'
-      +'<div class="foco-dot '+(st.pausedAt?'paused':'active')+'"></div>'
-      +'<div style="flex:1;min-width:0"><div style="font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(curOs?'#'+escHtml(String(curOs.num))+' · '+escHtml(curOs.titulo):'—')+'</div>'
-      +'<div style="font-size:10px;color:var(--muted)">'+formatFocusTime(acc)+' hoje</div></div></div>';
-    var others=planOss.filter(function(o){return o.id!==st.osId});
-    if(others.length){
-      html+='<div class="foco-dd-section">Trocar para</div>';
-      others.forEach(function(os){
-        var porte=osPorteFromHours(os.estimatedHours||0);
-        html+='<div class="foco-dd-row" onclick="startFocus(\''+os.id+'\')">'
-          +'<div style="width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0"></div>'
-          +'<span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px">'+porte.label+'</span>'
-          +'<div style="flex:1;min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)+'</div>'
-          +'<span style="font-size:11px;font-family:var(--mono);color:var(--muted)">'+formatFocusTime(focusAccumulatedToday(os.id))+'</span></div>';
-      });
-    }
-    html+='<div class="foco-dd-actions">'
-      +(st.pausedAt
-        ?'<button class="foco-dd-btn success" onclick="resumeFocus()">▶ Retomar</button>'
-        :'<button class="foco-dd-btn" onclick="pauseFocus()">⏸ Pausar</button>')
-      +'<button class="foco-dd-btn success" onclick="concludeOS(\''+st.osId+'\')">✓ Concluir OS</button></div>';
-  }else{
-    if(planOss.length){
-      html+='<div class="foco-dd-section">OSs do plano de hoje</div>';
-      planOss.forEach(function(os){
-        var porte=osPorteFromHours(os.estimatedHours||0);
-        html+='<div class="foco-dd-row" onclick="startFocus(\''+os.id+'\')">'
-          +'<span class="'+porte.cls+'" style="font-size:10px;padding:1px 7px;border-radius:10px">'+porte.label+'</span>'
-          +'<div style="flex:1;min-width:0;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">#'+escHtml(String(os.num))+' · '+escHtml(os.titulo)+'</div></div>';
-      });
-    }else{
-      html+='<div style="padding:16px 12px;font-size:12px;color:var(--hint)">Nenhuma OS no plano de hoje. Crie um planejamento primeiro.</div>';
-    }
-  }
-  document.getElementById('foco-dropdown').innerHTML=html;
 }
 
 function setPesoValue(h){
@@ -8650,8 +8527,6 @@ document.addEventListener('click',function(e){
     var dd=document.getElementById('bell-dropdown');
     if(dd)dd.style.display='none';
   }
-  var fc=document.getElementById('foco-container');
-  if(fc&&!fc.contains(e.target)){closeFocoDropdown();}
 });
 document.addEventListener('keydown',function(){if(typeof touchActivity==='function')touchActivity()});
 </script>
@@ -8835,10 +8710,6 @@ var __paralelo_config = {
   </div>
 </div>
 <!-- FOCO PiP STRIP (mini indicador borda direita) -->
-<div id="pip-strip-indicator" onclick="openPipWindow()" title="Abrir painel de foco" style="display:none;position:fixed;right:0;top:50%;transform:translateY(-50%);width:17px;height:73px;background:rgba(16,185,129,.35);border-radius:6px 0 0 6px;cursor:pointer;z-index:9000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;transition:background .2s">
-  <div style="width:5px;height:5px;border-radius:50%;background:#10b981" id="pip-si-dot"></div>
-  <div style="width:3px;height:3px;border-radius:50%;background:#10b981;opacity:.5"></div>
-  <div style="width:3px;height:3px;border-radius:50%;background:#10b981;opacity:.5"></div>
-</div>
+<div id="foco-widget"></div>
 </body>
 </html>
