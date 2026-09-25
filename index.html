@@ -7274,12 +7274,9 @@ function trocarFoco(){
 }
 function voltarParaAfazer(){
   var st=getFocusState();if(!st)return;
-  var next=_proxOssAndamento(st.osId);
-  var os=S.oss.find(function(o){return o.id===st.osId;});
-  if(os){os.status='afazer';dbMoverOS(os.id,'afazer').catch(function(){});}
-  if(next){startFocus(next.id);}else{saveFocusState(null);updateFocusUI();updatePipUI();}
+  moveOS(st.osId,'afazer');
+  updateFocusUI();
   renderKanban();
-  toast('OS devolvida para A Fazer');
 }
 
 function alternarFoco(){
