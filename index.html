@@ -4740,7 +4740,11 @@ function startEditAprop(pontoId,ossDisp,focusOsId){
   var p=S.pontos.find(function(p){return p.id===pontoId});if(!p)return;
   if(!ossDisp)ossDisp=ossParaApropriar();
   var st=getApropState(p);st._backup=JSON.parse(JSON.stringify(st.oss));st.editing=true;
-  if(focusOsId&&!st.oss.find(function(x){return x.osId===focusOsId})){st.oss.push({osId:focusOsId,horas:0});rateioIgualSt(st,p.horasTrabalhadas||0)}
+  if(focusOsId&&!st.oss.find(function(x){return x.osId===focusOsId})){
+    var usadoFoc=st.oss.reduce(function(a,x){return a+(x.horas||0)},0);
+    var sobraFoc=Math.max(0,parseFloat(((p.horasTrabalhadas||0)-usadoFoc).toFixed(2)));
+    st.oss.push({osId:focusOsId,horas:sobraFoc});
+  }
   redrawApropDay(p,ossDisp);setTimeout(function(){attachSlider(pontoId)},50);
 }
 function redrawApropDay(p,ossDisp){
@@ -4757,8 +4761,16 @@ function attachAllBkSliders(p){
     }
   });
 }
-function addApropOS(pid){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);st.oss.push({osId:'',horas:0});rateioIgualSt(st,p.horasTrabalhadas||0);redrawApropDay(p)}
-function removeApropOS(pid,idx){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);st.oss.splice(idx,1);rateioIgualSt(st,p.horasTrabalhadas||0);redrawApropDay(p)}
+function addApropOS(pid){
+  var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;
+  var st=getApropState(p);
+  // Não redistribui as linhas existentes — só sugere o que sobrou do ponto pra linha nova.
+  var usado=st.oss.reduce(function(a,x){return a+(x.horas||0)},0);
+  var sobra=Math.max(0,parseFloat(((p.horasTrabalhadas||0)-usado).toFixed(2)));
+  st.oss.push({osId:'',horas:sobra});
+  redrawApropDay(p);
+}
+function removeApropOS(pid,idx){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);st.oss.splice(idx,1);redrawApropDay(p)}
 function updateApropOS(pid,idx,osId){var p=S.pontos.find(function(p){return p.id===pid});if(!p)return;var st=getApropState(p);st.oss[idx].osId=osId;redrawApropDay(p)}
 function searchApropOS(pid,idx,q){
   var resEl=document.getElementById('aprop-os-res-'+pid+'-'+idx);if(!resEl)return;
