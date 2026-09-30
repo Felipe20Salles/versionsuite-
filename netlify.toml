@@ -15,3 +15,9 @@
 
 [context.deploy-preview]
   command = ""
+
+# pip.html foi substituído pelo widget inline — redireciona para a home
+[[redirects]]
+  from = "/pip.html"
+  to = "/"
+  status = 301
