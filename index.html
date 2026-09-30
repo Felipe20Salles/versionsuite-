@@ -260,6 +260,9 @@ textarea.form-input{resize:vertical;min-height:70px}
 .pref-flow-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
 .pref-flow-row:last-child{border-bottom:none}
 .pref-flow-label{font-size:13px;font-weight:500}
+.pref-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.pref-card .pref-flow-row{padding:11px 14px}
+.pref-periodo-preview{font-size:11.5px;color:var(--accent);padding:8px 14px;background:var(--accent-bg,rgba(124,111,247,.08));border-top:1px solid var(--border)}
 .pref-flow-sub{font-size:11px;color:var(--muted);margin-top:2px}
 .pref-time-input{width:70px;padding:5px 8px;font-family:var(--mono);font-size:13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--card2);color:var(--text);text-align:center}
 .pref-seg-block{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
@@ -914,53 +917,78 @@ textarea.form-input{resize:vertical;min-height:70px}
 
         <!-- Painel: Pessoal -->
         <div id="pref-tab-pessoal">
+          <!-- APARÊNCIA -->
           <div class="pref-section">
             <div class="pref-section-title">Aparência</div>
-            <div class="theme-toggle" onclick="toggleTheme()">
-              <div style="flex:1"><div style="font-size:13px;font-weight:500">Modo claro</div><div style="font-size:12px;color:var(--muted)">Alterna entre dark e light mode</div></div>
-              <div class="toggle-switch" id="theme-toggle-sw"><div class="toggle-knob"></div></div>
+            <div class="pref-card">
+              <div class="pref-flow-row">
+                <div><div class="pref-flow-label">Modo claro</div><div class="pref-flow-sub">Alterna entre dark e light mode</div></div>
+                <div class="toggle-switch" id="theme-toggle-sw" onclick="toggleTheme()"><div class="toggle-knob"></div></div>
+              </div>
+              <div class="pref-flow-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+                <div><div class="pref-flow-label">Cor de destaque</div><div class="pref-flow-sub">Aplicada em botões, cards ativos, barras e badges</div></div>
+                <div class="color-palette" id="color-palette"></div>
+              </div>
             </div>
           </div>
+          <!-- EXPEDIENTE -->
           <div class="pref-section">
-            <div class="pref-section-title">Cor de destaque</div>
-            <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Aplicada em botões, cards ativos, barras e badges.</div>
-            <div class="color-palette" id="color-palette"></div>
+            <div class="pref-section-title">Expediente</div>
+            <div class="pref-card">
+              <div class="pref-flow-row">
+                <div><div class="pref-flow-label">Entrada</div><div class="pref-flow-sub">Hora de início do expediente</div></div>
+                <input class="pref-time-input" id="pref-hora-entrada" type="time" value="08:00" onchange="saveSchedule()">
+              </div>
+              <div class="pref-flow-row">
+                <div><div class="pref-flow-label">Almoço</div><div class="pref-flow-sub">Saída para o almoço</div></div>
+                <input class="pref-time-input" id="pref-hora-almoco" type="time" value="12:00" onchange="saveSchedule()">
+              </div>
+              <div class="pref-flow-row">
+                <div><div class="pref-flow-label">Retorno</div><div class="pref-flow-sub">Hora prevista de retorno</div></div>
+                <input class="pref-time-input" id="pref-hora-retorno" type="time" value="13:00" onchange="saveSchedule()">
+              </div>
+              <div class="pref-flow-row">
+                <div><div class="pref-flow-label">Saída</div><div class="pref-flow-sub">Fim do expediente</div></div>
+                <input class="pref-time-input" id="pref-hora-saida" type="time" value="17:00" onchange="saveSchedule()">
+              </div>
+              <div class="pref-flow-row">
+                <div><div class="pref-flow-label">Carga diária (h)</div><div class="pref-flow-sub">Horas de trabalho esperadas por dia</div></div>
+                <input class="pref-time-input" id="pref-carga-diaria" type="number" min="1" max="24" value="8" style="width:60px" onchange="saveSchedule()">
+              </div>
+            </div>
           </div>
+          <!-- APURAÇÃO DE HORAS -->
           <div class="pref-section">
-            <div class="pref-section-title">Fluxo Diário</div>
-            <div class="pref-flow-row">
-              <div><div class="pref-flow-label">Entrada</div><div class="pref-flow-sub">Hora de início do expediente</div></div>
-              <input class="pref-time-input" id="pref-hora-entrada" type="time" value="08:00" onchange="saveSchedule()">
-            </div>
-            <div class="pref-flow-row">
-              <div><div class="pref-flow-label">Almoço</div><div class="pref-flow-sub">Saída para o almoço</div></div>
-              <input class="pref-time-input" id="pref-hora-almoco" type="time" value="12:00" onchange="saveSchedule()">
-            </div>
-            <div class="pref-flow-row">
-              <div><div class="pref-flow-label">Retorno</div><div class="pref-flow-sub">Hora prevista de retorno</div></div>
-              <input class="pref-time-input" id="pref-hora-retorno" type="time" value="13:00" onchange="saveSchedule()">
-            </div>
-            <div class="pref-flow-row">
-              <div><div class="pref-flow-label">Saída</div><div class="pref-flow-sub">Fim do expediente</div></div>
-              <input class="pref-time-input" id="pref-hora-saida" type="time" value="17:00" onchange="saveSchedule()">
-            </div>
-            <div class="pref-flow-row">
-              <div><div class="pref-flow-label">Carga diária (h)</div><div class="pref-flow-sub">Horas de trabalho esperadas por dia</div></div>
-              <input class="pref-time-input" id="pref-carga-diaria" type="number" min="1" max="24" value="8" style="width:60px" onchange="saveSchedule()">
-            </div>
-            <div class="pref-flow-row">
-              <div><div class="pref-flow-label">WIP Limit</div><div class="pref-flow-sub">Máx. de OSs simultâneas em "Em andamento"</div></div>
-              <input class="pref-time-input" id="pref-wip-limit" type="number" min="1" max="20" value="5" style="width:60px" onchange="saveSchedule()">
-            </div>
-            <div class="pref-seg-block">
-              <div style="display:flex;align-items:center;justify-content:space-between">
-                <div><div class="pref-flow-label">Formato de horas na apropriação</div><div class="pref-flow-sub">Vale para exibição e edição de horas</div></div>
+            <div class="pref-section-title">Apuração de Horas</div>
+            <div class="pref-card">
+              <!-- Período -->
+              <div class="pref-flow-row" style="flex-wrap:wrap;gap:10px">
+                <div style="flex:1;min-width:0"><div class="pref-flow-label">Período de apuração</div><div class="pref-flow-sub">Intervalo usado em relatórios e no Ponto</div></div>
+                <div class="pref-seg-control" id="pref-periodo-apuracao">
+                  <div class="pref-seg-opt" data-per="mensal" onclick="setPeriodoApuracao('mensal')">Mensal</div>
+                  <div class="pref-seg-opt" data-per="quinzenal" onclick="setPeriodoApuracao('quinzenal')">Quinzenal (16→15)</div>
+                </div>
+              </div>
+              <div class="pref-periodo-preview" id="pref-periodo-preview"></div>
+              <!-- Formato de horas -->
+              <div class="pref-flow-row" style="flex-wrap:wrap;gap:10px">
+                <div style="flex:1;min-width:0"><div class="pref-flow-label">Formato de horas</div><div class="pref-flow-sub">Vale para exibição e edição de horas</div></div>
                 <div class="pref-seg-control" id="pref-formato-horas">
                   <div class="pref-seg-opt" data-fmt="decimal" onclick="setFormatoHoras('decimal')">Decimal</div>
                   <div class="pref-seg-opt" data-fmt="hhmm" onclick="setFormatoHoras('hhmm')">HH:MM</div>
                 </div>
               </div>
-              <div class="pref-seg-example" id="pref-formato-horas-exemplo"></div>
+              <div class="pref-seg-example" id="pref-formato-horas-exemplo" style="padding:7px 14px 10px;border-top:1px solid var(--border)"></div>
+            </div>
+          </div>
+          <!-- KANBAN -->
+          <div class="pref-section">
+            <div class="pref-section-title">Kanban</div>
+            <div class="pref-card">
+              <div class="pref-flow-row">
+                <div><div class="pref-flow-label">WIP Limit</div><div class="pref-flow-sub">Máx. de OSs simultâneas em "Em andamento"</div></div>
+                <input class="pref-time-input" id="pref-wip-limit" type="number" min="1" max="50" value="5" style="width:60px" onchange="saveSchedule()">
+              </div>
             </div>
           </div>
         </div>
@@ -6231,6 +6259,27 @@ function loadSchedulePrefs(){
   if(el('pref-carga-diaria'))el('pref-carga-diaria').value=s.cargaDiaria||8;
   if(el('pref-wip-limit'))el('pref-wip-limit').value=s.wipLimit||5;
   renderFormatoHorasControl();
+  renderPeriodoApuracaoControl();
+}
+
+// ── PERÍODO DE APURAÇÃO ───────────────────────────────────────────────────
+function getPeriodoApuracao(){return getSchedule().periodoApuracao||'quinzenal';}
+function setPeriodoApuracao(val){
+  var s=getSchedule();s.periodoApuracao=val;
+  localStorage.setItem('vs_schedule',JSON.stringify(s));
+  renderPeriodoApuracaoControl();
+}
+function renderPeriodoApuracaoControl(){
+  var val=getPeriodoApuracao();
+  var wrap=document.getElementById('pref-periodo-apuracao');
+  if(wrap)wrap.querySelectorAll('.pref-seg-opt').forEach(function(o){o.classList.toggle('active',o.getAttribute('data-per')===val);});
+  var prev=document.getElementById('pref-periodo-preview');
+  if(!prev)return;
+  var per=calcPeriodoEquipe(0);
+  var M=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  var di=parseInt(per.inicio.split('-')[1],10)-1,dd=per.inicio.split('-')[2];
+  var df=parseInt(per.fim.split('-')[1],10)-1,de=per.fim.split('-')[2];
+  prev.textContent='📅 Período atual: '+dd+'/'+M[di]+' – '+de+'/'+M[df];
 }
 
 // ── FORMATO DE HORAS (decimal vs HH:MM) — vale para ponto e apropriação ───────
@@ -7869,6 +7918,18 @@ function calcPeriodoVersao(versao){
 }
 function calcPeriodoEquipe(offset){
   var hoje=new Date();
+  var tipo=getPeriodoApuracao();
+  if(tipo==='mensal'){
+    // Período: 1º ao último dia do mês (offset em meses a partir do atual)
+    var mes=hoje.getMonth()+offset,ano=hoje.getFullYear();
+    while(mes<0){mes+=12;ano--;}
+    while(mes>11){mes-=12;ano++;}
+    var ultimo=new Date(ano,mes+1,0).getDate();
+    var inicio=ano+'-'+String(mes+1).padStart(2,'0')+'-01';
+    var fim=ano+'-'+String(mes+1).padStart(2,'0')+'-'+String(ultimo).padStart(2,'0');
+    return{inicio:inicio,fim:fim};
+  }
+  // Quinzenal: 16 do mês M → 15 do mês M+1 (comportamento original)
   var day=hoje.getDate();
   var baseMes=day>15?hoje.getMonth():hoje.getMonth()-1;
   var baseAno=hoje.getFullYear();
