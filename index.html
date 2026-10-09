@@ -820,6 +820,12 @@ textarea.form-input{resize:vertical;min-height:70px}
           </div>
         </div>
         <div id="tab-aprop" style="display:none">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-ghost" title="Período anterior" onclick="_pontoFiltro.offset--;renderAprop()">←</button>
+            <span id="aprop-periodo-label" style="font-size:14px;font-weight:500;min-width:145px;text-align:center"></span>
+            <button class="btn btn-sm btn-ghost" title="Próximo período" onclick="_pontoFiltro.offset++;renderAprop()">→</button>
+            <span id="aprop-periodo-resumo" style="font-size:12px;color:var(--muted);margin-left:auto"></span>
+          </div>
           <div style="font-size:13px;color:var(--muted);margin-bottom:14px">Distribua as horas de cada dia entre as OSs da versão. Use <strong>∷ Distribuição</strong> para apropriar automaticamente dias sem lançamento.</div>
           <div id="aprop-list"></div>
         </div>
@@ -2547,7 +2553,27 @@ function load(){
 }
 function save(){try{localStorage.setItem('vs4',JSON.stringify(S))}catch(e){}}
 function toMin(t){var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1])}
-function calcHorasStr(m){var p=m.trim().split(/\s+/);if(p.length<4)return 0;var h=((toMin(p[3])-toMin(p[0]))-(toMin(p[2])-toMin(p[1])))/60;return Math.max(0,parseFloat(h.toFixed(2)))}
+// Horas trabalhadas a partir das marcações: soma os pares fechados
+// (1ª→2ª, 3ª→4ª, ...). Uma marcação ímpar no fim é um intervalo em aberto:
+// ainda não conta, mas não zera as horas dos pares anteriores.
+function calcHorasMarcacoes(ms){
+  if(typeof ms==='string')ms=ms.trim().split(/\s+/);
+  ms=(ms||[]).filter(function(m){return/^\d{2}:\d{2}$/.test(m)});
+  var tot=0;
+  for(var i=0;i+1<ms.length;i+=2)tot+=Math.max(0,toMin(ms[i+1])-toMin(ms[i]));
+  return parseFloat((tot/60).toFixed(2));
+}
+function calcHorasStr(m){return calcHorasMarcacoes(m||'')}
+function hojeLocal(){return new Date().toLocaleDateString('sv')}
+// Importação: se o dia já tem mais marcações registradas no app do que o
+// arquivo importado (ex.: relatório gerado antes da 3ª batida), mantém as do app.
+function _manterMarcacoesMaisCompletas(novo,atual){
+  var n=function(m){return((m||'').match(/\d{2}:\d{2}/g)||[]).length};
+  if(n(atual.marcacoes)>n(novo.marcacoes)){
+    novo.marcacoes=atual.marcacoes;
+    novo.horasTrabalhadas=calcHorasMarcacoes(atual.marcacoes.match(/\d{2}:\d{2}/g));
+  }
+}
 function horasOS(osId){return S.pontos.reduce(function(a,p){var ap=(p.apropriacoes||[]).find(function(x){return x.osId===osId});return a+(ap?ap.horas:0)},0)}
 function fmtDate(d,pre){if(!d)return'';var dt=new Date(d+'T12:00:00');return(pre||'')+dt.toLocaleDateString('pt-BR')}
 function daysBetween(a,b){return Math.round((new Date(b+'T12:00:00')-new Date(a+'T12:00:00'))/864e5)}
@@ -2763,13 +2789,12 @@ function renderDash(){
   }
   var filtroVid=vfEl?vfEl.value:'todas';
 
-  // OSs filtradas por versão; pontos filtrados pelo período da versão (16/mês-1 a 15/mês)
+  // OSs filtradas por versão; pontos filtrados pelo período de apuração
+  // (Preferências > Pessoal): ciclo 16→15 ou mês civil 01→último dia.
   var ossF=filtroVid==='todas'?S.oss:S.oss.filter(function(o){return o.versaoId===filtroVid});
-  var pontosF=S.pontos;
-  if(filtroVid!=='todas'){
-    var vp=calcPeriodoVersao(S.versoes.find(function(v){return v.id===filtroVid}));
-    if(vp)pontosF=S.pontos.filter(function(p){return p.data>=vp.inicio&&p.data<=vp.fim;});
-  }
+  var vp=filtroVid==='todas'?calcPeriodoEquipe(0):calcPeriodoHorasVersao(S.versoes.find(function(v){return v.id===filtroVid}));
+  var pontosF=vp?S.pontos.filter(function(p){return p.data>=vp.inicio&&p.data<=vp.fim;}):S.pontos;
+  var perLbl=vp?labelPeriodoEquipe(vp.inicio,vp.fim):'registradas';
   var conc=ossF.filter(function(o){return o.status==='concluido'}).length;
   var horasPonto=pontosF.reduce(function(a,p){return a+(p.horasTrabalhadas||0)},0);
   var horasAprop=pontosF.reduce(function(a,p){return a+((p.apropriacoes||[]).reduce(function(b,x){return b+x.horas},0))},0);
@@ -2778,7 +2803,7 @@ function renderDash(){
     '<div class="metric-card"><div class="metric-val">'+S.versoes.length+'</div><div class="metric-lbl">Versões</div><div style="font-size:11px;color:var(--hint);margin-top:2px">total geral</div></div>'+
     '<div class="metric-card"><div class="metric-val">'+ossF.length+'</div><div class="metric-lbl">OSs registradas</div>'+(filtroVid!=='todas'?'<div style="font-size:11px;color:var(--hint);margin-top:2px">'+S.versoes.find(function(v){return v.id===filtroVid}).nome+'</div>':'')+'</div>'+
     '<div class="metric-card"><div class="metric-val">'+conc+'</div><div class="metric-lbl">OSs concluídas</div>'+(ossF.length?'<div style="font-size:11px;color:var(--hint);margin-top:2px">'+(ossF.length?Math.round(conc/ossF.length*100):0)+'% do total</div>':'')+'</div>'+
-    '<div class="metric-card"><div class="metric-val">'+horasPonto.toFixed(1)+'h</div><div class="metric-lbl">Horas ponto</div><div style="font-size:11px;color:var(--hint);margin-top:2px">registradas</div></div>'+
+    '<div class="metric-card"><div class="metric-val">'+horasPonto.toFixed(1)+'h</div><div class="metric-lbl">Horas ponto</div><div style="font-size:11px;color:var(--hint);margin-top:2px">'+perLbl+'</div></div>'+
     '<div class="metric-card"><div class="metric-val">'+horasAprop.toFixed(1)+'h</div><div class="metric-lbl">Horas apropriadas</div><div style="font-size:11px;color:var(--hint);margin-top:2px">'+(horasPonto>0?Math.round(horasAprop/horasPonto*100)+'% do ponto':'')+'</div></div>';
 
   // banners
@@ -2805,7 +2830,7 @@ function renderDash(){
   ativasEl.innerHTML=ativas.map(function(v){
     var voss=S.oss.filter(function(o){return o.versaoId===v.id});
     var tot=voss.length,cn=voss.filter(function(o){return o.status==='concluido'}).length,pct=tot?Math.round(cn/tot*100):0;
-    var vper=calcPeriodoVersao(v);
+    var vper=calcPeriodoHorasVersao(v);
     var pontosV=vper?S.pontos.filter(function(p){return p.data>=vper.inicio&&p.data<=vper.fim;}):[];
     var hv=pontosV.reduce(function(a,p){return a+(p.horasTrabalhadas||0)},0);
     return'<div class="versao-card ativa-border" onclick="goKanban(\''+v.id+'\')">'+
@@ -4310,30 +4335,11 @@ function fmtTime(el){var v=el.value.replace(/\D/g,'');if(v.length>=3)v=v.slice(0
 function calcTotal(){
   var vs=['p-m1','p-m2','p-m3','p-m4'].map(function(id){return document.getElementById(id).value});
   var ok=function(v){return/^\d{2}:\d{2}$/.test(v);};
-  if(vs.every(ok)){var h=((toMin(vs[3])-toMin(vs[0]))-(toMin(vs[2])-toMin(vs[1])))/60;document.getElementById('p-total').textContent=h>0?fmtHoras(h):'--';}
-  else if(ok(vs[0])&&ok(vs[1])&&!ok(vs[2])&&!ok(vs[3])){var h2=(toMin(vs[1])-toMin(vs[0]))/60;document.getElementById('p-total').textContent=h2>0?h2.toFixed(2)+'h (sem almoço)':'--';}
-  else document.getElementById('p-total').textContent='--';
-}
-function salvarPonto(){
-  var data=document.getElementById('p-data').value;if(!data)return;
-  var ms=['p-m1','p-m2','p-m3','p-m4'].map(function(id){return document.getElementById(id).value}).filter(function(m){return/^\d{2}:\d{2}$/.test(m)});
-  var marcacoes=ms.join(' ');
-  var horasTrabalhadas=ms.length===4?calcHorasStr(marcacoes):(ms.length===2?Math.max(0,parseFloat(((toMin(ms[1])-toMin(ms[0]))/60).toFixed(2))):0);
-  var dia=document.getElementById('p-dia').value;
-  var versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
-  var editId=document.getElementById('modal-ponto').dataset.editId;
-  if(editId){
-    // Modo edição — preserva apropriacoes e id
-    var ei=S.pontos.findIndex(function(p){return p.id===editId});
-    if(ei>-1){S.pontos[ei]=Object.assign({},S.pontos[ei],{data:data,dia:dia,marcacoes:marcacoes,horasTrabalhadas:horasTrabalhadas})}
-  }else{
-    var ei2=S.pontos.findIndex(function(p){return p.data===data});
-    var reg={id:uid(),data:data,dia:dia,marcacoes:marcacoes,horasTrabalhadas:horasTrabalhadas,versaoId:versaoId,apropriacoes:[]};
-    if(ei2>-1){reg.id=S.pontos[ei2].id;reg.apropriacoes=S.pontos[ei2].apropriacoes||[];S.pontos[ei2]=reg}
-    else{S.pontos.push(reg);S.pontos.sort(function(a,b){return b.data.localeCompare(a.data)})}
-  }
-  save();closeModal('modal-ponto');renderPontoList();renderDash();
-  toast(editId?'Registro atualizado':'Ponto salvo');
+  var ms=vs.filter(ok);
+  var el=document.getElementById('p-total');
+  if(!ms.length){el.textContent='--';return}
+  var h=calcHorasMarcacoes(ms);
+  el.textContent=(h>0?fmtHoras(h):'0h')+(ms.length%2?' (em aberto desde '+ms[ms.length-1]+')':'');
 }
 function renderPontoList(){
   var el=document.getElementById('ponto-list');
@@ -4366,6 +4372,7 @@ function renderPontoList(){
         '<span class="ponto-day-date">'+fmtDate(p.data)+'</span>'+
         '<span style="font-size:11px;color:var(--muted)">'+p.dia+'</span>'+
         (p.marcacoes?'<span style="font-family:var(--mono);font-size:11px;color:var(--hint)">'+p.marcacoes.trim()+'</span>':'')+
+        (function(){var mk=(p.marcacoes||'').match(/\d{2}:\d{2}/g)||[];return mk.length%2?'<span style="font-size:10px;color:var(--amber-text)" title="Número ímpar de marcações: o intervalo atual ainda não entra no total">● em aberto</span>':''})()+
       '</div>'+
       '<div style="display:flex;align-items:center;gap:10px">'+
         '<span class="ponto-day-horas">'+fmtHoras(h)+'</span>'+
@@ -4652,14 +4659,25 @@ function ossParaApropriarMinha(){
 }
 function renderAprop(){
   var el=document.getElementById('aprop-list');
-  if(!S.pontos.length){el.innerHTML='<div style="color:var(--hint);font-size:13px">Nenhum registro de ponto. Adicione dias no "Registro diário".</div>';return}
+  if(S._focusApropOS)_pontoFiltro.offset=0;
+  var per=calcPeriodoEquipe(_pontoFiltro.offset||0);
+  var lbl=document.getElementById('aprop-periodo-label');
+  if(lbl)lbl.textContent=labelPeriodoEquipe(per.inicio,per.fim);
+  var pontosPer=S.pontos.filter(function(p){return p.data>=per.inicio&&p.data<=per.fim;});
+  var res=document.getElementById('aprop-periodo-resumo');
+  if(res){
+    var hP=pontosPer.reduce(function(a,p){return a+(p.horasTrabalhadas||0)},0);
+    var hA=pontosPer.reduce(function(a,p){return a+(p.apropriacoes||[]).reduce(function(b,x){return b+x.horas},0)},0);
+    res.textContent='Ponto: '+fmtHoras(hP)+' · Apropriado: '+fmtHoras(hA);
+  }
+  if(!pontosPer.length){el.innerHTML='<div style="color:var(--hint);font-size:13px">Nenhum registro de ponto neste período. Adicione dias no "Registro diário".</div>';return}
   var ossDisp=ossParaApropriarMinha();
-  el.innerHTML=S.pontos.map(function(p){
+  el.innerHTML=pontosPer.map(function(p){
     var st=getApropState(p);
     return'<div class="ponto-day" id="aprop-day-'+p.id+'">'+renderApropDay(p,st,ossDisp)+'</div>';
   }).join('');
-  S.pontos.forEach(function(p){var st=getApropState(p);if(st.editing)attachSlider(p.id)});
-  if(S._focusApropOS){var osId=S._focusApropOS;S._focusApropOS=null;var today=new Date().toISOString().slice(0,10);var targetP=S.pontos.find(function(p){return p.data===today})||S.pontos[0];if(targetP)startEditAprop(targetP.id,ossDisp,osId)}
+  pontosPer.forEach(function(p){var st=getApropState(p);if(st.editing)attachSlider(p.id)});
+  if(S._focusApropOS){var osId=S._focusApropOS;S._focusApropOS=null;var today=hojeLocal();var targetP=pontosPer.find(function(p){return p.data===today})||pontosPer[0];if(targetP)startEditAprop(targetP.id,ossDisp,osId)}
 }
 function renderApropDay(p,st,ossDisp){
   var h=p.horasTrabalhadas||0;
@@ -5018,18 +5036,12 @@ function importPontoXLSX(input){
           // Limpar artefatos como "18:00:" (XLSX do dia 24/04 tinha isso)
           marcStr=marcStr.replace(/\d{2}:\d{2}:/g,function(m){return m.slice(0,5)});
           var tempos=marcStr.match(/\d{2}:\d{2}/g)||[];
-          if(tempos.length<2)return; // sem saída registrada — pular
+          if(!tempos.length)return; // sem nenhuma marcação
 
           // Sempre recalcular horasTrabalhadas a partir das marcações reais
-          // (o campo HorasTrabalhadas do XLSX pode ser fração Excel ou estar ausente)
-          var marcStr4=tempos.join(' ');
-          var ht=tempos.length>=4?calcHorasStr(marcStr4):0;
-          if(ht<=0&&tempos.length>=2){
-            // Fallback: entrada → saída sem descontar almoço
-            function toMin2(t){var p=t.split(':');return parseInt(p[0])*60+parseInt(p[1])}
-            ht=Math.max(0,(toMin2(tempos[tempos.length-1])-toMin2(tempos[0]))/60);
-            ht=parseFloat(ht.toFixed(2));
-          }
+          // (o campo HorasTrabalhadas do XLSX pode ser fração Excel ou estar ausente).
+          // Pares fechados somam; marcação ímpar (dia em aberto) é mantida sem zerar.
+          var ht=calcHorasMarcacoes(tempos);
 
           porData[dataISO]={data:dataISO,dia:diaVal,marcacoes:tempos.join('  '),horasTrabalhadas:ht};
         });
@@ -5041,7 +5053,11 @@ function importPontoXLSX(input){
           var ei=S.pontos.findIndex(function(p){return p.data===reg.data});
           var novo={id:uid(),data:reg.data,dia:reg.dia,marcacoes:reg.marcacoes,
             horasTrabalhadas:reg.horasTrabalhadas,versaoId:versaoId,apropriacoes:[]};
-          if(ei>-1){novo.id=S.pontos[ei].id;novo.apropriacoes=S.pontos[ei].apropriacoes||[];S.pontos[ei]=novo}
+          if(ei>-1){
+            novo.id=S.pontos[ei].id;novo.apropriacoes=S.pontos[ei].apropriacoes||[];
+            _manterMarcacoesMaisCompletas(novo,S.pontos[ei]);
+            S.pontos[ei]=novo;
+          }
           else S.pontos.push(novo);
           imported++;
         });
@@ -5201,7 +5217,7 @@ function importCSV(input){
       var ht=calcHorasStr(reg.marcacoes);
       var ei=S.pontos.findIndex(function(p){return p.data===reg.data});
       var novo={id:uid(),data:reg.data,dia:reg.dia,marcacoes:reg.marcacoes,horasTrabalhadas:ht,versaoId:versaoId,apropriacoes:[]};
-      if(ei>-1){novo.id=S.pontos[ei].id;novo.apropriacoes=S.pontos[ei].apropriacoes||[];S.pontos[ei]=novo}
+      if(ei>-1){novo.id=S.pontos[ei].id;novo.apropriacoes=S.pontos[ei].apropriacoes||[];_manterMarcacoesMaisCompletas(novo,S.pontos[ei]);S.pontos[ei]=novo}
       else{S.pontos.push(novo)}
       imported++;
     });
@@ -6135,19 +6151,23 @@ function salvarPonto(){
   var data=document.getElementById('p-data').value;if(!data)return;
   var ms=['p-m1','p-m2','p-m3','p-m4'].map(function(id){return document.getElementById(id).value}).filter(function(m){return/^\d{2}:\d{2}$/.test(m)});
   var marcacoes=ms.join(' ');
-  var horasTrabalhadas=ms.length===4?calcHorasStr(marcacoes):(ms.length===2?Math.max(0,parseFloat(((toMin(ms[1])-toMin(ms[0]))/60).toFixed(2))):0);
+  // Pares fechados somam (1ª→2ª, 3ª→4ª); marcação ímpar fica em aberto sem zerar o resto
+  var horasTrabalhadas=calcHorasMarcacoes(ms);
   var dia=document.getElementById('p-dia').value;
-  var versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
   var editId=document.getElementById('modal-ponto').dataset.editId;
   // Captura marcações anteriores antes do save para detectar transição < 4 → 4
   var pontoExist=editId?S.pontos.find(function(p){return p.id===editId}):S.pontos.find(function(p){return p.data===data});
   var marcAntes=pontoExist&&pontoExist.marcacoes?pontoExist.marcacoes.trim().split(/\s+/).filter(Boolean):[];
-  var pontoId=editId||uid();
-  var reg={id:pontoId,data:data,dia:dia,marcacoes:marcacoes,horasTrabalhadas:horasTrabalhadas,versaoId:versaoId,apropriacoes:[]};
-  if(editId){var ep=S.pontos.find(function(p){return p.id===editId});if(ep)reg.apropriacoes=ep.apropriacoes||[]}
+  var versaoId=(pontoExist&&pontoExist.versaoId)||S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
+  var pontoId=pontoExist?pontoExist.id:uid();
+  // Nunca descarta o que já foi apropriado no dia (manual ou auto-apropriação do
+  // foco) — antes, registrar uma nova marcação via "+ Registrar Ponto" num dia
+  // já existente gravava apropriacoes:[] e apagava tudo.
+  var reg={id:pontoId,data:data,dia:dia,marcacoes:marcacoes,horasTrabalhadas:horasTrabalhadas,versaoId:versaoId,
+    apropriacoes:pontoExist?(pontoExist.apropriacoes||[]):[]};
   dbSalvarPonto(reg).then(function(saved){
     reg.id=saved.id;
-    var ei=S.pontos.findIndex(function(p){return p.id===editId||p.data===data});
+    var ei=S.pontos.findIndex(function(p){return p.id===pontoId||p.data===data});
     if(ei>-1)S.pontos[ei]=reg;
     else{S.pontos.push(reg);S.pontos.sort(function(a,b){return b.data.localeCompare(a.data)})}
     closeModal('modal-ponto');renderPontoList();renderDash();
@@ -6268,6 +6288,11 @@ function setPeriodoApuracao(val){
   var s=getSchedule();s.periodoApuracao=val;
   localStorage.setItem('vs_schedule',JSON.stringify(s));
   renderPeriodoApuracaoControl();
+  _pontoFiltro.offset=0;_dashEquipe.periodoOffset=0;S.pontosEquipe=[];
+  if(document.getElementById('ponto-list'))renderPontoList();
+  var tabAp=document.getElementById('tab-aprop');
+  if(tabAp&&tabAp.style.display!=='none')renderAprop();
+  renderDash();
 }
 function renderPeriodoApuracaoControl(){
   var val=getPeriodoApuracao();
@@ -6318,6 +6343,9 @@ function renderFormatoHorasControl(){
   if(ex)ex.innerHTML='Exemplo: <b>'+fmtHorasAs(7.5,fmt)+'</b> em vez de <b>'+fmtHorasAs(7.5,outro)+'</b>';
 }
 
+// 'mensal' (01→último dia) ou 'ciclo' (16→15), conforme Preferências > Pessoal
+function getApuracao(){return getPeriodoApuracao()==='mensal'?'mensal':'ciclo'}
+
 // ── PESO INTELIGENTE ─────────────────────────────────────────────────────────
 function getVelocityFactor(){return parseFloat(localStorage.getItem('vs_velocity_factor'))||1.0}
 
@@ -6349,7 +6377,7 @@ function onPesoInputChange(v){
 }
 
 // ── PLANEJAMENTO DO DIA ───────────────────────────────────────────────────────
-function getDayKey(){return'vs_dayplan_'+new Date().toISOString().slice(0,10)}
+function getDayKey(){return'vs_dayplan_'+hojeLocal()}
 
 function getDayPlan(){
   try{return JSON.parse(localStorage.getItem(getDayKey()))||null}catch(e){return null}
@@ -6510,11 +6538,18 @@ function confirmDayPlan(){
     return;
   }
   // Move selecionadas para andamento; devolve as não-selecionadas que estavam em andamento
+  // (apropriando antes o tempo de foco rastreado delas, como em qualquer saída de andamento)
+  var stFoco=getFocusState(),hApropPlano=0,nApropPlano=0;
   all.forEach(function(os){
     if(selectedIds.indexOf(os.id)!==-1){
       if(os.status!=='andamento'){os.status='andamento';dbMoverOS(os.id,'andamento').then(function(){sincronizarStatusRedmine(os,'andamento');}).catch(function(){});}
     } else {
-      if(os.status==='andamento'){os.status='afazer';dbMoverOS(os.id,'afazer').then(function(){sincronizarStatusRedmine(os,'afazer');}).catch(function(){});}
+      if(os.status==='andamento'){
+        if(stFoco&&stFoco.osId===os.id){closeFocusSession(stFoco);saveFocusState(null);stFoco=null;updateFocusUI();}
+        var seg=focusAccumulatedToday(os.id);
+        if(seg>=APROP_MIN_SECONDS){hApropPlano+=_registrarAproprFoco(os.id,seg).horas;nApropPlano++;}
+        os.status='afazer';dbMoverOS(os.id,'afazer').then(function(){sincronizarStatusRedmine(os,'afazer');}).catch(function(){});
+      }
     }
   });
   var plan={createdAt:new Date().toISOString(),confirmedAt:new Date().toISOString(),entries:entries};
@@ -6524,7 +6559,7 @@ function confirmDayPlan(){
   // Auto-inicia foco na primeira OS em andamento se ainda não há foco
   var firstAndamento=_proxOssAndamento(null);
   if(firstAndamento&&!getFocusState())startFocus(firstAndamento.id);
-  toast('Planejamento salvo — fila do dia definida!');
+  toast('Planejamento salvo — fila do dia definida!'+(nApropPlano?' '+fmtHoras(hApropPlano)+' de foco apropriadas em '+nApropPlano+' OS.':''));
 }
 
 function recalcVelocityFactor(){
@@ -6553,7 +6588,7 @@ var _resumeExtraEntries=[];
 var _undoAprop=null;
 var APROP_MIN_SECONDS=300;
 
-function getResumeKey(){return'vs_dayresume_'+new Date().toISOString().slice(0,10)}
+function getResumeKey(){return'vs_dayresume_'+hojeLocal()}
 function getDayResume(){var k=getResumeKey();try{return JSON.parse(localStorage.getItem(k))||{entries:[]}}catch(e){return{entries:[]}}}
 function saveDayResume(r){localStorage.setItem(getResumeKey(),JSON.stringify(r))}
 
@@ -7091,8 +7126,8 @@ function saveFocusState(st){
   if(st)localStorage.setItem('vs_focus_state',JSON.stringify(st));
   else localStorage.removeItem('vs_focus_state');
 }
-function getTodayLog(){var k='vs_time_log_'+new Date().toISOString().slice(0,10);try{return JSON.parse(localStorage.getItem(k))||[]}catch(e){return[]}}
-function saveTodayLog(log){localStorage.setItem('vs_time_log_'+new Date().toISOString().slice(0,10),JSON.stringify(log))}
+function getTodayLog(){var k='vs_time_log_'+hojeLocal();try{return JSON.parse(localStorage.getItem(k))||[]}catch(e){return[]}}
+function saveTodayLog(log){localStorage.setItem('vs_time_log_'+hojeLocal(),JSON.stringify(log))}
 
 function focusAccumulatedToday(osId){
   var log=getTodayLog();
@@ -7103,6 +7138,13 @@ function startFocus(osId){
   var st=getFocusState();
   if(st&&st.osId===osId&&!st.pausedAt)return;
   if(st&&!st.pausedAt)closeFocusSession(st);
+  // Troca de demanda (trocar/alternar foco, iniciar foco em outra OS): apropria
+  // o tempo rastreado da OS anterior sem movê-la de coluna.
+  if(st&&st.osId!==osId){
+    saveFocusState(null);
+    var segAnt=focusAccumulatedToday(st.osId);
+    if(segAnt>=APROP_MIN_SECONDS)_autoApropriar(st.osId,segAnt,null);
+  }
   var now=Date.now();
   var accumulated=focusAccumulatedToday(osId);
   var newSt={osId:osId,startedAt:now,pausedAt:null,accumulated:accumulated};
@@ -7143,9 +7185,12 @@ function concludeOS(osId){
   renderKanban();
 }
 
-function _autoApropriar(osId,totalSeg,newStatus){
+// Núcleo da auto-apropriação: soma o tempo de foco do dia da OS na apropriação
+// do ponto de hoje (cria o dia se não existir), registra no resumo do dia e
+// limpa o log da OS. Não move a OS nem mostra toast.
+function _registrarAproprFoco(osId,totalSeg){
   var horas=parseFloat((totalSeg/3600).toFixed(2));
-  var hoje=new Date().toISOString().slice(0,10);
+  var hoje=hojeLocal();
   var diaSem=DIAS_SEMANA[new Date().getDay()];
   var versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
 
@@ -7179,17 +7224,28 @@ function _autoApropriar(osId,totalSeg,newStatus){
   dbSalvarPonto(ponto).then(function(saved){
     if(isNovo)ponto.id=saved.id;
   }).catch(function(e){toast('Erro ao apropriar: '+e.message,'err')});
+  delete _apropState[ponto.id];
+  if(document.getElementById('ponto-list'))renderPontoList();
+
+  return{horas:horas,ponto:ponto,logSnap:logSnap};
+}
+
+// newStatus: coluna destino quando a OS está saindo de 'andamento';
+// null quando é só troca de foco (a OS continua onde está).
+function _autoApropriar(osId,totalSeg,newStatus){
+  var r=_registrarAproprFoco(osId,totalSeg);
+  var horas=r.horas,ponto=r.ponto,logSnap=r.logSnap;
 
   // Move OS — _doMoveOS direto, nunca moveOS: evita reentrar em
   // _finalizarAndamento (que chamaria _autoApropriar de novo e duplicaria a apropriação)
-  _doMoveOS(osId,newStatus);
+  if(newStatus)_doMoveOS(osId,newStatus);
 
   // Prepara undo state
   if(_undoAprop&&_undoAprop.timeoutId)clearTimeout(_undoAprop.timeoutId);
   var os=S.oss.find(function(o){return o.id===osId});
   var osNum=os?os.num:osId;
   var tid=setTimeout(function(){_undoAprop=null;},5000);
-  _undoAprop={osId:osId,horas:horas,pontoRef:ponto,logSnapshot:logSnap,timeoutId:tid};
+  _undoAprop={osId:osId,horas:horas,pontoRef:ponto,logSnapshot:logSnap,newStatus:newStatus,timeoutId:tid};
 
   // Toast com botão Desfazer (5s)
   var el=document.getElementById('toast');
@@ -7219,13 +7275,19 @@ function _desfazerAprop(){
   dr.entries=dr.entries.filter(function(e){return e.osId!==u.osId||!e.auto});
   saveDayResume(dr);
 
+  delete _apropState[ponto.id];
+  if(document.getElementById('ponto-list'))renderPontoList();
+
+  // Move OS de volta para andamento (se ela tinha saído) — antes de restaurar o
+  // log, porque reabrir uma concluída zera o log do dia dessa OS
+  if(u.newStatus)moveOS(u.osId,'andamento');
+
   // Restaura log
   var logFull=getTodayLog().concat(u.logSnapshot);
   saveTodayLog(logFull);
 
-  // Move OS de volta para andamento e reinicia foco
-  moveOS(u.osId,'andamento');
-  startFocus(u.osId);
+  if(u.newStatus)startFocus(u.osId);
+  else updateFocusUI();
 
   document.getElementById('toast').classList.remove('show');
 }
@@ -7239,7 +7301,7 @@ function _desfazerAprop(){
 function _finalizarAndamento(osId,newStatus){
   var st=getFocusState();
   var eraFocal=st&&st.osId===osId;
-  if(eraFocal)closeFocusSession(st);
+  if(eraFocal){closeFocusSession(st);saveFocusState(null);}
 
   var totalSeg=focusAccumulatedToday(osId);
   if(totalSeg>=APROP_MIN_SECONDS){
@@ -7916,7 +7978,22 @@ function calcPeriodoVersao(versao){
   var inicio=prevYear+'-'+String(prevMonth+1).padStart(2,'0')+'-16';
   return{inicio:inicio,fim:fim};
 }
+// Período de horas de uma versão para o Dashboard: no modo mensal é o mês
+// civil da data da versão; no ciclo, o mesmo 16→15 de calcPeriodoVersao.
+// (A vigência da versão continua sempre em calcPeriodoVersao.)
+function calcPeriodoHorasVersao(versao){
+  if(getApuracao()!=='mensal')return calcPeriodoVersao(versao);
+  if(!versao||!versao.data)return null;
+  var p=versao.data.split('-');
+  return _periodoMesCivil(parseInt(p[0],10),parseInt(p[1],10)-1);
+}
+function _periodoMesCivil(ano,mes){
+  var ultimo=new Date(ano,mes+1,0).getDate();
+  var mm=String(mes+1).padStart(2,'0');
+  return{inicio:ano+'-'+mm+'-01',fim:ano+'-'+mm+'-'+String(ultimo).padStart(2,'0')};
+}
 function calcPeriodoEquipe(offset){
+  offset=offset||0;
   var hoje=new Date();
   var tipo=getPeriodoApuracao();
   if(tipo==='mensal'){
@@ -7948,7 +8025,9 @@ function labelPeriodoEquipe(inicio,fim){
   var M=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
   var mi=parseInt(inicio.split('-')[1],10)-1;
   var mf=parseInt(fim.split('-')[1],10)-1;
-  return'16/'+M[mi]+' – 15/'+M[mf];
+  if(inicio.slice(8)==='01'&&inicio.slice(0,7)===fim.slice(0,7))
+    return'01 – '+fim.slice(8)+'/'+M[mi]+'/'+inicio.slice(0,4);
+  return inicio.slice(8)+'/'+M[mi]+' – '+fim.slice(8)+'/'+M[mf];
 }
 
 async function loadPontosEquipe(userIds,inicio,fim){
