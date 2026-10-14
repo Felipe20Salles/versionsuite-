@@ -40,9 +40,51 @@
     return String(a.criado_em||'').localeCompare(String(b.criado_em||''));
   }
 
+  var ACEITA_OS=['aprovada','execucao','pausada','concluida'];
+  function aceitaOS(status){return ACEITA_OS.indexOf(status)>-1}
+
+  function primeiraEtapa(etapas,configs){
+    var puladas={};
+    (configs||[]).forEach(function(c){if(c.pulada)puladas[c.etapa_id]=true});
+    var ativas=(etapas||[]).filter(function(e){return e.ativo!==false&&!puladas[e.id]})
+      .sort(function(a,b){return a.ordem-b.ordem});
+    return ativas.length?ativas[0].id:null;
+  }
+
+  // Que mudanças na OS podem mexer no status do projeto dela
+  function gatilhosDaOS(antes,depois){
+    var g=[];
+    if(!depois||!depois.projetoId)return g;
+    var a=antes||{};
+    if(a.projetoId!==depois.projetoId){
+      g.push('os_vinculada');
+      if(depois.status==='andamento')g.push('os_andamento');
+      return g;
+    }
+    if(a.status!=='andamento'&&depois.status==='andamento')g.push('os_andamento');
+    if(a.status==='concluido'&&depois.status!=='concluido')g.push('os_reaberta');
+    return g;
+  }
+
+  function proximoStatusAuto(status,gatilho){
+    if(status==='aprovada'&&gatilho==='os_andamento')return'execucao';
+    if(status==='concluida'&&(gatilho==='os_vinculada'||gatilho==='os_reaberta'))return'execucao';
+    return null;
+  }
+
+  // O pai do Redmine só vincula OS sem projeto e que não foi desvinculada à mão
+  function vinculoPorPai(os,projetos){
+    if(!os||os.projetoId||os.projetoDesvinculado||!os.paiRedmine)return null;
+    var pai=String(os.paiRedmine);
+    var p=(projetos||[]).find(function(x){return x.pai_redmine&&String(x.pai_redmine)===pai&&aceitaOS(x.status)});
+    return p?p.id:null;
+  }
+
   var api={
     FATOR:FATOR,tamanhoPorHoras:tamanhoPorHoras,horasEsforco:horasEsforco,
-    calcPrioridade:calcPrioridade,compararBacklog:compararBacklog
+    calcPrioridade:calcPrioridade,compararBacklog:compararBacklog,
+    ACEITA_OS:ACEITA_OS,aceitaOS:aceitaOS,primeiraEtapa:primeiraEtapa,
+    gatilhosDaOS:gatilhosDaOS,proximoStatusAuto:proximoStatusAuto,vinculoPorPai:vinculoPorPai
   };
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.ProjCore=api;
 })(typeof window!=='undefined'?window:this);

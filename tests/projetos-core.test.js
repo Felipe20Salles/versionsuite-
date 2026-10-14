@@ -43,3 +43,53 @@ test('compararBacklog: legal primeiro, depois prioridade, nulas no fim, empate p
   ];
   assert.deepEqual(itens.sort(C.compararBacklog).map(x => x.id), ['c', 'd', 'e', 'a', 'b']);
 });
+
+test('aceitaOS', () => {
+  ['aprovada', 'execucao', 'pausada', 'concluida'].forEach(s => assert.equal(C.aceitaOS(s), true));
+  ['ideia', 'avaliacao', 'recusada', 'cancelada'].forEach(s => assert.equal(C.aceitaOS(s), false));
+});
+
+test('primeiraEtapa: menor ordem, ativa e não pulada', () => {
+  const etapas = [
+    { id: 'e3', ordem: 3 }, { id: 'e1', ordem: 1, ativo: false }, { id: 'e2', ordem: 2 }, { id: 'e4', ordem: 4 },
+  ];
+  assert.equal(C.primeiraEtapa(etapas, []), 'e2');
+  assert.equal(C.primeiraEtapa(etapas, [{ etapa_id: 'e2', pulada: true }]), 'e3');
+  assert.equal(C.primeiraEtapa([], []), null);
+});
+
+test('gatilhosDaOS', () => {
+  assert.deepEqual(C.gatilhosDaOS({}, { projetoId: null, status: 'andamento' }), []);
+  assert.deepEqual(C.gatilhosDaOS({}, { projetoId: 'p', status: 'afazer' }), ['os_vinculada']);
+  assert.deepEqual(C.gatilhosDaOS({ projetoId: 'x', status: 'andamento' }, { projetoId: 'p', status: 'andamento' }), ['os_vinculada', 'os_andamento']);
+  assert.deepEqual(C.gatilhosDaOS({ projetoId: 'p', status: 'afazer' }, { projetoId: 'p', status: 'andamento' }), ['os_andamento']);
+  assert.deepEqual(C.gatilhosDaOS({ projetoId: 'p', status: 'concluido' }, { projetoId: 'p', status: 'afazer' }), ['os_reaberta']);
+  assert.deepEqual(C.gatilhosDaOS({ projetoId: 'p', status: 'concluido' }, { projetoId: 'p', status: 'andamento' }), ['os_andamento', 'os_reaberta']);
+  assert.deepEqual(C.gatilhosDaOS({ projetoId: 'p', status: 'andamento' }, { projetoId: 'p', status: 'concluido' }), []);
+});
+
+test('proximoStatusAuto', () => {
+  assert.equal(C.proximoStatusAuto('aprovada', 'os_andamento'), 'execucao');
+  assert.equal(C.proximoStatusAuto('aprovada', 'os_vinculada'), null);
+  assert.equal(C.proximoStatusAuto('concluida', 'os_vinculada'), 'execucao');
+  assert.equal(C.proximoStatusAuto('concluida', 'os_reaberta'), 'execucao');
+  assert.equal(C.proximoStatusAuto('concluida', 'os_andamento'), null);
+  // Pausada nunca sai sozinha da pausa
+  assert.equal(C.proximoStatusAuto('pausada', 'os_andamento'), null);
+  assert.equal(C.proximoStatusAuto('pausada', 'os_reaberta'), null);
+  assert.equal(C.proximoStatusAuto('execucao', 'os_andamento'), null);
+});
+
+test('vinculoPorPai', () => {
+  const projetos = [
+    { id: 'p1', pai_redmine: '500', status: 'cancelada' },
+    { id: 'p2', pai_redmine: '500', status: 'execucao' },
+    { id: 'p3', pai_redmine: '600', status: 'ideia' },
+  ];
+  assert.equal(C.vinculoPorPai({ paiRedmine: '500' }, projetos), 'p2');
+  assert.equal(C.vinculoPorPai({ paiRedmine: 500 }, projetos), 'p2');
+  assert.equal(C.vinculoPorPai({ paiRedmine: '600' }, projetos), null);
+  assert.equal(C.vinculoPorPai({ paiRedmine: '500', projetoId: 'px' }, projetos), null);
+  assert.equal(C.vinculoPorPai({ paiRedmine: '500', projetoDesvinculado: true }, projetos), null);
+  assert.equal(C.vinculoPorPai({ paiRedmine: '' }, projetos), null);
+});
