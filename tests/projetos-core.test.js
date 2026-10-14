@@ -140,3 +140,30 @@ test('etapaNaData: dia local e última etapa do dia vence', () => {
   assert.equal(C.etapaNaData(ints, local('2026-01-07T15:00:00-03:00')), 'imp');
   assert.equal(C.etapaNaData(ints, '2025-12-31'), null);
 });
+
+test('horasPorEtapa: tipo de atividade > data > sem etapa', () => {
+  const etapas = [
+    { id: 'esp', tipos_atividade: ['9'] },
+    { id: 'dev', tipos_atividade: ['10'] },
+    { id: 'old', ativo: false, tipos_atividade: ['11'] },
+  ];
+  const eventos = [
+    ev('etapa', 'esp', 'a', '2026-01-05T12:00:00-03:00'),
+    ev('etapa', 'dev', 'd', '2026-01-10T12:00:00-03:00'),
+  ];
+  const linhas = [
+    { data: '2026-01-12', activity_type_id: '9', horas: 2 },   // tipo ligado a esp, mesmo estando em dev
+    { data: '2026-01-06', activity_type_id: 10, horas: '3' },  // número × string
+    { data: '2026-01-06', activity_type_id: null, horas: 1.5 },// sem tipo → pela data → esp
+    { data: '2026-01-11', activity_type_id: '77', horas: 1 },  // tipo não ligado → pela data → dev
+    { data: '2026-01-11', activity_type_id: '11', horas: 1 },  // tipo de etapa desativada → pela data → dev
+    { data: '2026-01-01', activity_type_id: null, horas: 4 },  // antes da 1ª etapa → sem etapa
+  ];
+  assert.deepEqual(C.horasPorEtapa(linhas, eventos, etapas), {
+    porEtapa: { esp: 3.5, dev: 5 }, semEtapa: 4, total: 12.5,
+  });
+});
+
+test('horasPorEtapa: vazio', () => {
+  assert.deepEqual(C.horasPorEtapa([], [], []), { porEtapa: {}, semEtapa: 0, total: 0 });
+});

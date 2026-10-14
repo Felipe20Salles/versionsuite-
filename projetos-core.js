@@ -130,7 +130,28 @@
     return achou;
   }
 
+  function r2(n){return Math.round(n*100)/100}
+
+  // Regra C: tipo de atividade ligado a uma etapa ativa; senão, a etapa do dia; senão, "sem etapa"
+  function horasPorEtapa(linhas,eventos,etapas){
+    var mapa={};
+    (etapas||[]).forEach(function(e){
+      if(e.ativo===false)return;
+      (e.tipos_atividade||[]).forEach(function(t){mapa[String(t)]=e.id});
+    });
+    var ints=intervalosEtapa(eventos),por={},sem=0,total=0;
+    (linhas||[]).forEach(function(l){
+      var h=num(l.horas)||0;if(!h)return;
+      total+=h;
+      var et=(l.activity_type_id!=null&&mapa[String(l.activity_type_id)])||etapaNaData(ints,String(l.data).slice(0,10));
+      if(et)por[et]=(por[et]||0)+h;else sem+=h;
+    });
+    Object.keys(por).forEach(function(k){por[k]=r2(por[k])});
+    return{porEtapa:por,semEtapa:r2(sem),total:r2(total)};
+  }
+
   var api={
+    horasPorEtapa:horasPorEtapa,
     intervalosEtapa:intervalosEtapa,tempoPorPapel:tempoPorPapel,diasNaEtapaAtual:diasNaEtapaAtual,
     dataLocal:dataLocal,etapaNaData:etapaNaData,
     FATOR:FATOR,tamanhoPorHoras:tamanhoPorHoras,horasEsforco:horasEsforco,
