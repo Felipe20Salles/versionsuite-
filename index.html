@@ -1479,6 +1479,8 @@ textarea.form-input{resize:vertical;min-height:70px}
   </div>
 </div>
 
+<div class="pj-drawer" id="pj-drawer"></div>
+
 <!-- MODAL IDEIA DE PROJETO -->
 <div class="modal-overlay" id="modal-pj-ideia">
   <div class="modal" style="max-width:560px">
@@ -6052,7 +6054,6 @@ function pjLinhaBacklog(p){
     '<span class="badge pj-badge-st">'+PJ_STATUS[p.status]+'</span>'+
   '</div>';
 }
-function pjAbrir(id){openPjIdeia(id)} // substituído pelo painel na Task 11
 
 function pjPodeEditarIdeia(p){
   if(!p)return true;
@@ -6227,6 +6228,174 @@ async function pjDrop(ev,col){
     await projMoverEtapa(p,col.getAttribute('data-etapa'));
     renderPjQuadro();toast('Etapa: '+projEtapa(p.etapa_id).nome);
   }catch(e){toast('Erro: '+e.message,'err')}
+}
+
+function pjFechar(){_pjAberto=null;document.getElementById('pj-drawer').classList.remove('open')}
+function pjPodeMexerNaOS(os){return can('gerir_projetos')||(os&&os.createdBy===CURRENT_USER.id)}
+function pjEventoTexto(e){
+  if(e.tipo==='status')return(e.de?PJ_STATUS[e.de]+' → ':'')+(PJ_STATUS[e.para]||e.para);
+  if(e.tipo==='etapa'||e.tipo==='retorno'){var et=projEtapa(e.para);return(e.tipo==='retorno'?'↩ Retorno para ':'Etapa: ')+(et?et.nome:'?')}
+  if(e.tipo==='vinculo_os')return e.para?'Vinculada '+e.para.replace('os:','OS '):'Desvinculada '+String(e.de||'').replace('os:','OS ');
+  return'Comentário';
+}
+function pjAbrir(id){
+  var p=projById(id);if(!p)return;
+  _pjAberto=id;
+  var gerir=can('gerir_projetos');
+  var c=ProjCore.calcPrioridade(p,projConfigs(id));
+  var acoes=gerir?(PJ_ACOES[p.status]||[]).map(function(a){
+    return'<button class="btn btn-sm '+(a==='aprovar'||a==='concluir'?'btn-primary':'btn-ghost')+'" onclick="pjAcao(\''+id+'\',\''+a+'\')">'+PJ_ACAO_LABEL[a]+'</button>';
+  }).join(' '):'';
+  var emFluxo=['aprovada','execucao','pausada','concluida'].indexOf(p.status)>-1;
+  var html=
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'+
+      '<div><div style="font-size:17px;font-weight:600;color:var(--text)">'+escHtml(p.titulo)+'</div>'+
+      '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><span class="badge pj-badge-st">'+PJ_STATUS[p.status]+'</span>'+(p.legal?'<span class="badge pj-badge-legal">Legal</span>':'')+
+      '<span class="badge pj-badge-st">Prioridade '+(c.prioridade===null?'—':c.prioridade.toFixed(1))+'</span></div></div>'+
+      '<button class="btn btn-sm btn-ghost" onclick="pjFechar()">✕</button>'+
+    '</div>'+
+    '<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">'+
+      (pjPodeEditarIdeia(p)?'<button class="btn btn-sm btn-ghost" onclick="openPjIdeia(\''+id+'\')">✏ Editar ideia e notas</button>':'')+acoes+
+    '</div>'+
+    (p.descricao?'<div style="margin-top:12px;font-size:13px;color:var(--muted);white-space:pre-wrap">'+escHtml(p.descricao)+'</div>':'')+
+    '<div class="pj-sec"><div class="pj-sec-title">Dados</div>'+
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+        '<div class="form-group"><label class="form-label">Data-alvo</label><input type="date" class="form-input" value="'+(p.data_alvo||'')+'" '+(gerir?'':'disabled')+' onchange="pjSetCampo(\''+id+'\',\'data_alvo\',this.value||null)"></div>'+
+        '<div class="form-group"><label class="form-label">Pai no Redmine</label><input class="form-input" value="'+escHtml(p.pai_redmine||'')+'" placeholder="nº da tarefa-pai" '+(gerir?'':'disabled')+' onchange="pjSetCampo(\''+id+'\',\'pai_redmine\',this.value.trim()||null)"></div>'+
+      '</div>'+
+      '<div style="font-size:11px;color:var(--hint)">Notas: '+(c.valor!==null?'Impacto '+p.nota_impacto+' · Urgência '+p.nota_urgencia+' · Alinhamento '+p.nota_alinhamento+' (valor '+c.valor+')':'—')+
+        ' · Esforço: '+(c.tamanho?c.tamanho+(c.horas?' ('+c.horas+'h)':''):'—')+'</div>'+
+    '</div>'+
+    '<div class="pj-sec"><div class="pj-sec-title">Fluxo do projeto</div><div id="pj-fluxo-'+id+'">'+pjFluxoHtml(p,null)+'</div></div>'+
+    (emFluxo?'<div class="pj-sec"><div class="pj-sec-title">Tempo por papel</div>'+pjTempoHtml(p)+'</div>':'')+
+    (emFluxo?'<div class="pj-sec"><div class="pj-sec-title">OSs vinculadas</div>'+pjOSsHtml(p)+'</div>':'')+
+    '<div class="pj-sec"><div class="pj-sec-title">Linha do tempo</div>'+
+      '<div style="display:flex;gap:6px;margin-bottom:10px"><input class="form-input" id="pj-novo-coment" placeholder="Comentar…"><button class="btn btn-sm" onclick="pjComentar(\''+id+'\')">Enviar</button></div>'+
+      pjTimelineHtml(p)+
+    '</div>';
+  var dr=document.getElementById('pj-drawer');dr.innerHTML=html;dr.classList.add('open');
+  if(emFluxo)pjCarregarRealizado(p);
+}
+
+function pjFluxoHtml(p,real){
+  var gerir=can('gerir_projetos');
+  var etapas=projEtapasAtivas();
+  var linhas=etapas.map(function(e){
+    var c=projConfigs(p.id).find(function(x){return x.etapa_id===e.id})||{};
+    var papel=projPapel(e.papel_id);
+    var atual=p.etapa_id===e.id;
+    var userOpts='<option value="">— usuário —</option>'+S_USERS.map(function(u){
+      return'<option value="'+u.id+'"'+(c.responsavel_user_id===u.id?' selected':'')+'>'+escHtml(u.displayName)+'</option>';
+    }).join('');
+    var est=+c.horas_estimadas||0;
+    var rea=real?(real.porEtapa[e.id]||0):null;
+    var pct=rea!==null&&est>0?Math.round(rea/est*100):null;
+    var resp=gerir
+      ?'<select class="form-input" style="padding:3px 6px;font-size:11px" onchange="pjSetConfig(\''+p.id+'\',\''+e.id+'\',\'responsavel_user_id\',this.value||null)">'+userOpts+'</select>'+
+        (c.responsavel_user_id?'':'<input class="form-input" style="padding:3px 6px;font-size:11px;margin-top:3px" placeholder="ou nome livre" value="'+escHtml(c.responsavel_nome||'')+'" onchange="pjSetConfig(\''+p.id+'\',\''+e.id+'\',\'responsavel_nome\',this.value.trim()||null)">')
+      :escHtml(pjResponsavel(p,e.id).split(' · ')[1]||'—');
+    return'<tr style="'+(c.pulada?'opacity:.45;':'')+(atual?'background:var(--card2);':'')+'">'+
+      '<td>'+(atual?'▶ ':'')+escHtml(e.nome)+'<div style="font-size:10px;color:var(--hint)">'+escHtml(papel?papel.nome:'')+(papel&&papel.externo?' (externo)':'')+'</div></td>'+
+      '<td>'+resp+'</td>'+
+      '<td style="width:64px">'+(gerir?'<input type="number" min="0" step="1" class="form-input" style="padding:3px 6px;font-size:11px;width:58px" value="'+est+'" onchange="pjSetConfig(\''+p.id+'\',\''+e.id+'\',\'horas_estimadas\',parseFloat(this.value)||0)">':est+'h')+'</td>'+
+      '<td style="font-family:var(--mono);white-space:nowrap">'+(rea===null?'…':rea+'h'+(pct!==null?' <span style="color:'+(pct>100?'var(--red-text)':'var(--hint)')+'">('+pct+'%)</span>':''))+'</td>'+
+      '<td style="width:40px;text-align:center">'+(gerir?'<input type="checkbox" title="Pular etapa neste projeto" '+(c.pulada?'checked':'')+' onchange="pjSetConfig(\''+p.id+'\',\''+e.id+'\',\'pulada\',this.checked)" style="accent-color:var(--accent)">':(c.pulada?'pulada':''))+'</td>'+
+    '</tr>';
+  }).join('');
+  var sem=real&&real.semEtapa?'<tr><td colspan="3" style="color:var(--hint)">Sem etapa</td><td style="font-family:var(--mono)">'+real.semEtapa+'h</td><td></td></tr>':'';
+  var mover=gerir&&p.status==='execucao'?'<div style="margin-top:8px;display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)">Mover para '+
+    '<select class="form-input" style="width:auto;padding:3px 6px;font-size:12px" onchange="pjMoverPeloPainel(\''+p.id+'\',this.value)"><option value="">—</option>'+
+    etapas.map(function(e){return'<option value="'+e.id+'">'+escHtml(e.nome)+'</option>'}).join('')+'</select></div>':'';
+  return'<table class="pj-tbl"><tr><th>Etapa</th><th>Responsável</th><th>Estim.</th><th>Realizado</th><th>Pular</th></tr>'+linhas+sem+'</table>'+
+    (real?'<div style="font-size:11px;color:var(--hint);margin-top:4px">Total apropriado: '+real.total+'h</div>':'')+mover;
+}
+async function pjCarregarRealizado(p){
+  var r=await sb.rpc('projeto_horas_agregadas',{p_projeto_id:p.id});
+  if(r.error){console.warn(r.error);return}
+  var real=ProjCore.horasPorEtapa(r.data||[],projEventos(p.id),PJ.etapas);
+  var box=document.getElementById('pj-fluxo-'+p.id);
+  if(box&&_pjAberto===p.id)box.innerHTML=pjFluxoHtml(p,real);
+}
+async function pjMoverPeloPainel(id,etapaId){
+  var p=projById(id);if(!p||!etapaId)return;
+  try{await projMoverEtapa(p,etapaId);renderProjetos();pjAbrir(id)}catch(e){toast('Erro: '+e.message,'err')}
+}
+async function pjSetConfig(pid,etapaId,campo,valor){
+  var atual=PJ.configs.find(function(x){return x.projeto_id===pid&&x.etapa_id===etapaId});
+  var row=Object.assign({workspace_id:CURRENT_WORKSPACE_ID,projeto_id:pid,etapa_id:etapaId,horas_estimadas:0,pulada:false,responsavel_user_id:null,responsavel_nome:null},atual||{});
+  row[campo]=valor;
+  // Ao escolher um usuário, o nome fica guardado para aparecer como ex-membro se ele sair do workspace
+  if(campo==='responsavel_user_id'){var u=S_USERS.find(function(x){return x.id===valor});row.responsavel_nome=u?u.displayName:null}
+  if(campo==='responsavel_nome')row.responsavel_user_id=null;
+  var r=await sb.from('projeto_etapa_config').upsert(row,{onConflict:'projeto_id,etapa_id'}).select().single();
+  if(r.error){toast('Erro: '+r.error.message,'err');return}
+  if(atual)Object.assign(atual,r.data);else PJ.configs.push(r.data);
+  var p=projById(pid);
+  if(campo==='horas_estimadas')await projAtualizarPrioridade(p);
+  renderProjetos();pjAbrir(pid);
+}
+async function pjSetCampo(id,campo,valor){
+  var p=projById(id);if(!p||!can('gerir_projetos'))return;
+  var campos={};campos[campo]=valor;
+  try{await projSalvar(p,campos);renderProjetos();toast('Salvo')}catch(e){toast('Erro: '+e.message,'err')}
+}
+
+function pjTempoHtml(p){
+  var t=ProjCore.tempoPorPapel(projEventos(p.id));
+  var partes=Object.keys(t.dias).map(function(pid){var pp=projPapel(pid);return(pp?escHtml(pp.nome):'?')+' '+t.dias[pid]+'d'});
+  return'<div style="font-size:13px;color:var(--text)">'+(partes.join(' · ')||'—')+'</div>'+
+    '<div style="font-size:11px;color:var(--hint);margin-top:2px">'+t.retornos+' retorno'+(t.retornos===1?'':'s')+'</div>';
+}
+function pjOSsHtml(p){
+  var oss=S.oss.filter(function(o){return o.projetoId===p.id});
+  var porVersao={};
+  oss.forEach(function(o){(porVersao[o.versaoId]=porVersao[o.versaoId]||[]).push(o)});
+  var grupos=Object.keys(porVersao).map(function(vid){
+    var v=S.versoes.find(function(x){return x.id===vid});
+    return'<div style="font-size:11px;color:var(--hint);margin:8px 0 4px">'+escHtml(v?v.nome:'Sem versão')+'</div>'+
+      porVersao[vid].map(function(o){
+        return'<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0">'+
+          '<span style="font-family:var(--mono);color:var(--muted)">#'+escHtml(o.num)+'</span>'+
+          '<span style="flex:1;color:var(--text)">'+escHtml(o.titulo)+'</span>'+
+          '<span class="badge pj-badge-st">'+statusLabel(o.status)+'</span>'+
+          (pjPodeMexerNaOS(o)?'<span style="cursor:pointer;color:var(--hint)" title="Desvincular" onclick="pjVincularOS(\''+o.id+'\',null)">×</span>':'')+
+        '</div>';
+      }).join('');
+  }).join('');
+  var candidatas=ProjCore.aceitaOS(p.status)?S.oss.filter(function(o){return o.projetoId!==p.id&&pjPodeMexerNaOS(o)}):[];
+  var sel=candidatas.length?'<div style="display:flex;gap:6px;margin-top:10px"><select class="form-input" id="pj-vinc-sel" style="font-size:12px"><option value="">Vincular OS…</option>'+
+    candidatas.map(function(o){return'<option value="'+o.id+'">#'+escHtml(o.num)+' '+escHtml(o.titulo)+(o.projetoId?' (em outro projeto)':'')+'</option>'}).join('')+
+    '</select><button class="btn btn-sm" onclick="var v=document.getElementById(\'pj-vinc-sel\').value;if(v)pjVincularOS(v,\''+p.id+'\')">Vincular</button></div>':'';
+  return(grupos||'<div style="font-size:12px;color:var(--hint)">Nenhuma OS vinculada.</div>')+sel;
+}
+function pjTimelineHtml(p){
+  return projEventos(p.id).slice().reverse().map(function(e){
+    var u=S_USERS.find(function(x){return x.id===e.autor_id});
+    var quando=new Date(e.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+    return'<div style="border-left:2px solid var(--border2);padding:2px 0 8px 10px;font-size:12px">'+
+      '<div style="color:var(--text)">'+escHtml(pjEventoTexto(e))+'</div>'+
+      (e.comentario?'<div style="color:var(--muted);white-space:pre-wrap">'+escHtml(e.comentario)+'</div>':'')+
+      '<div style="font-size:10px;color:var(--hint)">'+quando+(u?' · '+escHtml(u.displayName):'')+'</div>'+
+    '</div>';
+  }).join('')||'<div style="font-size:12px;color:var(--hint)">Sem eventos.</div>';
+}
+async function pjComentar(id){
+  var inp=document.getElementById('pj-novo-coment');var t=(inp.value||'').trim();if(!t)return;
+  try{await projEvento(id,'comentario',null,null,t);pjAbrir(id)}catch(e){toast('Erro: '+e.message,'err')}
+}
+// projetoId null = desvincular (marca para o pai do Redmine não revincular)
+async function pjVincularOS(osId,projetoId){
+  var os=S.oss.find(function(o){return o.id===osId});if(!os||!pjPodeMexerNaOS(os))return;
+  if(projetoId&&!ProjCore.aceitaOS((projById(projetoId)||{}).status)){toast('Este projeto não aceita OS no status atual','err');return}
+  var antigo=os.projetoId||null;
+  var campos={projeto_id:projetoId,projeto_desvinculado:!projetoId&&!!antigo};
+  var {error}=await sb.from('oss').update(campos).eq('id',osId);
+  if(error){toast('Erro: '+error.message,'err');return}
+  os.projetoId=projetoId;os.projetoDesvinculado=campos.projeto_desvinculado;
+  await projRegistrarVinculo(os,antigo,projetoId,null);
+  _projNotificarOS(osId,{status:os.status,projetoId:projetoId});
+  renderProjetos();if(_pjAberto)pjAbrir(_pjAberto);
+  if(document.getElementById('screen-kanban').classList.contains('active'))renderKanban();
 }
 
 // ── OPERAÇÕES SUPABASE ────────────────────────────────────────────────────────
