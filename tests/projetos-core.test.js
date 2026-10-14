@@ -167,3 +167,8 @@ test('horasPorEtapa: tipo de atividade > data > sem etapa', () => {
 test('horasPorEtapa: vazio', () => {
   assert.deepEqual(C.horasPorEtapa([], [], []), { porEtapa: {}, semEtapa: 0, total: 0 });
 });
+
+test('gatilhosDaOS: vincular OS já concluída não reabre projeto (paridade com o banco)', () => {
+  assert.deepEqual(C.gatilhosDaOS({}, { projetoId: 'p', status: 'concluido' }), []);
+  assert.deepEqual(C.gatilhosDaOS({ projetoId: 'x', status: 'concluido' }, { projetoId: 'p', status: 'concluido' }), []);
+});

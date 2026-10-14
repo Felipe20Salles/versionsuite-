@@ -32,7 +32,7 @@ create table if not exists projetos (
   nota_impacto smallint check (nota_impacto between 1 and 5),
   nota_urgencia smallint check (nota_urgencia between 1 and 5),
   nota_alinhamento smallint check (nota_alinhamento between 1 and 5),
-  legal boolean not null default false,
+  legal boolean not null default false check (not legal or nota_urgencia = 5),
   esforco_total_h numeric check (esforco_total_h >= 0),
   esforco_tamanho text check (esforco_tamanho in ('P','M','G','GG')),
   prioridade numeric,
@@ -187,7 +187,17 @@ returns trigger language plpgsql set search_path = public, pg_temp as $$
 begin
   new.prioridade := projeto_calc_prioridade(new);
   -- Relógio do servidor (a policy de eventos compara com now())
-  if tg_op = 'UPDATE' then new.atualizado_em := now(); end if;
+  if tg_op = 'UPDATE' then
+    new.atualizado_em := now();
+  else
+    new.criado_em := now();
+    new.atualizado_em := null;
+    -- Ideia nova não nasce em etapa; data-alvo e pai do Redmine são de quem gere
+    new.etapa_id := null;
+    if auth.uid() is not null and not pode_gerir_projetos(new.workspace_id) then
+      new.data_alvo := null; new.pai_redmine := null;
+    end if;
+  end if;
   return new;
 end;
 $$;
@@ -229,9 +239,15 @@ create policy projeto_eventos_insert on projeto_eventos for insert
                  and e.para = projeto_eventos.para and e.criado_em > now() - interval '2 minutes'))
          or (de is not null and para is null and exists (select 1 from oss o
                where o.workspace_id = projeto_eventos.workspace_id and 'os:' || o.num = projeto_eventos.de
-                 and o.projeto_id is distinct from projeto_eventos.projeto_id))))
+                 and o.projeto_id is distinct from projeto_eventos.projeto_id)
+             and exists (select 1 from projeto_eventos e
+               where e.projeto_id = projeto_eventos.projeto_id and e.tipo = 'vinculo_os'
+                 and e.para = projeto_eventos.de))))
       -- status/etapa: só registra uma mudança recém-gravada no projeto, e uma vez só
-      or (tipo in ('status', 'etapa', 'retorno') and exists (
+      or (((tipo = 'status' and para in ('ideia', 'execucao'))
+           or (tipo = 'etapa' and de is null
+               and papel_id is not distinct from (select e2.papel_id from projeto_etapas e2 where e2.id::text = projeto_eventos.para)))
+          and exists (
             select 1 from projetos p
             where p.id = projeto_eventos.projeto_id
               and coalesce(p.atualizado_em, p.criado_em) >= now() - interval '2 minutes'
@@ -242,6 +258,18 @@ create policy projeto_eventos_insert on projeto_eventos for insert
                                 and e.criado_em >= coalesce(p.atualizado_em, p.criado_em))))
     )
   );
+
+create or replace function projeto_eventos_carimbo()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  new.criado_em := now();
+  if auth.uid() is not null then new.autor_id := auth.uid(); end if;
+  return new;
+end;
+$$;
+drop trigger if exists projeto_eventos_carimbo on projeto_eventos;
+create trigger projeto_eventos_carimbo before insert on projeto_eventos
+  for each row execute function projeto_eventos_carimbo();
 
 -- ── Fluxo padrão ─────────────────────────────────────────────────────────────
 create or replace function seed_projeto_fluxo(ws_id uuid)

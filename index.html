@@ -5970,11 +5970,24 @@ async function projEvento(pid,tipo,de,para,comentario,papelId){
   if(error)throw error;
   PJ.eventos.push(data);return data;
 }
-async function projSalvar(p,campos){
-  campos.atualizado_em=new Date().toISOString();
-  var {data,error}=await sb.from('projetos').update(campos).eq('id',p.id).select().single();
+// esperado: {coluna:valor} que o projeto precisa ter no banco para a gravação valer
+async function projSalvar(p,campos,esperado){
+  var q=sb.from('projetos').update(campos).eq('id',p.id);
+  Object.keys(esperado||{}).forEach(function(k){q=esperado[k]==null?q.is(k,null):q.eq(k,esperado[k])});
+  var {data,error}=await q.select();
   if(error)throw error;
-  Object.assign(p,data);return p;
+  if(!data||!data.length){
+    await projRecarregar(p.id);
+    throw new Error('O projeto foi alterado por outra pessoa. A tela foi atualizada; tente de novo.');
+  }
+  Object.assign(p,data[0]);return p;
+}
+async function projRecarregar(id){
+  var r=await sb.from('projetos').select('*').eq('id',id).maybeSingle();
+  if(r.error||!r.data)return null;
+  var p=projById(id);
+  if(p)Object.assign(p,r.data);else{p=r.data;PJ.projetos.push(p)}
+  return p;
 }
 async function projAtualizarPrioridade(p){
   var pr=ProjCore.calcPrioridade(p,projConfigs(p.id)).prioridade;
@@ -5985,7 +5998,7 @@ async function projMudarStatus(p,novo,comentario){
   var de=p.status,campos={status:novo},entrar=null;
   if(novo==='execucao'&&!p.etapa_id){entrar=ProjCore.primeiraEtapa(PJ.etapas,projConfigs(p.id));campos.etapa_id=entrar}
   else if(novo==='execucao'&&de==='concluida')entrar=p.etapa_id;
-  await projSalvar(p,campos);
+  await projSalvar(p,campos,{status:de});
   await projEvento(p.id,'status',de,novo,comentario);
   if(entrar){var et=projEtapa(entrar);await projEvento(p.id,'etapa',null,entrar,null,et&&et.papel_id)}
 }
@@ -5993,14 +6006,15 @@ async function projMoverEtapa(p,etapaId){
   if(!etapaId||p.etapa_id===etapaId)return;
   var deId=p.etapa_id,de=projEtapa(deId),para=projEtapa(etapaId);
   var tipo=(de&&para&&para.ordem<de.ordem)?'retorno':'etapa';
-  await projSalvar(p,{etapa_id:etapaId});
+  await projSalvar(p,{etapa_id:etapaId},{etapa_id:deId,status:'execucao'});
   await projEvento(p.id,tipo,deId,etapaId,null,para&&para.papel_id);
 }
 var PJ_GATILHO_LABEL={os_vinculada:'OS vinculada',os_andamento:'OS em andamento',os_reaberta:'OS reaberta'};
 async function projAposMudancaOS(antes,depois){
   if(!PJ.ok||!depois||!depois.projetoId)return;
-  var p=projById(depois.projetoId);if(!p)return;
   var gs=ProjCore.gatilhosDaOS(antes,depois);
+  if(!gs.length)return;
+  var p=await projRecarregar(depois.projetoId);if(!p)return;
   for(var i=0;i<gs.length;i++){
     var novo=ProjCore.proximoStatusAuto(p.status,gs[i]);
     if(!novo)continue;
@@ -6437,7 +6451,7 @@ function renderFluxoProjetosPrefs(){
   var htmlEtapas=etapas.map(function(e,i){
     var papelOpts=papeis.map(function(pp){return'<option value="'+pp.id+'"'+(pp.id===e.papel_id?' selected':'')+'>'+escHtml(pp.nome)+'</option>'}).join('');
     var chips=tipos.map(function(t){
-      var tid=String(t.id),meu=(e.tipos_atividade||[]).indexOf(tid)>-1;
+      var tid=String(t.id).replace(/[^\w-]/g,''),meu=(e.tipos_atividade||[]).indexOf(tid)>-1;
       var dono=!meu&&etapas.find(function(o){return o.id!==e.id&&o.ativo!==false&&(o.tipos_atividade||[]).indexOf(tid)>-1});
       return'<label style="font-size:11px;display:inline-flex;gap:3px;align-items:center;margin:2px 8px 2px 0;color:'+(dono?'var(--hint)':'var(--muted)')+'" title="'+(dono?'Já ligado a '+escHtml(dono.nome):'')+'">'+
         '<input type="checkbox" '+(meu?'checked':'')+(dono?' disabled':'')+' onchange="fluxoToggleTipo(\''+e.id+'\',\''+tid+'\',this.checked)" style="accent-color:var(--accent)">'+escHtml(t.name)+'</label>';
@@ -6540,7 +6554,8 @@ async function dbDeletarOS(id){
   await sb.from('oss').delete().eq('id',id);
 }
 async function dbMoverOS(id,novoStatus){
-  await sb.from('oss').update({status:novoStatus}).eq('id',id);
+  var {error}=await sb.from('oss').update({status:novoStatus}).eq('id',id);
+  if(error)throw error;
   _projNotificarOS(id,{status:novoStatus});
 }
 async function dbToggleEntrega(id,entregas){

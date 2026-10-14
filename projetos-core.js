@@ -57,7 +57,8 @@
     if(!depois||!depois.projetoId)return g;
     var a=antes||{};
     if(a.projetoId!==depois.projetoId){
-      g.push('os_vinculada');
+      // OS já concluída não reabre o projeto (o banco exige uma OS não concluída)
+      if(depois.status!=='concluido')g.push('os_vinculada');
       if(depois.status==='andamento')g.push('os_andamento');
       return g;
     }
