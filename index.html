@@ -1479,6 +1479,31 @@ textarea.form-input{resize:vertical;min-height:70px}
   </div>
 </div>
 
+<!-- MODAL IDEIA DE PROJETO -->
+<div class="modal-overlay" id="modal-pj-ideia">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-title" id="pj-ideia-title">Nova ideia</div>
+    <input type="hidden" id="pj-ideia-id">
+    <div class="form-group"><label class="form-label">Título</label><input class="form-input" id="pj-ideia-titulo" placeholder="O que é a ideia, em uma linha"></div>
+    <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-input" id="pj-ideia-desc" rows="3" placeholder="Problema, quem ganha, contexto"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      <div class="form-group"><label class="form-label">Impacto no cliente</label><select class="form-input" id="pj-nota-impacto"></select></div>
+      <div class="form-group"><label class="form-label">Urgência / legal</label><select class="form-input" id="pj-nota-urgencia" onchange="pjAtualizarLegal()"></select></div>
+      <div class="form-group"><label class="form-label">Alinhamento</label><select class="form-input" id="pj-nota-alinhamento"></select></div>
+    </div>
+    <label class="form-check"><input type="checkbox" id="pj-legal" style="width:15px;height:15px;accent-color:var(--accent)"><span class="form-check-label">Obrigação legal</span><span class="form-check-hint">exige urgência 5</span></label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+      <div class="form-group"><label class="form-label">Esforço total (h)</label><input type="number" min="0" step="1" class="form-input" id="pj-esforco-h" placeholder="opcional"></div>
+      <div class="form-group"><label class="form-label">ou só o tamanho</label><select class="form-input" id="pj-esforco-tam"><option value="">—</option><option>P</option><option>M</option><option>G</option><option>GG</option></select></div>
+    </div>
+    <div style="font-size:11px;color:var(--hint)">As horas por etapa são informadas no painel do projeto. Quando existem, elas valem no lugar do total.</div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modal-pj-ideia')">Cancelar</button>
+      <button class="btn btn-primary" onclick="pjSalvarIdeia()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL VISITANTE -->
 <div class="modal-overlay" id="modal-visitor" style="z-index:600">
   <div class="modal" style="max-width:380px">
@@ -5999,8 +6024,130 @@ function renderProjetos(){
   av.innerHTML='';
   pjTab(_pjTab);
 }
-function renderPjBacklog(){document.getElementById('pj-tab-backlog').innerHTML='<div class="empty-col">Em construção</div>'}
 function renderPjQuadro(){document.getElementById('pj-tab-quadro').innerHTML='<div class="empty-col">Em construção</div>'}
+
+var _pjMostrarRecusadas=false;
+function renderPjBacklog(){
+  var el=document.getElementById('pj-tab-backlog');if(!el)return;
+  var lista=PJ.projetos.filter(function(p){
+    return p.status==='ideia'||p.status==='avaliacao'||(_pjMostrarRecusadas&&p.status==='recusada');
+  }).sort(ProjCore.compararBacklog);
+  el.innerHTML=
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:10px">'+
+      '<label class="form-check" style="margin:0"><input type="checkbox" '+(_pjMostrarRecusadas?'checked':'')+' onchange="_pjMostrarRecusadas=this.checked;renderPjBacklog()" style="width:15px;height:15px;accent-color:var(--accent)"><span class="form-check-label">Mostrar recusadas</span></label>'+
+    '</div>'+
+    (lista.map(pjLinhaBacklog).join('')||'<div class="empty-col">Nenhuma ideia ainda. Use “+ Nova ideia”.</div>');
+}
+function pjLinhaBacklog(p){
+  var c=ProjCore.calcPrioridade(p,projConfigs(p.id));
+  var autor=S_USERS.find(function(u){return u.id===p.sugerido_por});
+  var notas=c.valor!==null?'I'+p.nota_impacto+' · U'+p.nota_urgencia+' · A'+p.nota_alinhamento:'sem notas';
+  var esf=c.tamanho?' · esforço '+c.tamanho+(c.horas?' ('+c.horas+'h)':''):'';
+  return'<div class="pj-row" onclick="pjAbrir(\''+p.id+'\')">'+
+    '<div class="pj-prio" style="color:'+(c.prioridade===null?'var(--hint)':'var(--accent)')+'">'+(c.prioridade===null?'—':c.prioridade.toFixed(1))+'</div>'+
+    '<div style="flex:1;min-width:0">'+
+      '<div style="font-size:14px;color:var(--text);font-weight:500">'+escHtml(p.titulo)+'</div>'+
+      '<div style="font-size:11px;color:var(--hint);margin-top:2px">'+escHtml(autor?autor.displayName:'—')+' · '+notas+esf+'</div>'+
+    '</div>'+
+    (p.legal?'<span class="badge pj-badge-legal">Legal</span>':'')+
+    '<span class="badge pj-badge-st">'+PJ_STATUS[p.status]+'</span>'+
+  '</div>';
+}
+function pjAbrir(id){openPjIdeia(id)} // substituído pelo painel na Task 11
+
+function pjPodeEditarIdeia(p){
+  if(!p)return true;
+  return can('gerir_projetos')||(p.status==='ideia'&&p.sugerido_por===CURRENT_USER.id);
+}
+function pjNotasOpts(){return'<option value="">—</option>'+[1,2,3,4,5].map(function(n){return'<option>'+n+'</option>'}).join('')}
+function pjAtualizarLegal(){
+  var u=document.getElementById('pj-nota-urgencia').value,c=document.getElementById('pj-legal');
+  c.disabled=u!=='5';if(u!=='5')c.checked=false;
+}
+function openPjIdeia(id){
+  var p=id?projById(id):null;
+  if(p&&!pjPodeEditarIdeia(p)){toast('Sem permissão para editar esta ideia','err');return}
+  document.getElementById('pj-ideia-title').textContent=p?'Editar ideia':'Nova ideia';
+  document.getElementById('pj-ideia-id').value=p?p.id:'';
+  document.getElementById('pj-ideia-titulo').value=p?p.titulo:'';
+  document.getElementById('pj-ideia-desc').value=p&&p.descricao?p.descricao:'';
+  ['impacto','urgencia','alinhamento'].forEach(function(k){
+    var s=document.getElementById('pj-nota-'+k);s.innerHTML=pjNotasOpts();
+    s.value=p&&p['nota_'+k]!=null?String(p['nota_'+k]):'';
+  });
+  document.getElementById('pj-legal').checked=!!(p&&p.legal);
+  document.getElementById('pj-esforco-h').value=p&&p.esforco_total_h!=null?p.esforco_total_h:'';
+  document.getElementById('pj-esforco-tam').value=p&&p.esforco_tamanho?p.esforco_tamanho:'';
+  pjAtualizarLegal();
+  openModal('modal-pj-ideia');
+}
+async function pjSalvarIdeia(){
+  var id=document.getElementById('pj-ideia-id').value;
+  var titulo=document.getElementById('pj-ideia-titulo').value.trim();
+  if(!titulo){toast('Informe o título','err');return}
+  function nota(k){var x=document.getElementById('pj-nota-'+k).value;return x?parseInt(x,10):null}
+  var h=parseFloat(document.getElementById('pj-esforco-h').value);
+  var campos={
+    titulo:titulo,descricao:document.getElementById('pj-ideia-desc').value.trim()||null,
+    nota_impacto:nota('impacto'),nota_urgencia:nota('urgencia'),nota_alinhamento:nota('alinhamento'),
+    legal:document.getElementById('pj-legal').checked&&nota('urgencia')===5,
+    esforco_total_h:isNaN(h)||h<=0?null:h,
+    esforco_tamanho:document.getElementById('pj-esforco-tam').value||null
+  };
+  var p=id?projById(id):null;
+  campos.prioridade=ProjCore.calcPrioridade(Object.assign({},p||{},campos),p?projConfigs(p.id):[]).prioridade;
+  try{
+    if(!p){
+      campos.workspace_id=CURRENT_WORKSPACE_ID;campos.sugerido_por=CURRENT_USER.id;campos.status='ideia';
+      var r=await sb.from('projetos').insert(campos).select().single();
+      if(r.error)throw r.error;
+      p=r.data;PJ.projetos.push(p);
+      await projEvento(p.id,'status',null,'ideia','Ideia criada');
+    }else await projSalvar(p,campos);
+    // Só a pontuação de quem gere projetos leva Ideia → Em avaliação; nota de quem sugeriu é sugestão
+    if(p.status==='ideia'&&can('gerir_projetos')&&ProjCore.calcPrioridade(p,projConfigs(p.id)).valor!==null){
+      await projMudarStatus(p,'avaliacao','Pontuada');
+    }
+    closeModal('modal-pj-ideia');renderProjetos();
+    if(typeof _pjAberto!=='undefined'&&_pjAberto===p.id)pjAbrir(p.id);
+    toast('Ideia salva');
+  }catch(e){toast('Erro ao salvar ideia: '+e.message,'err')}
+}
+
+var PJ_ACOES={
+  ideia:['recusar','cancelar'],avaliacao:['aprovar','recusar','cancelar'],recusada:['reabrir'],
+  aprovada:['cancelar'],execucao:['pausar','concluir','cancelar'],pausada:['retomar','cancelar'],
+  concluida:['cancelar'],cancelada:[]
+};
+var PJ_ACAO_LABEL={aprovar:'✓ Aprovar',recusar:'Recusar',reabrir:'Reabrir',pausar:'Pausar',retomar:'Retomar',concluir:'✓ Concluir',cancelar:'Cancelar projeto'};
+var PJ_ACAO_STATUS={aprovar:'aprovada',recusar:'recusada',reabrir:'avaliacao',pausar:'pausada',retomar:'execucao',concluir:'concluida',cancelar:'cancelada'};
+function pjPedirComentario(titulo){
+  return modalConfirm(titulo,
+    '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Comentário (obrigatório)</div>'+
+    '<textarea class="form-input" id="pj-coment" rows="3"></textarea>','Confirmar','btn-primary'
+  ).then(function(ok){
+    if(!ok)return null;
+    var t=(document.getElementById('pj-coment').value||'').trim();
+    if(!t){toast('O comentário é obrigatório','err');return null}
+    return t;
+  });
+}
+async function pjAcao(id,acao){
+  var p=projById(id);
+  if(!p||!can('gerir_projetos'))return;
+  if((PJ_ACOES[p.status]||[]).indexOf(acao)===-1)return;
+  var coment=null;
+  if(acao==='recusar'||acao==='cancelar'){
+    coment=await pjPedirComentario(acao==='recusar'?'Recusar ideia':'Cancelar projeto');
+    if(coment===null)return;
+  }
+  try{
+    await projMudarStatus(p,PJ_ACAO_STATUS[acao],coment);
+    renderProjetos();if(_pjAberto===id)pjAbrir(id);
+    toast(PJ_STATUS[p.status]);
+  }catch(e){toast('Erro: '+e.message,'err')}
+}
+var _pjAberto=null;
 
 // ── OPERAÇÕES SUPABASE ────────────────────────────────────────────────────────
 
