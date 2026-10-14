@@ -142,9 +142,16 @@ begin
          is not distinct from
          (old.titulo, old.descricao, old.nota_impacto, old.nota_urgencia, old.nota_alinhamento, old.legal,
           old.esforco_total_h, old.esforco_tamanho, old.data_alvo, old.pai_redmine)
-     and (old.status = 'aprovada' or new.etapa_id is not distinct from old.etapa_id)
-     and exists (select 1 from oss o where o.projeto_id = old.id
-                 and (old.status = 'concluida' or o.status = 'andamento')) then
+     -- Aprovada → entra na 1ª etapa ativa não pulada; Concluída → volta para a mesma etapa
+     and ((old.status = 'aprovada' and new.etapa_id = (
+             select e.id from projeto_etapas e
+             where e.workspace_id = old.workspace_id and e.ativo
+               and not exists (select 1 from projeto_etapa_config c
+                               where c.projeto_id = old.id and c.etapa_id = e.id and c.pulada)
+             order by e.ordem limit 1)
+           and exists (select 1 from oss o where o.projeto_id = old.id and o.status = 'andamento'))
+       or (old.status = 'concluida' and new.etapa_id is not distinct from old.etapa_id
+           and exists (select 1 from oss o where o.projeto_id = old.id and o.status <> 'concluido'))) then
     return new;
   end if;
   raise exception 'Sem permissão para alterar este projeto (requer "Gerir projetos").';
@@ -216,7 +223,10 @@ create policy projeto_eventos_insert on projeto_eventos for insert
       -- vínculo: a OS citada tem de estar mesmo vinculada (para) ou fora (de) deste projeto
       or (tipo = 'vinculo_os' and (
             (para is not null and de is null and exists (select 1 from oss o
-               where o.projeto_id = projeto_eventos.projeto_id and 'os:' || o.num = projeto_eventos.para))
+               where o.projeto_id = projeto_eventos.projeto_id and 'os:' || o.num = projeto_eventos.para)
+             and not exists (select 1 from projeto_eventos e
+               where e.projeto_id = projeto_eventos.projeto_id and e.tipo = 'vinculo_os'
+                 and e.para = projeto_eventos.para and e.criado_em > now() - interval '2 minutes'))
          or (de is not null and para is null and exists (select 1 from oss o
                where o.workspace_id = projeto_eventos.workspace_id and 'os:' || o.num = projeto_eventos.de
                  and o.projeto_id is distinct from projeto_eventos.projeto_id))))
