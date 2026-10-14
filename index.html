@@ -101,6 +101,28 @@ textarea.form-input{resize:vertical;min-height:70px}
 .kanban-col-count{font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:10px;background:var(--card2);color:var(--hint)}
 .kanban-col-body{display:flex;flex-direction:column;gap:8px;min-height:80px}
 .empty-col{border:1px dashed var(--border);border-radius:var(--radius-lg);padding:24px;text-align:center;color:var(--hint);font-size:12px}
+/* PROJETOS */
+.pj-tab{background:none;border:none;border-bottom:2px solid transparent;padding:8px 14px;font-size:13px;color:var(--muted);cursor:pointer;font-family:var(--font)}
+.pj-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.pj-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;cursor:pointer}
+.pj-row:hover{border-color:var(--accent)}
+.pj-prio{font-family:var(--mono);font-size:18px;font-weight:600;min-width:46px;text-align:center}
+.pj-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;align-items:flex-start}
+.pj-col{flex:0 0 240px;min-width:240px}
+.pj-col.drop{outline:2px dashed var(--accent);outline-offset:4px;border-radius:var(--radius-lg)}
+.pj-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;cursor:pointer}
+.pj-card:hover{border-color:var(--accent)}
+.pj-bar{height:4px;background:var(--card2);border-radius:2px;overflow:hidden;margin:6px 0}
+.pj-bar>div{height:100%;background:var(--green)}
+.pj-drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);background:var(--surface);border-left:1px solid var(--border2);z-index:250;overflow-y:auto;padding:20px 22px;transform:translateX(100%);transition:transform .2s}
+.pj-drawer.open{transform:none}
+.pj-sec{margin-top:18px}
+.pj-sec-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.pj-badge-legal{background:var(--amber-dim);color:var(--amber-text)}
+.pj-badge-st{background:var(--card2);color:var(--muted)}
+.pj-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.pj-tbl td,.pj-tbl th{padding:5px 4px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
+.pj-tbl th{font-size:10px;color:var(--hint);font-weight:500;text-transform:uppercase}
 
 .os-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden}
 .os-card:hover{border-color:var(--accent)}
@@ -529,6 +551,12 @@ textarea.form-input{resize:vertical;min-height:70px}
           <svg class="nav-icon" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><polyline points="8,4 8,8 11,10"/></svg>Histórico
         </div>
       </div>
+      <div class="nav-section" id="nav-sec-estrategico" style="display:none">
+        <div class="nav-label">Estratégico</div>
+        <div id="nav-projetos" class="nav-item" onclick="goScreen('projetos')">
+          <svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 1.5l6.5 6.5L8 14.5 1.5 8z"/></svg>Projetos
+        </div>
+      </div>
       <div class="nav-section">
         <div class="nav-label">Versão atual</div>
         <div class="nav-item" onclick="goScreen('kanban')">
@@ -584,6 +612,17 @@ textarea.form-input{resize:vertical;min-height:70px}
       </div>
     </div>
     <div class="content">
+
+      <!-- PROJETOS -->
+      <div id="screen-projetos" class="screen">
+        <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px">
+          <button id="pj-tab-btn-backlog" class="pj-tab active" onclick="pjTab('backlog')">Backlog de ideias</button>
+          <button id="pj-tab-btn-quadro" class="pj-tab" onclick="pjTab('quadro')">Projetos</button>
+        </div>
+        <div id="pj-aviso"></div>
+        <div id="pj-tab-backlog"></div>
+        <div id="pj-tab-quadro" style="display:none"></div>
+      </div>
 
       <!-- DASHBOARD -->
       <div id="screen-dashboard" class="screen active">
@@ -1622,6 +1661,8 @@ function applyMenuPermissions(){
   if(navBoletim)navBoletim.style.display=(!isVisitor&&canMenu('boletim'))?'':'none';
   if(navPonto)navPonto.style.display=(!isVisitor&&canMenu('ponto'))?'':'none';
   if(navPrefs)navPrefs.style.display=(!isVisitor&&(isAdmin()||canMenu('preferencias')))?'':'none';
+  var navSecEst=document.getElementById('nav-sec-estrategico');
+  if(navSecEst)navSecEst.style.display=(!isVisitor&&canMenu('projetos'))?'':'none';
 }
 function canEditOS(os){return can('os_editar');}
 function canEditVersao(v){
@@ -2179,7 +2220,8 @@ async function renderRolesPrefs(){
     'acoes.os_criar':'Criar OS','acoes.os_editar':'Editar OS','acoes.os_deletar_propria':'Deletar próprias OSs',
     'acoes.boletim_editar':'Editar Boletim','acoes.agenda_editar':'Editar Agenda','acoes.preferencias_admin':'Administrar Preferências',
     'acoes.dashboard_equipe':'Dashboard: ver equipe própria',
-    'acoes.dashboard_todas_equipes':'Dashboard: ver todas as equipes'
+    'acoes.dashboard_todas_equipes':'Dashboard: ver todas as equipes',
+    'menus.projetos':'Projetos','acoes.gerir_projetos':'Gerir projetos'
   };
 
   var {data:rolesData}=await sb.from('roles').select('*').eq('workspace_id',CURRENT_WORKSPACE_ID);
@@ -2301,6 +2343,7 @@ function openGerenciarRole(roleId){
       mkChk('menus.boletim','Boletim',!!(p.menus&&p.menus.boletim))+
       mkChk('menus.ponto','Ponto',!!(p.menus&&p.menus.ponto))+
       mkChk('menus.preferencias','Preferências',!!(p.menus&&p.menus.preferencias))+
+      mkChk('menus.projetos','Projetos',!!(p.menus&&p.menus.projetos))+
     '</div>'+
     '<div>'+
       '<div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Ações</div>'+
@@ -2312,6 +2355,7 @@ function openGerenciarRole(roleId){
       mkChk('acoes.preferencias_admin','Administrar Preferências',!!(p.acoes&&p.acoes.preferencias_admin))+
       mkChk('acoes.dashboard_equipe','Dashboard: ver equipe própria',!!(p.acoes&&p.acoes.dashboard_equipe))+
       mkChk('acoes.dashboard_todas_equipes','Dashboard: ver todas as equipes',!!(p.acoes&&p.acoes.dashboard_todas_equipes))+
+      mkChk('acoes.gerir_projetos','Gerir projetos (pontuar, aprovar, mover etapas)',!!(p.acoes&&p.acoes.gerir_projetos))+
     '</div>';
   openModal('modal-gerenciar-role');
 }
@@ -2730,7 +2774,7 @@ function goScreen(name){
     return;
   }
   // Bloquear telas restritas para visitante
-  var telasBloqueadas=['boletim','ponto','preferencias'];
+  var telasBloqueadas=['boletim','ponto','preferencias','projetos'];
   if(CURRENT_USER&&CURRENT_USER.isVisitor&&telasBloqueadas.indexOf(name)>-1){
     toast('Acesso restrito para visitantes','err');return;
   }
@@ -2739,7 +2783,7 @@ function goScreen(name){
   document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active')});
   var el=document.getElementById('screen-'+name);if(el)el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(function(b){if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+name+"'"))b.classList.add('active')});
-  var titles={dashboard:'Dashboard',kanban:'Demandas',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda'};
+  var titles={dashboard:'Dashboard',kanban:'Demandas',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda',projetos:'Projetos'};
   var isVisitor=CURRENT_USER&&CURRENT_USER.isVisitor;
   var acts={
     dashboard:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
@@ -2747,6 +2791,7 @@ function goScreen(name){
     boletim:'',
     ponto:'',
     historico:'',preferencias:'',
+    projetos:(!isVisitor&&PJ.ok)?'<button class="btn btn-primary btn-sm" onclick="openPjIdeia()">+ Nova ideia</button>':'',
     agenda:(!isVisitor&&can('agenda_editar'))?'<button class="btn btn-primary btn-sm" onclick="openNovaPublicacao()">+ Nova publicação</button> <button class="btn btn-sm btn-ghost" onclick="openNewAgendaEvent()">+ Evento pontual</button>':''
   };
   document.getElementById('topbar-title').textContent=titles[name]||name;
@@ -2769,6 +2814,7 @@ function goScreen(name){
     renderVisitorLog();
   }
   if(name==='agenda')renderAgenda();
+  if(name==='projetos')renderProjetos();
 }
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
@@ -5936,6 +5982,25 @@ async function projRegistrarVinculo(os,antigoId,novoId,motivo){
     if(novoId&&projById(novoId))await projEvento(novoId,'vinculo_os',null,'os:'+os.num,motivo||null);
   }catch(e){console.warn('Evento de vínculo falhou:',e)}
 }
+
+// ── PROJETOS: tela ──────────────────────────────────────────────────────────
+var _pjTab='backlog';
+function pjTab(nome){
+  _pjTab=nome;
+  ['backlog','quadro'].forEach(function(t){
+    document.getElementById('pj-tab-'+t).style.display=t===nome?'':'none';
+    document.getElementById('pj-tab-btn-'+t).classList.toggle('active',t===nome);
+  });
+  if(nome==='backlog')renderPjBacklog();else renderPjQuadro();
+}
+function renderProjetos(){
+  var av=document.getElementById('pj-aviso');
+  if(!PJ.ok){av.innerHTML='<div class="empty-col">Módulo de projetos indisponível neste workspace (as tabelas não carregaram).</div>';return}
+  av.innerHTML='';
+  pjTab(_pjTab);
+}
+function renderPjBacklog(){document.getElementById('pj-tab-backlog').innerHTML='<div class="empty-col">Em construção</div>'}
+function renderPjQuadro(){document.getElementById('pj-tab-quadro').innerHTML='<div class="empty-col">Em construção</div>'}
 
 // ── OPERAÇÕES SUPABASE ────────────────────────────────────────────────────────
 
