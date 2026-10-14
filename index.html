@@ -1456,6 +1456,11 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div class="form-group" style="flex:1"><label class="form-label">Link evidência</label><input class="form-input" id="os-link" placeholder="https://..."></div>
       <div class="form-group" style="flex:1"><label class="form-label">Observações</label><input class="form-input" id="os-obs" placeholder="Notas internas..."></div>
     </div>
+    <div class="form-group" id="os-projeto-wrap" style="display:none">
+      <label class="form-label">Projeto</label>
+      <select class="form-input" id="os-projeto"></select>
+      <div id="os-projeto-hint" style="font-size:11px;color:var(--hint);margin-top:4px"></div>
+    </div>
     <!-- Peso Inteligente -->
     <div class="form-group">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -3230,6 +3235,7 @@ function renderKanban(){
               '<span class="badge '+(linha==='Gestão de Talentos'?'tag-gt':'tag-pag')+'">'+os.produto+'</span>'+
               (os.tipoRedmine?badgeTipoRedmine(os.tipoRedmine):'')+
               (os.atribuicao?badgeAtribuicao(os.atribuicao):'')+
+              (os.projetoId&&projById(os.projetoId)?'<span class="badge" style="background:var(--accent-glow);color:var(--accent)" title="Projeto">◆ '+escHtml(projById(os.projetoId).titulo.slice(0,24))+'</span>':'')+
             '</div>'+
             (h>0?'<span class="os-horas-label">'+h.toFixed(1)+'h</span>':'')+
           '</div>'+
@@ -3254,6 +3260,19 @@ function deleteOS(osId){if(!confirm('Remover esta OS?'))return;S.oss=S.oss.filte
 function goAprop(osId){S._focusApropOS=osId;goScreen('ponto');setTimeout(function(){setPontoTabById('tab-aprop')},60)}
 
 // ── OS CRUD ──────────────────────────────────────────────────────────────────
+function populateProjetoSelOS(os){
+  var wrap=document.getElementById('os-projeto-wrap');
+  if(!PJ.ok){wrap.style.display='none';return}
+  wrap.style.display='';
+  var atual=os&&os.projetoId?os.projetoId:'';
+  var lista=PJ.projetos.filter(function(p){return ProjCore.aceitaOS(p.status)||p.id===atual});
+  document.getElementById('os-projeto').innerHTML='<option value="">(nenhum)</option>'+
+    lista.map(function(p){return'<option value="'+p.id+'">'+escHtml(p.titulo)+'</option>'}).join('');
+  document.getElementById('os-projeto').value=atual;
+  var p=atual?projById(atual):null;
+  document.getElementById('os-projeto-hint').textContent=(p&&os.paiRedmine&&String(p.pai_redmine)===String(os.paiRedmine))
+    ?'Vinculado pelo pai #'+os.paiRedmine+' do Redmine':'';
+}
 function populateVersaoSelOS(){
   var sel=document.getElementById('os-versao-sel');if(!sel)return;
   sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+'</option>'}).join('');
@@ -3296,7 +3315,7 @@ function openNovaOS(){
   document.getElementById('os-status').value='afazer';
   var nomeAtual='';
   if(CURRENT_USER&&!CURRENT_USER.isVisitor){var meta=CURRENT_USER.user_metadata||{};nomeAtual=meta.full_name||meta.name||'';}
-  populateProdutoSel();populateVersaoSelOS();populateAtribSel(nomeAtual);
+  populateProdutoSel();populateVersaoSelOS();populateAtribSel(nomeAtual);populateProjetoSelOS(null);
   var vf=getVelocityFactor();
   setPesoValue(Math.round((4/Math.max(vf,0.1))*2)/2);
   openModal('modal-os');
@@ -3315,6 +3334,7 @@ function openEditOS(osId){
   populateProdutoSel();document.getElementById('os-produto').value=os.produto;
   populateVersaoSelOS();document.getElementById('os-versao-sel').value=os.versaoId;
   populateAtribSel(os.atribuicao||'');
+  populateProjetoSelOS(os);
   setPesoValue(os.estimatedHours||4);
   openModal('modal-os');
 }
@@ -6606,10 +6626,14 @@ function salvarOS(){
     estimatedHours:parseFloat(document.getElementById('os-horas-input').value)||2,
     entregas:old?old.entregas:{}
     ,tipoRedmine:old?old.tipoRedmine||'':'',paiRedmine:old?old.paiRedmine||'':''
-    ,projetoId:old?old.projetoId||null:null,projetoDesvinculado:old?!!old.projetoDesvinculado:false};
+    ,projetoId:(PJ.ok?(document.getElementById('os-projeto').value||null):(old?old.projetoId||null:null))};
+  var projAntigo=old?old.projetoId||null:null;
+  // Soltar à mão marca a OS para o pai do Redmine não revincular; escolher um projeto limpa a marca
+  data.projetoDesvinculado=data.projetoId?false:(projAntigo?true:(old?!!old.projetoDesvinculado:false));
   dbSalvarOS(data).then(function(){
     if(S.editOS){var i=S.oss.findIndex(function(o){return o.id===S.editOS});if(i>-1)S.oss[i]=data}
     else S.oss.push(data);
+    projRegistrarVinculo(data,projAntigo,data.projetoId,null);
     closeModal('modal-os');S.editOS=null;renderKanban();renderDash();toast('OS salva');
   }).catch(function(e){errEl.style.display='block';errEl.textContent='Erro: '+e.message});
 }
@@ -8923,8 +8947,11 @@ async function importarDoRedmine(){
         tipoRedmine:iss.tracker?iss.tracker.name:'',
         paiRedmine:iss.parent?String(iss.parent.id):''
       };
+      var pvNova=PJ.ok?ProjCore.vinculoPorPai(novaOS,PJ.projetos):null;
+      if(pvNova)novaOS.projetoId=pvNova;
       await dbSalvarOS(novaOS);
       S.oss.push(novaOS);
+      if(pvNova)await projRegistrarVinculo(novaOS,null,pvNova,'Automático pelo pai #'+novaOS.paiRedmine+' do Redmine');
       count++;
     }
 
@@ -8939,7 +8966,10 @@ async function importarDoRedmine(){
         versaoId:S.versaoK,
         paiRedmine:upd.iss.parent?String(upd.iss.parent.id):''
       });
+      var pvUpd=PJ.ok?ProjCore.vinculoPorPai(S.oss[idx],PJ.projetos):null;
+      if(pvUpd)S.oss[idx].projetoId=pvUpd;
       await dbSalvarOS(S.oss[idx]);
+      if(pvUpd)await projRegistrarVinculo(S.oss[idx],null,pvUpd,'Automático pelo pai #'+S.oss[idx].paiRedmine+' do Redmine');
       synced++;
     }
 
