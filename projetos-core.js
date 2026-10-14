@@ -80,7 +80,59 @@
     return p?p.id:null;
   }
 
+  var FECHA_ETAPA=['concluida','cancelada','recusada'];
+  var DIA_MS=86400000;
+
+  function porData(a,b){return new Date(a.criado_em)-new Date(b.criado_em)}
+
+  function intervalosEtapa(eventos){
+    var out=[],aberto=null;
+    (eventos||[]).slice().sort(porData).forEach(function(e){
+      if(e.tipo==='etapa'||e.tipo==='retorno'){
+        if(aberto)aberto.fim=e.criado_em;
+        aberto={etapaId:e.para,papelId:e.papel_id||null,inicio:e.criado_em,fim:null,retorno:e.tipo==='retorno'};
+        out.push(aberto);
+      }else if(e.tipo==='status'&&FECHA_ETAPA.indexOf(e.para)>-1&&aberto){
+        aberto.fim=e.criado_em;aberto=null;
+      }
+    });
+    return out;
+  }
+
+  function tempoPorPapel(eventos,agora){
+    var fimPadrao=agora||new Date().toISOString();
+    var ints=intervalosEtapa(eventos),dias={};
+    ints.forEach(function(i){
+      if(!i.papelId)return;
+      var ms=new Date(i.fim||fimPadrao)-new Date(i.inicio);
+      dias[i.papelId]=(dias[i.papelId]||0)+Math.max(0,ms)/DIA_MS;
+    });
+    Object.keys(dias).forEach(function(k){dias[k]=Math.round(dias[k]*10)/10});
+    return{dias:dias,retornos:ints.filter(function(i){return i.retorno}).length};
+  }
+
+  function diasNaEtapaAtual(eventos,agora){
+    var ints=intervalosEtapa(eventos);
+    var ult=ints[ints.length-1];
+    if(!ult||ult.fim)return null;
+    return Math.floor((new Date(agora||new Date().toISOString())-new Date(ult.inicio))/DIA_MS);
+  }
+
+  function dataLocal(ts){return new Date(ts).toLocaleDateString('sv')}
+
+  // Etapa em que o projeto estava num dia (data local); se mudou no mesmo dia, vale a última
+  function etapaNaData(intervalos,dataISO){
+    var achou=null;
+    (intervalos||[]).forEach(function(i){
+      var ini=dataLocal(i.inicio),fim=i.fim?dataLocal(i.fim):null;
+      if(ini<=dataISO&&(fim===null||fim>=dataISO))achou=i.etapaId;
+    });
+    return achou;
+  }
+
   var api={
+    intervalosEtapa:intervalosEtapa,tempoPorPapel:tempoPorPapel,diasNaEtapaAtual:diasNaEtapaAtual,
+    dataLocal:dataLocal,etapaNaData:etapaNaData,
     FATOR:FATOR,tamanhoPorHoras:tamanhoPorHoras,horasEsforco:horasEsforco,
     calcPrioridade:calcPrioridade,compararBacklog:compararBacklog,
     ACEITA_OS:ACEITA_OS,aceitaOS:aceitaOS,primeiraEtapa:primeiraEtapa,

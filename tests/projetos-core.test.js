@@ -93,3 +93,50 @@ test('vinculoPorPai', () => {
   assert.equal(C.vinculoPorPai({ paiRedmine: '500', projetoDesvinculado: true }, projetos), null);
   assert.equal(C.vinculoPorPai({ paiRedmine: '' }, projetos), null);
 });
+
+// Timestamps com fuso explícito -03:00 para não depender do fuso da máquina nos cálculos de dias
+const ev = (tipo, para, papel, quando, de) => ({ tipo, para, papel_id: papel, criado_em: quando, de: de || null });
+
+test('intervalosEtapa e tempoPorPapel com retorno e conclusão', () => {
+  const eventos = [
+    ev('status', 'execucao', null, '2026-01-01T12:00:00-03:00', 'aprovada'),
+    ev('etapa', 'esp', 'analista', '2026-01-01T12:00:00-03:00'),
+    ev('etapa', 'dev', 'dev', '2026-01-03T12:00:00-03:00'),
+    ev('etapa', 'val', 'testador', '2026-01-08T12:00:00-03:00'),
+    ev('retorno', 'dev', 'dev', '2026-01-09T12:00:00-03:00'),
+    ev('status', 'concluida', null, '2026-01-11T12:00:00-03:00', 'execucao'),
+  ];
+  const ints = C.intervalosEtapa(eventos);
+  assert.equal(ints.length, 4);
+  assert.equal(ints[3].retorno, true);
+  assert.equal(ints[3].fim, '2026-01-11T12:00:00-03:00');
+  const t = C.tempoPorPapel(eventos, '2026-02-01T12:00:00-03:00');
+  assert.deepEqual(t, { dias: { analista: 2, dev: 7, testador: 1 }, retornos: 1 });
+});
+
+test('tempoPorPapel: etapa atual conta até agora; pausa não fecha', () => {
+  const eventos = [
+    ev('etapa', 'esp', 'cliente', '2026-01-01T12:00:00-03:00'),
+    ev('status', 'pausada', null, '2026-01-02T12:00:00-03:00', 'execucao'),
+  ];
+  assert.deepEqual(C.tempoPorPapel(eventos, '2026-01-04T00:00:00-03:00'), { dias: { cliente: 2.5 }, retornos: 0 });
+  assert.equal(C.diasNaEtapaAtual(eventos, '2026-01-04T00:00:00-03:00'), 2);
+  assert.equal(C.diasNaEtapaAtual([], '2026-01-04T00:00:00-03:00'), null);
+});
+
+test('etapaNaData: dia local e última etapa do dia vence', () => {
+  // 22h em -03:00 = 01h UTC do dia seguinte; deve contar no dia local
+  const eventos = [
+    ev('etapa', 'esp', 'a', '2026-01-01T09:00:00-03:00'),
+    ev('etapa', 'dev', 'd', '2026-01-05T22:00:00-03:00'),
+    ev('etapa', 'val', 't', '2026-01-07T09:00:00-03:00'),
+    ev('etapa', 'imp', 'a', '2026-01-07T15:00:00-03:00'),
+  ];
+  const ints = C.intervalosEtapa(eventos);
+  const local = ts => C.dataLocal(ts);
+  // Usa as datas locais calculadas pelo próprio módulo, para o teste valer em qualquer fuso
+  assert.equal(C.etapaNaData(ints, local('2026-01-03T12:00:00-03:00')), 'esp');
+  assert.equal(C.etapaNaData(ints, local('2026-01-05T22:00:00-03:00')), 'dev');
+  assert.equal(C.etapaNaData(ints, local('2026-01-07T15:00:00-03:00')), 'imp');
+  assert.equal(C.etapaNaData(ints, '2025-12-31'), null);
+});
