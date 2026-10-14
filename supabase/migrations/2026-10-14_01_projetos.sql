@@ -122,11 +122,12 @@ create policy projetos_update on projetos for update
 --  (a) editar a própria ideia enquanto ela está em "Ideia";
 --  (b) disparar as transições automáticas (Aprovada → Em execução com OS em andamento;
 --      Concluída → Em execução com OS vinculada), sem mexer em mais nada.
--- auth.uid() nulo = SQL Editor/postgres: liberado.
 create or replace function projetos_guarda_update()
 returns trigger language plpgsql set search_path = public, pg_temp as $$
 begin
-  if auth.uid() is null or pode_gerir_projetos(old.workspace_id) then return new; end if;
+  -- Sessão sem usuário da API (SQL Editor/postgres/service_role): liberado
+  if (auth.uid() is null and current_user not in ('anon', 'authenticated'))
+     or pode_gerir_projetos(old.workspace_id) then return new; end if;
   if new.workspace_id <> old.workspace_id or new.sugerido_por is distinct from old.sugerido_por
      or new.criado_em <> old.criado_em then
     raise exception 'Sem permissão para alterar este projeto.';
@@ -153,6 +154,41 @@ drop trigger if exists projetos_guarda_update on projetos;
 create trigger projetos_guarda_update before update on projetos
   for each row execute function projetos_guarda_update();
 
+-- Prioridade = Valor ÷ fator de esforço, calculada aqui para ninguém gravar um valor arbitrário.
+-- Mesma regra de calcPrioridade() em projetos-core.js.
+create or replace function projeto_calc_prioridade(p projetos)
+returns numeric language sql stable set search_path = public, pg_temp as $$
+  with h as (
+    select coalesce(
+      nullif((select sum(c.horas_estimadas) from projeto_etapa_config c where c.projeto_id = p.id), 0),
+      nullif(p.esforco_total_h, 0)) as horas
+  ), t as (
+    select case
+      when h.horas is null then p.esforco_tamanho
+      when h.horas <= 20 then 'P' when h.horas <= 80 then 'M' when h.horas <= 200 then 'G' else 'GG'
+    end as tam from h
+  )
+  select case
+    when p.nota_impacto is null or p.nota_urgencia is null or p.nota_alinhamento is null or t.tam is null then null
+    else round((p.nota_impacto + p.nota_urgencia + p.nota_alinhamento)::numeric
+               / (case t.tam when 'P' then 1 when 'M' then 3 when 'G' then 7 else 15 end), 1)
+  end from t
+$$;
+
+create or replace function projetos_set_prioridade()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  new.prioridade := projeto_calc_prioridade(new);
+  -- Relógio do servidor (a policy de eventos compara com now())
+  if tg_op = 'UPDATE' then new.atualizado_em := now(); end if;
+  return new;
+end;
+$$;
+-- Nome com "projetos_x" para disparar depois de projetos_guarda_update (ordem alfabética)
+drop trigger if exists projetos_x_prioridade on projetos;
+create trigger projetos_x_prioridade before insert or update on projetos
+  for each row execute function projetos_set_prioridade();
+
 -- Configuração por etapa (horas, responsável, pular): todos leem, só quem gere escreve
 drop policy if exists projeto_etapa_config_rw on projeto_etapa_config;
 drop policy if exists projeto_etapa_config_select on projeto_etapa_config;
@@ -165,9 +201,8 @@ create policy projeto_etapa_config_write on projeto_etapa_config for all
     and exists (select 1 from projetos p where p.id = projeto_id and p.workspace_id = projeto_etapa_config.workspace_id)
   );
 
--- Eventos: só leitura e inserção (histórico imutável). Comentário e vínculo: qualquer membro.
--- Status/etapa/retorno: quem gere, ou um evento que só registra o estado ATUAL do projeto
--- (o client grava o projeto antes do evento — é o caso das transições automáticas).
+-- Eventos: só leitura e inserção (histórico imutável). Quem gere insere qualquer evento;
+-- os demais membros só eventos coerentes com o estado real (o client grava o projeto antes do evento).
 drop policy if exists projeto_eventos_select on projeto_eventos;
 create policy projeto_eventos_select on projeto_eventos for select using (is_workspace_member(workspace_id));
 drop policy if exists projeto_eventos_insert on projeto_eventos;
@@ -176,10 +211,25 @@ create policy projeto_eventos_insert on projeto_eventos for insert
     is_workspace_member(workspace_id) and autor_id = auth.uid()
     and exists (select 1 from projetos p where p.id = projeto_id and p.workspace_id = projeto_eventos.workspace_id)
     and (
-      tipo in ('comentario', 'vinculo_os')
-      or pode_gerir_projetos(workspace_id)
-      or (tipo = 'status' and para = (select p.status from projetos p where p.id = projeto_id))
-      or (tipo in ('etapa', 'retorno') and para = (select p.etapa_id::text from projetos p where p.id = projeto_id))
+      pode_gerir_projetos(workspace_id)
+      or (tipo = 'comentario' and de is null and para is null)
+      -- vínculo: a OS citada tem de estar mesmo vinculada (para) ou fora (de) deste projeto
+      or (tipo = 'vinculo_os' and (
+            (para is not null and de is null and exists (select 1 from oss o
+               where o.projeto_id = projeto_eventos.projeto_id and 'os:' || o.num = projeto_eventos.para))
+         or (de is not null and para is null and exists (select 1 from oss o
+               where o.workspace_id = projeto_eventos.workspace_id and 'os:' || o.num = projeto_eventos.de
+                 and o.projeto_id is distinct from projeto_eventos.projeto_id))))
+      -- status/etapa: só registra uma mudança recém-gravada no projeto, e uma vez só
+      or (tipo in ('status', 'etapa', 'retorno') and exists (
+            select 1 from projetos p
+            where p.id = projeto_eventos.projeto_id
+              and coalesce(p.atualizado_em, p.criado_em) >= now() - interval '2 minutes'
+              and (case when projeto_eventos.tipo = 'status' then p.status else p.etapa_id::text end) = projeto_eventos.para
+              and not exists (select 1 from projeto_eventos e
+                              where e.projeto_id = p.id and e.tipo = projeto_eventos.tipo
+                                and e.para = projeto_eventos.para
+                                and e.criado_em >= coalesce(p.atualizado_em, p.criado_em))))
     )
   );
 
