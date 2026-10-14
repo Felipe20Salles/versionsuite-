@@ -6024,7 +6024,6 @@ function renderProjetos(){
   av.innerHTML='';
   pjTab(_pjTab);
 }
-function renderPjQuadro(){document.getElementById('pj-tab-quadro').innerHTML='<div class="empty-col">Em construção</div>'}
 
 var _pjMostrarRecusadas=false;
 function renderPjBacklog(){
@@ -6148,6 +6147,87 @@ async function pjAcao(id,acao){
   }catch(e){toast('Erro: '+e.message,'err')}
 }
 var _pjAberto=null;
+
+var _pjMostrarFechados=false;
+function pjResponsavel(p,etapaId){
+  var et=projEtapa(etapaId);if(!et)return'';
+  var papel=projPapel(et.papel_id);
+  var c=projConfigs(p.id).find(function(x){return x.etapa_id===etapaId});
+  var nome='';
+  if(c&&c.responsavel_user_id){
+    var u=S_USERS.find(function(x){return x.id===c.responsavel_user_id});
+    nome=u?u.displayName:((c.responsavel_nome||'?')+' (ex-membro)');
+  }else if(c&&c.responsavel_nome)nome=c.responsavel_nome;
+  return(papel?papel.nome:'')+(nome?' · '+nome:'');
+}
+function pjAlvo(d){
+  if(!d)return null;
+  var dias=Math.round((new Date(d+'T12:00:00')-new Date(hojeLocal()+'T12:00:00'))/86400000);
+  var cor=dias<0?'var(--red-text)':dias<=7?'var(--amber-text)':'var(--muted)';
+  return{txt:fmtDate(d)+(dias<0?' · atrasado':dias<=7?' · faltam '+dias+'d':''),cor:cor};
+}
+function pjCard(p){
+  var oss=S.oss.filter(function(o){return o.projetoId===p.id});
+  var conc=oss.filter(function(o){return o.status==='concluido'}).length;
+  var est=ProjCore.calcPrioridade(p,projConfigs(p.id)).horas;
+  if(!est)est=oss.reduce(function(a,o){return a+(+o.estimatedHours||0)},0);
+  var apr=PJ.horasTot[p.id]||0;
+  var resp=p.etapa_id?pjResponsavel(p,p.etapa_id):'';
+  var dias=p.status==='execucao'||p.status==='pausada'?ProjCore.diasNaEtapaAtual(projEventos(p.id)):null;
+  var alvo=pjAlvo(p.data_alvo);
+  var drag=can('gerir_projetos')&&p.status==='execucao';
+  var et=projEtapa(p.etapa_id);
+  var avisos=[];
+  if(p.status==='pausada'&&oss.some(function(o){return o.status==='andamento'}))avisos.push('OS em andamento com o projeto pausado');
+  if(et&&et.ativo===false)avisos.push('Etapa desativada no fluxo: mova o projeto');
+  return'<div class="pj-card" '+(drag?'draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\''+p.id+'\')"':'')+' onclick="pjAbrir(\''+p.id+'\')">'+
+    '<div style="display:flex;justify-content:space-between;gap:6px"><div style="font-size:13px;font-weight:500;color:var(--text)">'+escHtml(p.titulo)+'</div>'+
+      (p.status==='pausada'||p.status==='concluida'?'<span class="badge pj-badge-st">'+PJ_STATUS[p.status]+'</span>':'')+'</div>'+
+    (resp?'<div style="font-size:11px;color:var(--muted);margin-top:4px">'+escHtml(resp)+'</div>':'')+
+    (dias!==null?'<div style="font-size:11px;color:var(--hint)">há '+dias+' dia'+(dias===1?'':'s')+' nesta etapa</div>':'')+
+    '<div class="pj-bar"><div style="width:'+(oss.length?Math.round(conc/oss.length*100):0)+'%"></div></div>'+
+    '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--hint)"><span>'+conc+'/'+oss.length+' OSs</span>'+
+      '<span style="font-family:var(--mono)">'+apr.toFixed(1)+'h / '+(+est||0).toFixed(0)+'h</span></div>'+
+    (alvo?'<div style="font-size:11px;margin-top:4px;color:'+alvo.cor+'">🎯 '+alvo.txt+'</div>':'')+
+    avisos.map(function(a){return'<div style="font-size:11px;color:var(--amber-text);margin-top:4px">⚠ '+a+'</div>'}).join('')+
+  '</div>';
+}
+function renderPjQuadro(){
+  var el=document.getElementById('pj-tab-quadro');if(!el)return;
+  var vis=PJ.projetos.filter(function(p){
+    return p.status==='aprovada'||p.status==='execucao'||(_pjMostrarFechados&&(p.status==='pausada'||p.status==='concluida'));
+  });
+  var etapas=projEtapasAtivas().concat(PJ.etapas.filter(function(e){
+    return e.ativo===false&&vis.some(function(p){return p.etapa_id===e.id&&p.status!=='aprovada'});
+  }));
+  var cols=[{id:'',nome:'Aguardando início',papel:null}].concat(etapas.map(function(e){
+    return{id:e.id,nome:e.nome+(e.ativo===false?' (desativada)':''),papel:projPapel(e.papel_id)};
+  }));
+  var gerir=can('gerir_projetos');
+  el.innerHTML=
+    '<div style="display:flex;justify-content:flex-end;margin-bottom:10px">'+
+      '<label class="form-check" style="margin:0"><input type="checkbox" '+(_pjMostrarFechados?'checked':'')+' onchange="_pjMostrarFechados=this.checked;renderPjQuadro()" style="width:15px;height:15px;accent-color:var(--accent)"><span class="form-check-label">Mostrar pausados e concluídos</span></label>'+
+    '</div>'+
+    '<div class="pj-board">'+cols.map(function(c){
+      var itens=vis.filter(function(p){return c.id===''?(p.status==='aprovada'||!p.etapa_id):(p.status!=='aprovada'&&p.etapa_id===c.id)});
+      var dnd=gerir&&c.id?' data-etapa="'+c.id+'" ondragover="pjDragOver(event,this)" ondragleave="this.classList.remove(\'drop\')" ondrop="pjDrop(event,this)"':'';
+      return'<div class="pj-col"'+dnd+'>'+
+        '<div class="kanban-col-header"><span class="kanban-col-title">'+escHtml(c.nome)+'</span><span class="kanban-col-count">'+itens.length+'</span></div>'+
+        (c.papel?'<div style="font-size:10px;color:var(--hint);margin:-6px 0 8px">'+escHtml(c.papel.nome)+'</div>':'')+
+        '<div class="kanban-col-body">'+(itens.map(pjCard).join('')||'<div class="empty-col">—</div>')+'</div>'+
+      '</div>';
+    }).join('')+'</div>';
+}
+function pjDragOver(ev,col){ev.preventDefault();col.classList.add('drop')}
+async function pjDrop(ev,col){
+  ev.preventDefault();col.classList.remove('drop');
+  var p=projById(ev.dataTransfer.getData('text/plain'));
+  if(!p||p.status!=='execucao'||!can('gerir_projetos'))return;
+  try{
+    await projMoverEtapa(p,col.getAttribute('data-etapa'));
+    renderPjQuadro();toast('Etapa: '+projEtapa(p.etapa_id).nome);
+  }catch(e){toast('Erro: '+e.message,'err')}
+}
 
 // ── OPERAÇÕES SUPABASE ────────────────────────────────────────────────────────
 
