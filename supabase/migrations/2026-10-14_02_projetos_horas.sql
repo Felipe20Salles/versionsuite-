@@ -29,7 +29,7 @@ language sql security definer set search_path = public, pg_temp stable as $$
   )
   select l.data, l.activity_type_id, sum(l.horas) from linhas l group by 1, 2 order by 1
 $$;
-revoke execute on function projeto_horas_agregadas(uuid) from public;
+revoke execute on function projeto_horas_agregadas(uuid) from public, anon;
 grant execute on function projeto_horas_agregadas(uuid) to authenticated;
 
 create or replace function projetos_horas_totais(p_workspace_id uuid)
@@ -45,5 +45,5 @@ language sql security definer set search_path = public, pg_temp stable as $$
     and o.projeto_id is not null
   group by o.projeto_id
 $$;
-revoke execute on function projetos_horas_totais(uuid) from public;
+revoke execute on function projetos_horas_totais(uuid) from public, anon;
 grant execute on function projetos_horas_totais(uuid) to authenticated;

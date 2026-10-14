@@ -93,8 +93,22 @@ drop policy if exists projeto_etapas_write on projeto_etapas;
 create policy projeto_etapas_write on projeto_etapas for all
   using (is_workspace_admin(workspace_id)) with check (is_workspace_admin(workspace_id));
 
--- Projetos: membros leem, criam ideias (como autores) e atualizam; ninguém apaga.
--- A diferença entre autor da ideia e gerir_projetos é checada no client com can(), como no resto do app.
+-- Permissão "Gerir projetos" checada no banco (o client também checa com can(), mas
+-- sem isto qualquer membro aprovaria/moveria projetos chamando a API direto).
+create or replace function pode_gerir_projetos(ws_id uuid)
+returns boolean language sql security definer set search_path = public, pg_temp stable as $$
+  select exists (
+    select 1 from workspace_members wm join roles r on r.id = wm.role_id
+    where wm.workspace_id = ws_id and wm.user_id = auth.uid() and wm.status = 'active'
+      and r.workspace_id = ws_id
+      and (r.nome = 'admin' or (r.permissoes->'acoes'->>'gerir_projetos') = 'true')
+  )
+$$;
+revoke execute on function pode_gerir_projetos(uuid) from public, anon;
+grant execute on function pode_gerir_projetos(uuid) to authenticated;
+
+-- Projetos: membros leem e criam ideias (como autores); ninguém apaga.
+-- Update: a policy isola por workspace e o trigger abaixo restringe O QUE cada um pode mudar.
 drop policy if exists projetos_select on projetos;
 create policy projetos_select on projetos for select using (is_workspace_member(workspace_id));
 drop policy if exists projetos_insert on projetos;
@@ -104,15 +118,56 @@ drop policy if exists projetos_update on projetos;
 create policy projetos_update on projetos for update
   using (is_workspace_member(workspace_id)) with check (is_workspace_member(workspace_id));
 
+-- Sem "Gerir projetos", um membro só pode:
+--  (a) editar a própria ideia enquanto ela está em "Ideia";
+--  (b) disparar as transições automáticas (Aprovada → Em execução com OS em andamento;
+--      Concluída → Em execução com OS vinculada), sem mexer em mais nada.
+-- auth.uid() nulo = SQL Editor/postgres: liberado.
+create or replace function projetos_guarda_update()
+returns trigger language plpgsql set search_path = public, pg_temp as $$
+begin
+  if auth.uid() is null or pode_gerir_projetos(old.workspace_id) then return new; end if;
+  if new.workspace_id <> old.workspace_id or new.sugerido_por is distinct from old.sugerido_por
+     or new.criado_em <> old.criado_em then
+    raise exception 'Sem permissão para alterar este projeto.';
+  end if;
+  if old.status = 'ideia' and new.status = 'ideia' and old.sugerido_por = auth.uid()
+     and new.etapa_id is not distinct from old.etapa_id then
+    return new;
+  end if;
+  if new.status = 'execucao' and old.status in ('aprovada', 'concluida')
+     and (new.titulo, new.descricao, new.nota_impacto, new.nota_urgencia, new.nota_alinhamento, new.legal,
+          new.esforco_total_h, new.esforco_tamanho, new.data_alvo, new.pai_redmine)
+         is not distinct from
+         (old.titulo, old.descricao, old.nota_impacto, old.nota_urgencia, old.nota_alinhamento, old.legal,
+          old.esforco_total_h, old.esforco_tamanho, old.data_alvo, old.pai_redmine)
+     and (old.status = 'aprovada' or new.etapa_id is not distinct from old.etapa_id)
+     and exists (select 1 from oss o where o.projeto_id = old.id
+                 and (old.status = 'concluida' or o.status = 'andamento')) then
+    return new;
+  end if;
+  raise exception 'Sem permissão para alterar este projeto (requer "Gerir projetos").';
+end;
+$$;
+drop trigger if exists projetos_guarda_update on projetos;
+create trigger projetos_guarda_update before update on projetos
+  for each row execute function projetos_guarda_update();
+
+-- Configuração por etapa (horas, responsável, pular): todos leem, só quem gere escreve
 drop policy if exists projeto_etapa_config_rw on projeto_etapa_config;
-create policy projeto_etapa_config_rw on projeto_etapa_config for all
-  using (is_workspace_member(workspace_id))
+drop policy if exists projeto_etapa_config_select on projeto_etapa_config;
+create policy projeto_etapa_config_select on projeto_etapa_config for select using (is_workspace_member(workspace_id));
+drop policy if exists projeto_etapa_config_write on projeto_etapa_config;
+create policy projeto_etapa_config_write on projeto_etapa_config for all
+  using (pode_gerir_projetos(workspace_id))
   with check (
-    is_workspace_member(workspace_id)
+    pode_gerir_projetos(workspace_id)
     and exists (select 1 from projetos p where p.id = projeto_id and p.workspace_id = projeto_etapa_config.workspace_id)
   );
 
--- Eventos: só leitura e inserção (histórico imutável)
+-- Eventos: só leitura e inserção (histórico imutável). Comentário e vínculo: qualquer membro.
+-- Status/etapa/retorno: quem gere, ou um evento que só registra o estado ATUAL do projeto
+-- (o client grava o projeto antes do evento — é o caso das transições automáticas).
 drop policy if exists projeto_eventos_select on projeto_eventos;
 create policy projeto_eventos_select on projeto_eventos for select using (is_workspace_member(workspace_id));
 drop policy if exists projeto_eventos_insert on projeto_eventos;
@@ -120,6 +175,12 @@ create policy projeto_eventos_insert on projeto_eventos for insert
   with check (
     is_workspace_member(workspace_id) and autor_id = auth.uid()
     and exists (select 1 from projetos p where p.id = projeto_id and p.workspace_id = projeto_eventos.workspace_id)
+    and (
+      tipo in ('comentario', 'vinculo_os')
+      or pode_gerir_projetos(workspace_id)
+      or (tipo = 'status' and para = (select p.status from projetos p where p.id = projeto_id))
+      or (tipo in ('etapa', 'retorno') and para = (select p.etapa_id::text from projetos p where p.id = projeto_id))
+    )
   );
 
 -- ── Fluxo padrão ─────────────────────────────────────────────────────────────
@@ -141,7 +202,8 @@ begin
     (ws_id, 'Implantação', 5, p_analista);
 end;
 $$;
-revoke execute on function seed_projeto_fluxo(uuid) from public;
+-- No Supabase, `from public` não basta: anon/authenticated recebem execute por default privileges
+revoke execute on function seed_projeto_fluxo(uuid) from public, anon, authenticated;
 
 select seed_projeto_fluxo(id) from workspaces;
 
