@@ -1041,6 +1041,7 @@ textarea.form-input{resize:vertical;min-height:70px}
 
         <!-- Painel: Plataforma -->
         <div id="pref-tab-plataforma" style="display:none">
+          <div class="pref-section" id="pref-fluxo-projetos" style="display:none"></div>
           <div class="pref-section">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
               <div class="pref-section-title" style="margin-bottom:0">Produtos cadastrados</div>
@@ -2793,6 +2794,7 @@ function goPrefsTab(nome){
   });
   if(nome==='pessoal')loadSchedulePrefs();
   if(nome==='plataforma')loadRedmineProdOpts().then(renderProdutos);
+  if(nome==='plataforma')renderFluxoProjetosPrefs();
 }
 
 // ── NAV ──────────────────────────────────────────────────────────────────────
@@ -6416,6 +6418,84 @@ async function pjVincularOS(osId,projetoId){
   _projNotificarOS(osId,{status:os.status,projetoId:projetoId});
   renderProjetos();if(_pjAberto)pjAbrir(_pjAberto);
   if(document.getElementById('screen-kanban').classList.contains('active'))renderKanban();
+}
+
+// ── PROJETOS: editor do fluxo (admin) ───────────────────────────────────────
+function renderFluxoProjetosPrefs(){
+  var box=document.getElementById('pref-fluxo-projetos');if(!box)return;
+  if(!PJ.ok||!isAdmin()){box.style.display='none';return}
+  box.style.display='';
+  var tipos=getTipoAtividades().filter(function(t){return t.id!=null});
+  var papeis=PJ.papeis.slice().sort(function(a,b){return a.ordem-b.ordem});
+  var etapas=PJ.etapas.slice().sort(function(a,b){return a.ordem-b.ordem});
+  var htmlPapeis=papeis.map(function(pp){
+    return'<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">'+
+      '<input class="form-input" style="flex:1" value="'+escHtml(pp.nome)+'" onchange="fluxoUpd(\'projeto_papeis\',\''+pp.id+'\',{nome:this.value.trim()||\'Papel\'})">'+
+      '<label style="font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:center"><input type="checkbox" '+(pp.externo?'checked':'')+' onchange="fluxoUpd(\'projeto_papeis\',\''+pp.id+'\',{externo:this.checked})" style="accent-color:var(--accent)">externo</label>'+
+    '</div>';
+  }).join('');
+  var htmlEtapas=etapas.map(function(e,i){
+    var papelOpts=papeis.map(function(pp){return'<option value="'+pp.id+'"'+(pp.id===e.papel_id?' selected':'')+'>'+escHtml(pp.nome)+'</option>'}).join('');
+    var chips=tipos.map(function(t){
+      var tid=String(t.id),meu=(e.tipos_atividade||[]).indexOf(tid)>-1;
+      var dono=!meu&&etapas.find(function(o){return o.id!==e.id&&o.ativo!==false&&(o.tipos_atividade||[]).indexOf(tid)>-1});
+      return'<label style="font-size:11px;display:inline-flex;gap:3px;align-items:center;margin:2px 8px 2px 0;color:'+(dono?'var(--hint)':'var(--muted)')+'" title="'+(dono?'Já ligado a '+escHtml(dono.nome):'')+'">'+
+        '<input type="checkbox" '+(meu?'checked':'')+(dono?' disabled':'')+' onchange="fluxoToggleTipo(\''+e.id+'\',\''+tid+'\',this.checked)" style="accent-color:var(--accent)">'+escHtml(t.name)+'</label>';
+    }).join('')||'<span style="font-size:11px;color:var(--hint)">Cadastre os tipos de atividade acima para ligar às etapas.</span>';
+    return'<div style="padding:10px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;'+(e.ativo===false?'opacity:.5':'')+'">'+
+      '<div style="display:flex;gap:8px;align-items:center">'+
+        '<span style="font-family:var(--mono);color:var(--hint);width:18px">'+(i+1)+'</span>'+
+        '<input class="form-input" style="flex:1" value="'+escHtml(e.nome)+'" onchange="fluxoUpd(\'projeto_etapas\',\''+e.id+'\',{nome:this.value.trim()||\'Etapa\'})">'+
+        '<select class="form-input" style="width:150px" onchange="fluxoUpd(\'projeto_etapas\',\''+e.id+'\',{papel_id:this.value})">'+papelOpts+'</select>'+
+        '<button class="btn btn-sm btn-ghost" onclick="fluxoMover(\''+e.id+'\',-1)">↑</button>'+
+        '<button class="btn btn-sm btn-ghost" onclick="fluxoMover(\''+e.id+'\',1)">↓</button>'+
+        '<button class="btn btn-sm btn-ghost" onclick="fluxoUpd(\'projeto_etapas\',\''+e.id+'\',{ativo:'+(e.ativo===false)+'})">'+(e.ativo===false?'Reativar':'Desativar')+'</button>'+
+      '</div>'+
+      '<div style="margin:6px 0 0 26px">'+chips+'</div>'+
+    '</div>';
+  }).join('');
+  box.innerHTML=
+    '<div class="pref-section-title">Fluxo de projetos</div>'+
+    '<div style="font-size:12px;color:var(--hint);margin-bottom:10px">Etapas por que todo projeto passa, com o papel responsável. Os tipos de atividade ligam as horas apropriadas à etapa. Desativar não apaga o histórico.</div>'+
+    '<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px">'+
+      '<div><div class="pj-sec-title">Papéis</div>'+htmlPapeis+'<button class="btn btn-sm btn-ghost" onclick="fluxoNovoPapel()">+ Novo papel</button></div>'+
+      '<div><div class="pj-sec-title">Etapas</div>'+htmlEtapas+'<button class="btn btn-sm btn-ghost" onclick="fluxoNovaEtapa()">+ Nova etapa</button></div>'+
+    '</div>';
+}
+async function fluxoUpd(tabela,id,campos){
+  var r=await sb.from(tabela).update(campos).eq('id',id).select().single();
+  if(r.error){toast('Erro: '+r.error.message,'err');return}
+  var arr=tabela==='projeto_papeis'?PJ.papeis:PJ.etapas;
+  var i=arr.findIndex(function(x){return x.id===id});if(i>-1)arr[i]=r.data;
+  renderFluxoProjetosPrefs();
+}
+async function fluxoNovoPapel(){
+  var ordem=PJ.papeis.reduce(function(m,x){return Math.max(m,x.ordem)},0)+1;
+  var r=await sb.from('projeto_papeis').insert({workspace_id:CURRENT_WORKSPACE_ID,nome:'Novo papel',ordem:ordem}).select().single();
+  if(r.error){toast('Erro: '+r.error.message,'err');return}
+  PJ.papeis.push(r.data);renderFluxoProjetosPrefs();
+}
+async function fluxoNovaEtapa(){
+  var ordem=PJ.etapas.reduce(function(m,x){return Math.max(m,x.ordem)},0)+1;
+  var papel=PJ.papeis[0];
+  var r=await sb.from('projeto_etapas').insert({workspace_id:CURRENT_WORKSPACE_ID,nome:'Nova etapa',ordem:ordem,papel_id:papel?papel.id:null}).select().single();
+  if(r.error){toast('Erro: '+r.error.message,'err');return}
+  PJ.etapas.push(r.data);renderFluxoProjetosPrefs();
+}
+async function fluxoMover(id,dir){
+  var lista=PJ.etapas.slice().sort(function(a,b){return a.ordem-b.ordem});
+  var i=lista.findIndex(function(e){return e.id===id}),j=i+dir;
+  if(i<0||j<0||j>=lista.length)return;
+  var a=lista[i],b=lista[j],oa=a.ordem,ob=b.ordem;
+  if(oa===ob)ob=oa+dir; // ordens iguais: força a troca
+  await fluxoUpd('projeto_etapas',a.id,{ordem:ob});
+  await fluxoUpd('projeto_etapas',b.id,{ordem:oa});
+}
+function fluxoToggleTipo(etapaId,tipoId,on){
+  var e=projEtapa(etapaId);if(!e)return;
+  var arr=(e.tipos_atividade||[]).map(String).filter(function(t){return t!==String(tipoId)});
+  if(on)arr.push(String(tipoId));
+  fluxoUpd('projeto_etapas',etapaId,{tipos_atividade:arr});
 }
 
 // ── OPERAÇÕES SUPABASE ────────────────────────────────────────────────────────
