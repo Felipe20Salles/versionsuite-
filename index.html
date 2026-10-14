@@ -7,6 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g1' x1='16' y1='2' x2='16' y2='28' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%237c6ff7'/%3E%3Cstop offset='60%25' stop-color='%23f97316'/%3E%3Cstop offset='100%25' stop-color='%23ef4444'/%3E%3C/linearGradient%3E%3ClinearGradient id='g2' x1='16' y1='12' x2='16' y2='26' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%23fbbf24'/%3E%3Cstop offset='100%25' stop-color='%23f97316'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M16 2C16 2 10 8 10 14c0 2.5 1 4.5 2.5 6C11.5 18 11 16.5 11 15c0-3 3-6 3-6s-0.5 3 1.5 5c0.5 0.7 1 1.3 1.5 2 0.5-1 0.8-2.2 0.8-3.5 0-1.5-0.8-3-0.8-3s3 2.5 3 6.5c0 1.2-0.3 2.3-0.8 3.2C20.7 18.8 21 17.4 21 16c0-4-3-8-3-8s0.5 2-0.5 4C18.5 10 16 6 16 2z' fill='url(%23g1)'/%3E%3Cpath d='M16 12C16 12 13 15.5 13 18.5c0 1.7 0.8 3.1 2 4C14.5 21.5 14 20.3 14 19c0-2 1.5-3.5 1.5-3.5s0.2 1.5 1 2.5C17 17.5 18 16 18 14.5c0-0.8-0.2-1.5-0.2-1.5S19.5 15 19.5 18c0 0.8-0.2 1.6-0.5 2.2 1-1 1.5-2.3 1.5-3.7C20.5 13.5 18 11 16 12z' fill='url(%23g2)'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="projetos-core.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -3244,35 +3245,6 @@ function openEditOS(osId){
   setPesoValue(os.estimatedHours||4);
   openModal('modal-os');
 }
-function salvarOS(){
-  var vid=document.getElementById('os-versao-sel').value||(S.versaoK)||(S.versoes[0]&&S.versoes[0].id);
-  if(!vid)return;
-  var num=document.getElementById('os-num').value.trim();
-  var errEl=document.getElementById('modal-os-error');
-  var dup=S.oss.find(function(o){return o.versaoId===vid&&o.num===num&&o.id!==S.editOS});
-  if(dup){errEl.style.display='block';errEl.textContent='OS '+num+' já cadastrada nesta versão.';return}
-  errEl.style.display='none';
-  var old=S.editOS?S.oss.find(function(o){return o.id===S.editOS}):null;
-  var osId=S.editOS||uid();
-  var data={id:osId,num:num,titulo:document.getElementById('os-titulo').value.trim(),
-    produto:document.getElementById('os-produto').value,
-    status:document.getElementById('os-status').value,
-    obs:document.getElementById('os-obs').value,
-    link:document.getElementById('os-link').value.trim(),
-    atribuicao:document.getElementById('os-atribuicao').value.trim(),
-    versaoId:vid,
-    criadaEm:old?old.criadaEm:new Date().toISOString(),
-    createdBy:old?old.createdBy:(CURRENT_USER?CURRENT_USER.id:null),
-    estimatedHours:parseFloat(document.getElementById('os-horas-input').value)||2,
-    entregas:old?old.entregas:{}};
-  dbSalvarOS(data).then(function(saved){
-    data.id=saved.id;
-    if(S.editOS){var i=S.oss.findIndex(function(o){return o.id===S.editOS});if(i>-1)S.oss[i]=data}
-    else S.oss.push(data);
-    closeModal('modal-os');S.editOS=null;renderKanban();renderDash();toast('OS salva');
-  }).catch(function(e){toast('Erro ao salvar OS: '+e.message,'err')});
-}
-
 // ── BOLETIM IA INTEGRADO ──────────────────────────────────────────────────────
 var BOL_TAB='gt';
 var BOL_OSS={gt:[],pag:[]};
@@ -5809,7 +5781,10 @@ async function load(){
       versaoId:o.versao_id,entregas:o.entregas||{},
       criadaEm:o.created_at,createdBy:o.created_by||null,
       tipoRedmine:o.tipo_redmine||'',paiRedmine:o.pai_redmine||''
+      ,projetoId:o.projeto_id||null,projetoDesvinculado:!!o.projeto_desvinculado
     }});
+    _osDb={};S.oss.forEach(function(o){_osDb[o.id]={status:o.status,projetoId:o.projetoId}});
+    await projCarregar();
 
     // Pontos (apenas do usuário)
     setLoadingMsg('Carregando ponto...');
@@ -5861,6 +5836,107 @@ async function save(){
   // mantida para compatibilidade com chamadas existentes
 }
 
+// ── PROJETOS: dados ─────────────────────────────────────────────────────────
+// Regras puras em projetos-core.js (window.ProjCore). Aqui só estado + Supabase.
+var PJ={projetos:[],etapas:[],papeis:[],configs:[],eventos:[],horasTot:{},ok:false};
+var PJ_STATUS={ideia:'Ideia',avaliacao:'Em avaliação',aprovada:'Aprovada',recusada:'Recusada',execucao:'Em execução',pausada:'Pausada',concluida:'Concluída',cancelada:'Cancelada'};
+var _osDb={}; // último {status,projetoId} gravado de cada OS, para detectar transições
+
+async function projCarregar(){
+  try{
+    var ws=CURRENT_WORKSPACE_ID;
+    var r=await Promise.all([
+      sb.from('projetos').select('*').eq('workspace_id',ws),
+      sb.from('projeto_etapas').select('*').eq('workspace_id',ws).order('ordem'),
+      sb.from('projeto_papeis').select('*').eq('workspace_id',ws).order('ordem'),
+      sb.from('projeto_etapa_config').select('*').eq('workspace_id',ws),
+      sb.from('projeto_eventos').select('*').eq('workspace_id',ws).order('criado_em'),
+      sb.rpc('projetos_horas_totais',{p_workspace_id:ws})
+    ]);
+    for(var i=0;i<r.length;i++)if(r[i].error)throw r[i].error;
+    PJ.projetos=r[0].data||[];PJ.etapas=r[1].data||[];PJ.papeis=r[2].data||[];
+    PJ.configs=r[3].data||[];PJ.eventos=r[4].data||[];
+    PJ.horasTot={};(r[5].data||[]).forEach(function(x){PJ.horasTot[x.projeto_id]=parseFloat(x.horas)||0});
+    PJ.ok=true;
+  }catch(e){console.warn('Projetos indisponíveis:',e&&e.message);PJ.ok=false}
+}
+function projById(id){return PJ.projetos.find(function(p){return p.id===id})||null}
+function projEtapa(id){return PJ.etapas.find(function(e){return e.id===id})||null}
+function projPapel(id){return PJ.papeis.find(function(x){return x.id===id})||null}
+function projConfigs(pid){return PJ.configs.filter(function(c){return c.projeto_id===pid})}
+function projEventos(pid){return PJ.eventos.filter(function(e){return e.projeto_id===pid})}
+function projEtapasAtivas(){return PJ.etapas.filter(function(e){return e.ativo!==false}).sort(function(a,b){return a.ordem-b.ordem})}
+
+async function projEvento(pid,tipo,de,para,comentario,papelId){
+  var row={workspace_id:CURRENT_WORKSPACE_ID,projeto_id:pid,tipo:tipo,
+    de:de==null?null:String(de),para:para==null?null:String(para),
+    papel_id:papelId||null,comentario:comentario||null,autor_id:CURRENT_USER.id};
+  var {data,error}=await sb.from('projeto_eventos').insert(row).select().single();
+  if(error)throw error;
+  PJ.eventos.push(data);return data;
+}
+async function projSalvar(p,campos){
+  campos.atualizado_em=new Date().toISOString();
+  var {data,error}=await sb.from('projetos').update(campos).eq('id',p.id).select().single();
+  if(error)throw error;
+  Object.assign(p,data);return p;
+}
+async function projAtualizarPrioridade(p){
+  var pr=ProjCore.calcPrioridade(p,projConfigs(p.id)).prioridade;
+  if(pr!==(p.prioridade==null?null:+p.prioridade))await projSalvar(p,{prioridade:pr});
+}
+// Muda o status e grava o histórico; ao entrar em execução, entra (ou reentra) numa etapa
+async function projMudarStatus(p,novo,comentario){
+  var de=p.status,campos={status:novo},entrar=null;
+  if(novo==='execucao'&&!p.etapa_id){entrar=ProjCore.primeiraEtapa(PJ.etapas,projConfigs(p.id));campos.etapa_id=entrar}
+  else if(novo==='execucao'&&de==='concluida')entrar=p.etapa_id;
+  await projSalvar(p,campos);
+  await projEvento(p.id,'status',de,novo,comentario);
+  if(entrar){var et=projEtapa(entrar);await projEvento(p.id,'etapa',null,entrar,null,et&&et.papel_id)}
+}
+async function projMoverEtapa(p,etapaId){
+  if(!etapaId||p.etapa_id===etapaId)return;
+  var deId=p.etapa_id,de=projEtapa(deId),para=projEtapa(etapaId);
+  var tipo=(de&&para&&para.ordem<de.ordem)?'retorno':'etapa';
+  await projSalvar(p,{etapa_id:etapaId});
+  await projEvento(p.id,tipo,deId,etapaId,null,para&&para.papel_id);
+}
+var PJ_GATILHO_LABEL={os_vinculada:'OS vinculada',os_andamento:'OS em andamento',os_reaberta:'OS reaberta'};
+async function projAposMudancaOS(antes,depois){
+  if(!PJ.ok||!depois||!depois.projetoId)return;
+  var p=projById(depois.projetoId);if(!p)return;
+  var gs=ProjCore.gatilhosDaOS(antes,depois);
+  for(var i=0;i<gs.length;i++){
+    var novo=ProjCore.proximoStatusAuto(p.status,gs[i]);
+    if(!novo)continue;
+    try{
+      await projMudarStatus(p,novo,'Automático: '+PJ_GATILHO_LABEL[gs[i]]+(depois.num?' (OS '+depois.num+')':''));
+      toast('Projeto "'+p.titulo+'" → '+PJ_STATUS[novo]);
+      if(typeof renderProjetos==='function'&&document.getElementById('screen-projetos').classList.contains('active'))renderProjetos();
+    }catch(e){console.warn('Status automático do projeto falhou:',e)}
+    return;
+  }
+}
+function _projNotificarOS(id,mud){
+  var antes=_osDb[id]||{};
+  var os=S.oss.find(function(o){return o.id===id})||{};
+  var depois={
+    status:mud.status!==undefined?mud.status:antes.status,
+    projetoId:('projetoId' in mud)?mud.projetoId:(antes.projetoId!==undefined?antes.projetoId:(os.projetoId||null)),
+    num:mud.num||os.num
+  };
+  _osDb[id]={status:depois.status,projetoId:depois.projetoId};
+  projAposMudancaOS(antes,depois);
+}
+// Histórico de vínculo nos dois projetos envolvidos
+async function projRegistrarVinculo(os,antigoId,novoId,motivo){
+  if(antigoId===novoId)return;
+  try{
+    if(antigoId&&projById(antigoId))await projEvento(antigoId,'vinculo_os','os:'+os.num,null,motivo||null);
+    if(novoId&&projById(novoId))await projEvento(novoId,'vinculo_os',null,'os:'+os.num,motivo||null);
+  }catch(e){console.warn('Evento de vínculo falhou:',e)}
+}
+
 // ── OPERAÇÕES SUPABASE ────────────────────────────────────────────────────────
 
 // Versões
@@ -5892,9 +5968,11 @@ async function dbSalvarOS(os){
     id:os.id,workspace_id:CURRENT_WORKSPACE_ID,versao_id:os.versaoId,num:os.num,titulo:os.titulo,
     produto:os.produto,status:os.status,obs:os.obs||'',link:os.link||'',
     atribuicao:os.atribuicao||'',estimated_hours:os.estimatedHours||0,entregas:os.entregas,created_by:CURRENT_USER.id,
-    tipo_redmine:os.tipoRedmine||'',pai_redmine:os.paiRedmine||''
+    tipo_redmine:os.tipoRedmine||'',pai_redmine:os.paiRedmine||'',
+    projeto_id:os.projetoId||null,projeto_desvinculado:!!os.projetoDesvinculado
   }).select().single();
   if(error)throw error;
+  _projNotificarOS(data.id,{status:os.status,projetoId:os.projetoId||null,num:os.num});
   return data;
 }
 async function dbDeletarOS(id){
@@ -5902,6 +5980,7 @@ async function dbDeletarOS(id){
 }
 async function dbMoverOS(id,novoStatus){
   await sb.from('oss').update({status:novoStatus}).eq('id',id);
+  _projNotificarOS(id,{status:novoStatus});
 }
 async function dbToggleEntrega(id,entregas){
   await sb.from('oss').update({entregas:entregas}).eq('id',id);
@@ -6064,7 +6143,9 @@ function salvarOS(){
     versaoId:vid,criadaEm:old?old.criadaEm:new Date().toISOString(),
     createdBy:old?old.createdBy:(CURRENT_USER?CURRENT_USER.id:null),
     estimatedHours:parseFloat(document.getElementById('os-horas-input').value)||2,
-    entregas:old?old.entregas:{}};
+    entregas:old?old.entregas:{}
+    ,tipoRedmine:old?old.tipoRedmine||'':'',paiRedmine:old?old.paiRedmine||'':''
+    ,projetoId:old?old.projetoId||null:null,projetoDesvinculado:old?!!old.projetoDesvinculado:false};
   dbSalvarOS(data).then(function(){
     if(S.editOS){var i=S.oss.findIndex(function(o){return o.id===S.editOS});if(i>-1)S.oss[i]=data}
     else S.oss.push(data);
