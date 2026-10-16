@@ -3152,6 +3152,7 @@ function salvarBsCicloEdit(){
   if(verSel)os.versaoId=verSel.value;
   dbSalvarOS(os).then(function(){
     toast('OS atualizada');
+    _garantirFocoAndamento();
     closeBsCicloEdit();
     renderCicloView();
   }).catch(function(e){toast('Erro: '+e.message,'err');});
@@ -6729,7 +6730,7 @@ function salvarOS(){
     if(S.editOS){var i=S.oss.findIndex(function(o){return o.id===S.editOS});if(i>-1)S.oss[i]=data}
     else S.oss.push(data);
     projRegistrarVinculo(data,projAntigo,data.projetoId,null);
-    closeModal('modal-os');S.editOS=null;renderKanban();renderDash();toast('OS salva');
+    closeModal('modal-os');S.editOS=null;_garantirFocoAndamento();renderKanban();renderDash();toast('OS salva');
   }).catch(function(e){errEl.style.display='block';errEl.textContent='Erro: '+e.message});
 }
 
@@ -6795,6 +6796,7 @@ function toggleE(osId,key){
       _finalizarAndamento(osId,'concluido');
       renderDash();
     }else{
+      if(statusAnterior!=='andamento'&&os.status==='andamento')_garantirFocoAndamento();
       renderKanban();renderDash();
     }
   }).catch(function(e){toast('Erro: '+e.message,'err')});
@@ -7980,6 +7982,19 @@ function _finalizarAndamento(osId,newStatus){
 
 // Retorna próxima OS em andamento que pertence ao usuário atual.
 // Nunca pula para card de outro usuário.
+// OS que entram em andamento sem passar por moveOS (criadas direto na coluna,
+// versão trocada no modal/ciclo, importação do Redmine): descarta foco cuja OS
+// saiu de andamento e, sem foco, inicia na próxima OS em andamento.
+function _garantirFocoAndamento(){
+  var st=getFocusState();
+  if(st&&!S.oss.some(function(o){return o.id===st.osId&&o.status==='andamento'})){
+    closeFocusSession(st);saveFocusState(null);st=null;
+  }
+  if(st){updateFocusUI();return}
+  var next=_proxOssAndamento(null);
+  if(next)startFocus(next.id);else updateFocusUI();
+}
+
 function _proxOssAndamento(excludeId){
   var meuNome=(getDisplayName()||'').trim();
   var candidatas=S.oss.filter(function(o){
@@ -9068,6 +9083,7 @@ async function importarDoRedmine(){
       synced++;
     }
 
+    _garantirFocoAndamento();
     renderKanban();
     var msg=[];
     if(count)msg.push(count+' importado(s)');
