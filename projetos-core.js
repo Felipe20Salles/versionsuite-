@@ -81,6 +81,31 @@
     return p?p.id:null;
   }
 
+  // OSs soltas com o mesmo pai no Redmine viram sugestão: criar projeto (2+ OSs) ou
+  // vincular ao projeto que já tem esse pai. Pai de ideia ainda não aprovada não sugere nada.
+  var PROJ_ENCERRADO=['cancelada','recusada'];
+  function sugestoesPorPai(oss,projetos,ignorados){
+    var grupos={},ordem=[];
+    (oss||[]).forEach(function(o){
+      if(!o.paiRedmine||o.projetoId||o.projetoDesvinculado)return;
+      var pai=String(o.paiRedmine);
+      if(ignorados&&ignorados[pai])return;
+      if(!grupos[pai]){grupos[pai]=[];ordem.push(pai)}
+      grupos[pai].push(o);
+    });
+    var out=[];
+    ordem.forEach(function(pai){
+      var g=grupos[pai];
+      var p=(projetos||[]).find(function(x){return x.pai_redmine&&String(x.pai_redmine)===pai&&PROJ_ENCERRADO.indexOf(x.status)<0});
+      if(p&&!aceitaOS(p.status))return;
+      if(!p&&g.length<2)return;
+      out.push({pai:pai,projetoId:p?p.id:null,osIds:g.map(function(o){return o.id}),
+        andamento:g.filter(function(o){return o.status==='andamento'}).length,
+        concluidas:g.filter(function(o){return o.status==='concluido'}).length});
+    });
+    return out.sort(function(a,b){return b.osIds.length-a.osIds.length});
+  }
+
   var FECHA_ETAPA=['concluida','cancelada','recusada'];
   var DIA_MS=86400000;
 
@@ -158,7 +183,8 @@
     FATOR:FATOR,tamanhoPorHoras:tamanhoPorHoras,horasEsforco:horasEsforco,
     calcPrioridade:calcPrioridade,compararBacklog:compararBacklog,
     ACEITA_OS:ACEITA_OS,aceitaOS:aceitaOS,primeiraEtapa:primeiraEtapa,
-    gatilhosDaOS:gatilhosDaOS,proximoStatusAuto:proximoStatusAuto,vinculoPorPai:vinculoPorPai
+    gatilhosDaOS:gatilhosDaOS,proximoStatusAuto:proximoStatusAuto,vinculoPorPai:vinculoPorPai,
+    sugestoesPorPai:sugestoesPorPai
   };
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.ProjCore=api;
 })(typeof window!=='undefined'?window:this);

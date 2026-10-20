@@ -104,6 +104,13 @@ textarea.form-input{resize:vertical;min-height:70px}
 /* PROJETOS */
 .pj-tab{background:none;border:none;border-bottom:2px solid transparent;padding:8px 14px;font-size:13px;color:var(--muted);cursor:pointer;font-family:var(--font)}
 .pj-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.pj-sug{border:1px solid var(--accent);background:var(--accent-glow);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:16px}
+.pj-sug-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.pj-sug-h span{font-size:12px;color:var(--muted)}
+.pj-sug-row{display:flex;align-items:center;gap:14px;padding:10px 0;border-top:1px solid var(--border2);flex-wrap:wrap}
+.pj-sug-num{font-family:var(--mono);font-size:12px;color:var(--muted);width:52px;flex-shrink:0}
+.pj-sug-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.pj-sug-and{background:var(--green-dim);color:var(--green-text)}
 .pj-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;cursor:pointer}
 .pj-row:hover{border-color:var(--accent)}
 .pj-prio{font-family:var(--mono);font-size:18px;font-weight:600;min-width:46px;text-align:center}
@@ -6074,7 +6081,106 @@ function renderPjBacklog(){
     '<div style="display:flex;justify-content:flex-end;margin-bottom:10px">'+
       '<label class="form-check" style="margin:0"><input type="checkbox" '+(_pjMostrarRecusadas?'checked':'')+' onchange="_pjMostrarRecusadas=this.checked;renderPjBacklog()" style="width:15px;height:15px;accent-color:var(--accent)"><span class="form-check-label">Mostrar recusadas</span></label>'+
     '</div>'+
+    pjSugestoesHtml()+
     (lista.map(pjLinhaBacklog).join('')||'<div class="empty-col">Nenhuma ideia ainda. Use “+ Nova ideia”.</div>');
+}
+
+// ── Sugestões de projeto a partir do pai das OSs no Redmine ──
+function _pjLerLS(k){try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return{}}}
+function _pjGravarLS(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+var _pjSugOcupado=false,_pjBuscandoPais={};
+function pjTituloPai(pai){return _pjLerLS('vs_pj_pai_titulos')[pai]||('Pai #'+pai+' no Redmine')}
+// Busca no Redmine (pelo proxy, se ligado) o título dos pais ainda sem nome; re-renderiza ao chegar
+function pjBuscarTitulosPais(pais){
+  var cfg=getRedmineConfig();if(!cfg.proxyUrl||!cfg.proxy)return;
+  var cache=_pjLerLS('vs_pj_pai_titulos');
+  var falta=pais.filter(function(p){return!cache[p]&&!_pjBuscandoPais[p]});
+  if(!falta.length)return;
+  Promise.all(falta.map(function(pai){
+    _pjBuscandoPais[pai]=true;
+    return _redmineFetch(cfg,'/issues/'+encodeURIComponent(pai)+'.json','GET')
+      .then(function(r){return r.ok?r.json():null})
+      .then(function(d){if(d&&d.issue&&d.issue.subject){var c=_pjLerLS('vs_pj_pai_titulos');c[pai]=d.issue.subject;_pjGravarLS('vs_pj_pai_titulos',c);return true}})
+      .catch(function(){});
+  })).then(function(res){
+    if(res.some(Boolean)&&_pjTab==='backlog'&&document.getElementById('screen-projetos').classList.contains('active'))renderPjBacklog();
+  });
+}
+function pjSugestoes(){return ProjCore.sugestoesPorPai(S.oss,PJ.projetos,_pjLerLS('vs_pj_pais_ignorados'))}
+function pjSugestoesHtml(){
+  if(!can('gerir_projetos'))return'';
+  var sug=pjSugestoes();if(!sug.length)return'';
+  pjBuscarTitulosPais(sug.map(function(s){return s.pai}));
+  return'<div class="pj-sug">'+
+    '<div class="pj-sug-h"><strong>Encontrei estes grupos de OSs no Redmine</strong><span>OSs com o mesmo pai no Redmine</span></div>'+
+    sug.map(function(s){
+      var pai=s.pai.replace(/[^\w-]/g,''),p=s.projetoId?projById(s.projetoId):null;
+      var h=s.osIds.reduce(function(a,id){return a+horasOS(id)},0);
+      var n=s.osIds.length,meta=[n+(n===1?' OS':' OSs')+(p?' ainda não '+(n===1?'vinculada':'vinculadas'):'')];
+      if(h>0)meta.push(fmtHoras(h)+' apontadas');
+      if(s.andamento)meta.push('<span class="badge pj-sug-and">'+s.andamento+' em andamento</span>');
+      return'<div class="pj-sug-row">'+
+        '<span class="pj-sug-num">#'+escHtml(s.pai)+'</span>'+
+        '<div style="flex:1;min-width:180px">'+
+          '<div style="font-weight:500">'+escHtml(p?p.titulo:pjTituloPai(s.pai))+(p?' <span class="badge pj-badge-st">já existe o projeto</span>':'')+'</div>'+
+          '<div class="pj-sug-meta">'+meta.join(' · ')+'</div>'+
+        '</div>'+
+        '<div style="display:flex;gap:6px">'+
+          (p?'<button class="btn btn-primary btn-sm" onclick="pjVincularPai(\''+pai+'\')">Vincular</button>'
+            :'<button class="btn btn-primary btn-sm" onclick="pjCriarDoPai(\''+pai+'\')">Criar projeto</button>')+
+          '<button class="btn btn-sm" onclick="pjIgnorarPai(\''+pai+'\')">Ignorar</button>'+
+        '</div>'+
+      '</div>';
+    }).join('')+
+  '</div>';
+}
+function pjIgnorarPai(pai){
+  var ig=_pjLerLS('vs_pj_pais_ignorados');ig[pai]=true;_pjGravarLS('vs_pj_pais_ignorados',ig);
+  renderPjBacklog();toast('Sugestão escondida');
+}
+// Liga as OSs do grupo ao projeto, uma a uma (só a coluna do vínculo, sem regravar a OS inteira)
+async function _pjVincularOSs(p,osIds,motivo){
+  var n=0;
+  for(var i=0;i<osIds.length;i++){
+    var os=S.oss.find(function(o){return o.id===osIds[i]});
+    if(!os||os.projetoId)continue;
+    var r=await sb.from('oss').update({projeto_id:p.id,projeto_desvinculado:false}).eq('id',os.id);
+    if(r.error){console.warn('Vínculo da OS '+os.num+' falhou:',r.error);continue}
+    os.projetoId=p.id;os.projetoDesvinculado=false;n++;
+    await projRegistrarVinculo(os,null,p.id,motivo);
+    _projNotificarOS(os.id,{projetoId:p.id});
+  }
+  return n;
+}
+async function pjCriarDoPai(pai){
+  if(_pjSugOcupado)return;
+  var s=pjSugestoes().find(function(x){return x.pai===pai&&!x.projetoId});if(!s)return;
+  _pjSugOcupado=true;
+  try{
+    var campos={workspace_id:CURRENT_WORKSPACE_ID,sugerido_por:CURRENT_USER.id,status:'ideia',
+      titulo:pjTituloPai(pai),pai_redmine:pai,descricao:'Criado a partir do pai #'+pai+' no Redmine.'};
+    var r=await sb.from('projetos').insert(campos).select().single();
+    if(r.error)throw r.error;
+    var p=r.data;PJ.projetos.push(p);
+    await projEvento(p.id,'status',null,'ideia','Criado a partir do pai #'+pai+' no Redmine');
+    await projMudarStatus(p,'aprovada','Aprovado na criação a partir do Redmine');
+    var n=await _pjVincularOSs(p,s.osIds,'Pai #'+pai+' do Redmine');
+    toast('Projeto "'+p.titulo+'" criado com '+n+(n===1?' OS':' OSs'));
+    renderKanban();pjTab('quadro');
+  }catch(e){toast('Erro ao criar projeto: '+e.message,'err');renderProjetos()}
+  finally{_pjSugOcupado=false}
+}
+async function pjVincularPai(pai){
+  if(_pjSugOcupado)return;
+  var s=pjSugestoes().find(function(x){return x.pai===pai&&x.projetoId});if(!s)return;
+  var p=projById(s.projetoId);if(!p)return;
+  _pjSugOcupado=true;
+  try{
+    var n=await _pjVincularOSs(p,s.osIds,'Pai #'+pai+' do Redmine');
+    toast(n+(n===1?' OS vinculada':' OSs vinculadas')+' ao projeto "'+p.titulo+'"');
+    renderKanban();renderProjetos();
+  }catch(e){toast('Erro ao vincular: '+e.message,'err')}
+  finally{_pjSugOcupado=false}
 }
 function pjLinhaBacklog(p){
   var c=ProjCore.calcPrioridade(p,projConfigs(p.id));

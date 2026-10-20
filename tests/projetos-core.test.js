@@ -172,3 +172,30 @@ test('gatilhosDaOS: vincular OS já concluída não reabre projeto (paridade com
   assert.deepEqual(C.gatilhosDaOS({}, { projetoId: 'p', status: 'concluido' }), []);
   assert.deepEqual(C.gatilhosDaOS({ projetoId: 'x', status: 'concluido' }, { projetoId: 'p', status: 'concluido' }), []);
 });
+
+test('sugestoesPorPai: agrupa OSs soltas pelo pai do Redmine', () => {
+  const oss = [
+    { id: 'a', paiRedmine: '4521', status: 'andamento' },
+    { id: 'b', paiRedmine: 4521, status: 'concluido' },
+    { id: 'c', paiRedmine: '4521', status: 'afazer' },
+    { id: 'd', paiRedmine: '4610', status: 'afazer' },                 // pai com 1 OS só: não sugere
+    { id: 'e', paiRedmine: '4521', projetoId: 'px' },                  // já tem projeto
+    { id: 'f', paiRedmine: '4521', projetoDesvinculado: true },        // soltou à mão
+    { id: 'g', paiRedmine: '' },                                       // sem pai
+    { id: 'h', paiRedmine: '4388', status: 'afazer' },                 // pai de projeto que aceita OS
+    { id: 'i', paiRedmine: '4700', status: 'afazer' }, { id: 'j', paiRedmine: '4700' }, // pai de ideia ainda não aprovada
+    { id: 'k', paiRedmine: '4800' }, { id: 'l', paiRedmine: '4800' },  // pai de projeto cancelado: volta a sugerir
+    { id: 'm', paiRedmine: '4900' }, { id: 'n', paiRedmine: '4900' }   // ignorado
+  ];
+  const projetos = [
+    { id: 'p1', pai_redmine: '4388', status: 'execucao' },
+    { id: 'p2', pai_redmine: '4700', status: 'avaliacao' },
+    { id: 'p3', pai_redmine: '4800', status: 'cancelada' }
+  ];
+  const s = C.sugestoesPorPai(oss, projetos, { '4900': true });
+  assert.deepEqual(s.map(x => x.pai), ['4521', '4800', '4388']);
+  assert.deepEqual(s[0], { pai: '4521', projetoId: null, osIds: ['a', 'b', 'c'], andamento: 1, concluidas: 1 });
+  assert.equal(s[1].projetoId, null);
+  assert.deepEqual(s[2], { pai: '4388', projetoId: 'p1', osIds: ['h'], andamento: 0, concluidas: 0 });
+  assert.deepEqual(C.sugestoesPorPai([], [], null), []);
+});
