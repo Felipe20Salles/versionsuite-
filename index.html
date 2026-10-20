@@ -110,6 +110,7 @@ textarea.form-input{resize:vertical;min-height:70px}
 .pj-sug-row{display:flex;align-items:center;gap:14px;padding:10px 0;border-top:1px solid var(--border2);flex-wrap:wrap}
 .pj-sug-num{font-family:var(--mono);font-size:12px;color:var(--muted);width:52px;flex-shrink:0}
 .pj-sug-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.pj-sug-vazio{font-size:12px;color:var(--muted);background:var(--card);border:1px dashed var(--border2);border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:16px}
 .pj-sug-and{background:var(--green-dim);color:var(--green-text)}
 .pj-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;cursor:pointer}
 .pj-row:hover{border-color:var(--accent)}
@@ -6109,7 +6110,15 @@ function pjBuscarTitulosPais(pais){
 function pjSugestoes(){return ProjCore.sugestoesPorPai(S.oss,PJ.projetos,_pjLerLS('vs_pj_pais_ignorados'))}
 function pjSugestoesHtml(){
   if(!can('gerir_projetos'))return'';
-  var sug=pjSugestoes();if(!sug.length)return'';
+  var sug=pjSugestoes();
+  if(!sug.length){
+    // Sem sugestão: diz o porquê, para não parecer que a função não funciona
+    var semPai=S.oss.filter(function(o){return!o.paiRedmine&&o.status!=='concluido'}).length;
+    var soltas=S.oss.filter(function(o){return o.paiRedmine&&!o.projetoId&&!o.projetoDesvinculado}).length;
+    var msg=semPai?semPai+(semPai===1?' OS em aberto não tem':' OSs em aberto não têm')+' o pai do Redmine guardado. Use “Importar do Redmine” no Kanban para preencher e as sugestões de projeto aparecem aqui.'
+      :soltas?'Nenhum pai do Redmine reúne 2 OSs ou mais ainda sem projeto.':'';
+    return msg?'<div class="pj-sug-vazio">💡 '+msg+'</div>':'';
+  }
   pjBuscarTitulosPais(sug.map(function(s){return s.pai}));
   return'<div class="pj-sug">'+
     '<div class="pj-sug-h"><strong>Encontrei estes grupos de OSs no Redmine</strong><span>OSs com o mesmo pai no Redmine</span></div>'+
@@ -9097,7 +9106,8 @@ async function importarDoRedmine(){
       var na=matchAtribuicaoRedmine(iss.assigned_to?iss.assigned_to.name:'');
       var np=matchProdutoRedmine(iss);
       var ntp=iss.tracker?iss.tracker.name:'';
-      return nt!==local.titulo||na!==local.atribuicao||np!==local.produto||ntp!==local.tipoRedmine||local.versaoId!==S.versaoK;
+      var npai=iss.parent?String(iss.parent.id):'';
+      return nt!==local.titulo||na!==local.atribuicao||np!==local.produto||ntp!==local.tipoRedmine||npai!==String(local.paiRedmine||'')||local.versaoId!==S.versaoK;
     }).map(function(iss){
       var local=existingByNum[String(iss.id)];
       var novoTitulo=iss.subject||'';
@@ -9109,6 +9119,8 @@ async function importarDoRedmine(){
       if(novaAtrib!==local.atribuicao)diffs.push({campo:'atribuição',de:local.atribuicao,para:novaAtrib});
       if(novoProd!==local.produto)diffs.push({campo:'produto',de:local.produto,para:novoProd});
       if(novoTipo!==local.tipoRedmine)diffs.push({campo:'tipo',de:local.tipoRedmine,para:novoTipo});
+      var novoPai=iss.parent?String(iss.parent.id):'';
+      if(novoPai!==String(local.paiRedmine||''))diffs.push({campo:'pai',de:local.paiRedmine?'#'+local.paiRedmine:'—',para:novoPai?'#'+novoPai:'—'});
       if(local.versaoId!==S.versaoK){
         var vAntiga=S.versoes.find(function(v){return v.id===local.versaoId});
         diffs.push({campo:'versão',de:vAntiga?vAntiga.nome:'—',para:versao.nome});
