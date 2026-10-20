@@ -6070,6 +6070,7 @@ function renderProjetos(){
   if(!PJ.ok){av.innerHTML='<div class="empty-col">Módulo de projetos indisponível neste workspace (as tabelas não carregaram).</div>';return}
   av.innerHTML='';
   pjTab(_pjTab);
+  if(!_pjPaisBuscado&&can('gerir_projetos'))pjBuscarPaisNoRedmine();
 }
 
 var _pjMostrarRecusadas=false;
@@ -6107,16 +6108,60 @@ function pjBuscarTitulosPais(pais){
     if(res.some(Boolean)&&_pjTab==='backlog'&&document.getElementById('screen-projetos').classList.contains('active'))renderPjBacklog();
   });
 }
+// Preenche o pai do Redmine das OSs que estão sem ele, consultando as issues pelo número da OS
+var _pjPaisBuscado=false,_pjPaisEstado='';
+function _pjOssSemPai(){return S.oss.filter(function(o){return!o.paiRedmine&&/^\d+$/.test(String(o.num||'').trim())})}
+async function pjBuscarPaisNoRedmine(){
+  var cfg=getRedmineConfig();
+  if(!cfg.proxyUrl||!cfg.proxy){_pjPaisEstado='sem_proxy';_pjRenderSug();return}
+  var alvo=_pjOssSemPai();
+  _pjPaisBuscado=true;
+  if(!alvo.length){_pjPaisEstado='ok';return}
+  _pjPaisEstado='buscando';_pjRenderSug();
+  var achados=0;
+  try{
+    for(var i=0;i<alvo.length;i+=50){
+      var lote=alvo.slice(i,i+50);
+      var ids=lote.map(function(o){return String(o.num).trim()}).join(',');
+      var r=await _redmineFetch(cfg,'/issues.json?issue_id='+ids+'&status_id=*&limit=100','GET');
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      var d=await r.json();
+      for(var j=0;j<(d.issues||[]).length;j++){
+        var iss=d.issues[j];if(!iss.parent)continue;
+        var pai=String(iss.parent.id);
+        var oss=lote.filter(function(o){return String(o.num).trim()===String(iss.id)});
+        for(var k=0;k<oss.length;k++){
+          var u=await sb.from('oss').update({pai_redmine:pai}).eq('id',oss[k].id);
+          if(u.error){console.warn('Pai da OS '+oss[k].num+' não gravou:',u.error);continue}
+          oss[k].paiRedmine=pai;achados++;
+        }
+      }
+    }
+    _pjPaisEstado='ok';
+    if(achados)toast('Pai do Redmine encontrado para '+achados+(achados===1?' OS':' OSs'));
+  }catch(e){
+    console.warn('Busca do pai no Redmine falhou:',e);
+    _pjPaisEstado='erro';
+  }
+  _pjRenderSug();
+}
+function _pjRenderSug(){
+  if(_pjTab==='backlog'&&document.getElementById('screen-projetos').classList.contains('active'))renderPjBacklog();
+}
 function pjSugestoes(){return ProjCore.sugestoesPorPai(S.oss,PJ.projetos,_pjLerLS('vs_pj_pais_ignorados'))}
 function pjSugestoesHtml(){
   if(!can('gerir_projetos'))return'';
   var sug=pjSugestoes();
   if(!sug.length){
     // Sem sugestão: diz o porquê, para não parecer que a função não funciona
-    var semPai=S.oss.filter(function(o){return!o.paiRedmine&&o.status!=='concluido'}).length;
+    var semPai=_pjOssSemPai().length;
     var soltas=S.oss.filter(function(o){return o.paiRedmine&&!o.projetoId&&!o.projetoDesvinculado}).length;
-    var msg=semPai?semPai+(semPai===1?' OS em aberto não tem':' OSs em aberto não têm')+' o pai do Redmine guardado. Use “Importar do Redmine” no Kanban para preencher e as sugestões de projeto aparecem aqui.'
-      :soltas?'Nenhum pai do Redmine reúne 2 OSs ou mais ainda sem projeto.':'';
+    var tentar=' <button class="btn btn-sm" style="margin-left:8px" onclick="pjBuscarPaisNoRedmine()">Buscar de novo</button>';
+    var msg=_pjPaisEstado==='buscando'?'Buscando no Redmine o pai de '+semPai+(semPai===1?' OS…':' OSs…')
+      :_pjPaisEstado==='sem_proxy'?'Para eu montar as sugestões sozinho, ligue o proxy do Redmine em Preferências › Integrações.'
+      :_pjPaisEstado==='erro'?'Não consegui falar com o Redmine. Confira se o proxy está rodando.'+tentar
+      :soltas?'Nenhum pai do Redmine reúne 2 OSs ou mais ainda sem projeto.'
+      :semPai?semPai+(semPai===1?' OS não tem':' OSs não têm')+' pai no Redmine, então não há o que agrupar.'+tentar:'';
     return msg?'<div class="pj-sug-vazio">💡 '+msg+'</div>':'';
   }
   pjBuscarTitulosPais(sug.map(function(s){return s.pai}));
