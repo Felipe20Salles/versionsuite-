@@ -9424,7 +9424,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
       ParaleloWidget.init({
         widget_key: __paralelo_config.sdkKey,
         apiUrl: __paralelo_config.apiUrl,
-        user: { id: session.user.id, name: session.user.email }
+        user: { id: session.user.id, name: (session.user.user_metadata||{}).full_name||(session.user.user_metadata||{}).name||'', email: session.user.email }
       })
       return true
     }
@@ -9476,7 +9476,7 @@ var _appIniciado=false; // evita duplo carregamento pelo onAuthStateChange
         ParaleloWidget.init({
           widget_key: __paralelo_config.sdkKey,
           apiUrl: __paralelo_config.apiUrl,
-          user: { id: session.user.id, name: session.user.email }
+          user: { id: session.user.id, name: (session.user.user_metadata||{}).full_name||(session.user.user_metadata||{}).name||'', email: session.user.email }
         })
         return true
       }
