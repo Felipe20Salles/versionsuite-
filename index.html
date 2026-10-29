@@ -2976,6 +2976,16 @@ function versaoStatus(v){
   if(!v.ativa)return'encerrada';
   return'ativa';
 }
+// Versão em que lançamentos realizados (ponto, foco, importação) devem cair:
+// a selecionada no Kanban, exceto se for planejada — aí usa a versão ativa.
+// Sem versão ativa, mantém o comportamento anterior.
+function versaoIdLancamento(){
+  var sel=S.versaoK?S.versoes.find(function(v){return v.id===S.versaoK}):null;
+  if(S.versaoK&&(!sel||versaoStatus(sel)!=='planejada'))return S.versaoK;
+  var ativa=S.versoes.find(function(v){return v.ativa});
+  if(ativa)return ativa.id;
+  return S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
+}
 function versaoOpcaoSufixo(v){
   var st=versaoStatus(v);
   return st==='planejada'?' (planejada)':st==='encerrada'?' ✓':'';
@@ -5221,7 +5231,7 @@ function importPontoXLSX(input){
           return;
         }
 
-        var versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
+        var versaoId=versaoIdLancamento();
         var porData={};
 
         rows.slice(1).forEach(function(row){
@@ -5381,7 +5391,7 @@ function importCSV(input){
     var usaFallback=(headerIdx===-1||iData===-1||iMarcacoes===-1);
 
     var porData={};
-    var versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
+    var versaoId=versaoIdLancamento();
 
     var startLine=usaFallback?0:(headerIdx+1);
 
@@ -6055,7 +6065,8 @@ async function load(){
         var per=calcPeriodoVersao(v);
         return per&&hoje>=per.inicio&&hoje<=per.fim;
       });
-      S.versaoK=vigente?vigente.id:S.versoes[0].id;
+      var ativaDef=S.versoes.find(function(v){return v.ativa});
+      S.versaoK=vigente?vigente.id:ativaDef?ativaDef.id:S.versoes[0].id;
     }
     _loadedAt=Date.now();
     await loadUsers();
@@ -6150,15 +6161,31 @@ async function projSalvar(p,campos,esperado){
   if(error)throw error;
   if(!data||!data.length){
     await projRecarregar(p.id);
-    throw new Error('O projeto foi alterado por outra pessoa. A tela foi atualizada; tente de novo.');
+    throw new Error('A demanda foi alterada por outra pessoa. A tela foi atualizada; tente de novo.');
   }
-  Object.assign(p,data[0]);return p;
+  projMesclar(p,data[0],campos);return p;
+}
+// Junta a linha vinda do banco na demanda local. Com gravação de horas ainda na fila
+// (planoNaFila), mantém horas_papeis/horas_origem locais — senão a linha devolvida
+// desfaz o clique e a gravação enfileirada gravaria o valor desfeito.
+// Campos que a própria gravação enviou (campos) sempre valem.
+function projMesclar(p,row,campos){
+  if(!row)return p;
+  if(typeof _planoPend!=='undefined'&&_planoPend[p.id]>0){
+    var r={};
+    Object.keys(row).forEach(function(k){
+      if((k==='horas_papeis'||k==='horas_origem')&&!(campos&&Object.prototype.hasOwnProperty.call(campos,k)))return;
+      r[k]=row[k];
+    });
+    row=r;
+  }
+  Object.assign(p,row);return p;
 }
 async function projRecarregar(id){
   var r=await sb.from('projetos').select('*').eq('id',id).maybeSingle();
   if(r.error||!r.data)return null;
   var p=projById(id);
-  if(p)Object.assign(p,r.data);else{p=r.data;PJ.projetos.push(p)}
+  if(p)projMesclar(p,r.data,null);else{p=r.data;PJ.projetos.push(p)}
   return p;
 }
 // Mudança numa OS (salvar, mover, vincular): o status da demanda não muda sozinho;
@@ -6797,7 +6824,8 @@ async function planoAdicionarDoRedmine(id){
   if(!PJ.ok||!planoRedmineOk())return false;
   var num=String(id==null?'':id).replace(/^#/,'').trim();
   if(!/^\d+$/.test(num)){toast('Informe o número do chamado pai no Redmine',true);return false}
-  var ex=PJ.projetos.filter(function(p){return String(p.pai_redmine||'')===num})[0];
+  num=String(parseInt(num,10)); // "007" e "7" são o mesmo chamado
+  var ex=PJ.projetos.filter(function(p){var pr=String(p.pai_redmine||'');return pr===num||(/^\d+$/.test(pr)&&String(parseInt(pr,10))===num)})[0];
   if(ex){
     toast('Já existe uma demanda para o chamado #'+num);
     _plAberto=null;
@@ -6909,6 +6937,7 @@ async function planoBuscarPaisNoRedmine(){
 // ── PLANO: ficha da demanda (painel lateral #pj-drawer) ─────────────────────
 var _plAberto=null;
 var _planoFila={};      // gravações de horas em série, por demanda
+var _planoPend={};      // quantas gravações ainda estão na fila, por demanda
 var _planoEvAdiado={};  // eventos agrupados (cliques seguidos em − / + e nos critérios viram um só)
 var PLANO_DECISAO={plano:{rot:'Incluir no plano',cls:'ap'},adiada:{rot:'Adiar',cls:'sb'},descartada:{rot:'Descartar',cls:'na'}};
 
@@ -6937,7 +6966,9 @@ function planoAposMudar(){
 }
 function planoNaFila(id,fn){
   var ant=_planoFila[id]||Promise.resolve();
-  var nx=ant.then(fn,fn);
+  _planoPend[id]=(_planoPend[id]||0)+1;
+  function fim(){_planoPend[id]--;if(_planoPend[id]<=0)delete _planoPend[id]}
+  var nx=ant.then(fn,fn).then(function(r){fim();return r},function(e){fim();throw e});
   _planoFila[id]=nx.catch(function(){});
   return nx;
 }
@@ -6956,7 +6987,10 @@ function planoEventoAdiado(id,tipo,para,ms){
 // ── ficha: HTML ──
 function planoEventoTexto(e){
   var R=ProjCore.STATUS_ROTULO;
-  function st(s){return R[s]||s||'?'}
+  // Chaves antigas de status (eventos gravados antes do Plano)
+  var ANT={ideia:'Ideia',avaliacao:'Em avaliação',aprovada:'Aprovada',execucao:'Em execução',
+    pausada:'Pausada',concluida:'Concluída',recusada:'Recusada',cancelada:'Cancelada'};
+  function st(s){return R[s]||ANT[s]||s||'?'}
   switch(e.tipo){
     case'decisao':return e.para==='plano'?'incluiu no plano':e.para==='adiada'?'adiou':e.para==='descartada'?'descartou':'mudou para '+st(e.para);
     case'criterios':return'avaliou'+(e.para!=null&&e.para!==''?' · prioridade '+e.para:'');
@@ -7330,9 +7364,13 @@ function renderPlanoPrefs(){
   var htmlPapeis=papeis.map(function(pp){
     var chips=tipos.map(function(t){
       var tid=String(t.id).replace(/[^\w-]/g,''),meu=(pp.tipos_atividade||[]).indexOf(tid)>-1;
-      var dono=!meu&&papeis.find(function(o){return o.id!==pp.id&&o.ativo!==false&&(o.tipos_atividade||[]).indexOf(tid)>-1});
-      return'<label style="font-size:11px;display:inline-flex;gap:3px;align-items:center;margin:2px 8px 2px 0;color:'+(dono?'var(--hint)':'var(--muted)')+'" title="'+(dono?'Já ligado a '+escHtml(dono.nome):'')+'">'+
-        '<input type="checkbox" '+(meu?'checked':'')+(dono?' disabled':'')+' onchange="planoToggleTipo(\''+pp.id+'\',\''+tid+'\',this.checked)" style="accent-color:var(--accent)">'+escHtml(t.name)+'</label>';
+      // Papel externo não recebe tipos de atividade (só pode desmarcar os que já tem);
+      // tipos de um papel externo não bloqueiam os papéis internos.
+      var dono=!meu&&papeis.find(function(o){return o.id!==pp.id&&o.ativo!==false&&!o.externo&&(o.tipos_atividade||[]).indexOf(tid)>-1});
+      var bloq=!!dono||(pp.externo&&!meu);
+      var dica=dono?'Já ligado a '+escHtml(dono.nome):bloq?'Papéis externos não recebem tipos de atividade':'';
+      return'<label style="font-size:11px;display:inline-flex;gap:3px;align-items:center;margin:2px 8px 2px 0;color:'+(bloq?'var(--hint)':'var(--muted)')+'" title="'+dica+'">'+
+        '<input type="checkbox" '+(meu?'checked':'')+(bloq?' disabled':'')+' onchange="planoToggleTipo(\''+pp.id+'\',\''+tid+'\',this.checked)" style="accent-color:var(--accent)">'+escHtml(t.name)+'</label>';
     }).join('')||'<span style="font-size:11px;color:var(--hint)">Cadastre os tipos de atividade para ligar aos papéis.</span>';
     return'<div style="padding:10px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;'+(pp.ativo===false?'opacity:.6':'')+'">'+
       '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">'+
@@ -7410,6 +7448,7 @@ async function planoNovoPapel(){
 }
 function planoToggleTipo(papelId,tipoId,on){
   var p=projPapel(papelId);if(!p)return;
+  if(on&&p.externo){toast('Papéis externos não recebem tipos de atividade','err');renderPlanoPrefs();return}
   var arr=(p.tipos_atividade||[]).map(String).filter(function(t){return t!==String(tipoId)});
   if(on)arr.push(String(tipoId));
   planoUpdPapel(papelId,{tipos_atividade:arr});
@@ -7591,7 +7630,9 @@ function salvarVersao(){
   var data=document.getElementById('v-data').value||null;
   var boletim=document.getElementById('v-boletim').value||null;
   var planejada=!_editingVersaoId&&document.getElementById('v-planejada').checked;
-  if(planejada&&!data){versaoModalErro('Informe a data da versão planejada.');return}
+  var vEd=_editingVersaoId?S.versoes.find(function(x){return x.id===_editingVersaoId}):null;
+  var edPlanejada=!!(vEd&&vEd.planejada&&!vEd.ativa);
+  if((planejada||edPlanejada)&&!data){versaoModalErro('Informe a data da versão planejada.');return}
   var capac=versaoModalLerCapac();
   if(capac===null){versaoModalErro('Informe as horas de capacidade como números maiores ou iguais a zero.');return}
   versaoModalErro('');
@@ -7777,7 +7818,7 @@ function salvarPonto(){
   // Captura marcações anteriores antes do save para detectar transição < 4 → 4
   var pontoExist=editId?S.pontos.find(function(p){return p.id===editId}):S.pontos.find(function(p){return p.data===data});
   var marcAntes=pontoExist&&pontoExist.marcacoes?pontoExist.marcacoes.trim().split(/\s+/).filter(Boolean):[];
-  var versaoId=(pontoExist&&pontoExist.versaoId)||S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
+  var versaoId=(pontoExist&&pontoExist.versaoId)||versaoIdLancamento();
   var pontoId=pontoExist?pontoExist.id:uid();
   // Nunca descarta o que já foi apropriado no dia (manual ou auto-apropriação do
   // foco) — antes, registrar uma nova marcação via "+ Registrar Ponto" num dia
@@ -8811,7 +8852,7 @@ function _registrarAproprFoco(osId,totalSeg){
   var horas=parseFloat((totalSeg/3600).toFixed(2));
   var hoje=hojeLocal();
   var diaSem=DIAS_SEMANA[new Date().getDay()];
-  var versaoId=S.versaoK||(S.versoes[0]&&S.versoes[0].id)||null;
+  var versaoId=versaoIdLancamento();
 
   // Snapshot do log para possível undo
   var logSnap=getTodayLog().filter(function(s){return s.osId===osId});
@@ -9919,6 +9960,10 @@ async function importarDoRedmine(){
   if(!cfg.proxyUrl||!cfg.proxy){toast('Ative o proxy Redmine nas Preferências','err');return}
   var versao=S.versoes.find(function(v){return v.id===S.versaoK});
   if(!versao){toast('Selecione uma versão no Kanban primeiro','err');return}
+  // Versão planejada não recebe OS importadas: usa a versão ativa, se houver.
+  var vidImp=versaoIdLancamento();
+  versao=S.versoes.find(function(v){return v.id===vidImp})||versao;
+  vidImp=versao.id;
   toast('Buscando tarefas no Redmine...');
   try{
     var r=await _redmineFetch(cfg,'/issues.json?assigned_to_id=me&status_id=open&limit=100&include=children','GET');
@@ -9948,7 +9993,7 @@ async function importarDoRedmine(){
       var np=matchProdutoRedmine(iss);
       var ntp=iss.tracker?iss.tracker.name:'';
       var npai=iss.parent?String(iss.parent.id):'';
-      return nt!==local.titulo||na!==local.atribuicao||np!==local.produto||ntp!==local.tipoRedmine||npai!==String(local.paiRedmine||'')||local.versaoId!==S.versaoK;
+      return nt!==local.titulo||na!==local.atribuicao||np!==local.produto||ntp!==local.tipoRedmine||npai!==String(local.paiRedmine||'')||local.versaoId!==vidImp;
     }).map(function(iss){
       var local=existingByNum[String(iss.id)];
       var novoTitulo=iss.subject||'';
@@ -9962,7 +10007,7 @@ async function importarDoRedmine(){
       if(novoTipo!==local.tipoRedmine)diffs.push({campo:'tipo',de:local.tipoRedmine,para:novoTipo});
       var novoPai=iss.parent?String(iss.parent.id):'';
       if(novoPai!==String(local.paiRedmine||''))diffs.push({campo:'pai',de:local.paiRedmine?'#'+local.paiRedmine:'—',para:novoPai?'#'+novoPai:'—'});
-      if(local.versaoId!==S.versaoK){
+      if(local.versaoId!==vidImp){
         var vAntiga=S.versoes.find(function(v){return v.id===local.versaoId});
         diffs.push({campo:'versão',de:vAntiga?vAntiga.nome:'—',para:versao.nome});
       }
@@ -10007,7 +10052,7 @@ async function importarDoRedmine(){
     for(var i=0;i<novas.length;i++){
       var iss=novas[i];
       var novaOS={
-        id:crypto.randomUUID(),versaoId:S.versaoK,
+        id:crypto.randomUUID(),versaoId:vidImp,
         num:String(iss.id),titulo:iss.subject||'',
         produto:matchProdutoRedmine(iss),
         atribuicao:matchAtribuicaoRedmine(iss.assigned_to?iss.assigned_to.name:''),
@@ -10032,7 +10077,7 @@ async function importarDoRedmine(){
       S.oss[idx]=Object.assign({},S.oss[idx],{
         titulo:upd.novoTitulo,atribuicao:upd.novaAtrib,
         produto:upd.novoProd,tipoRedmine:upd.novoTipo,
-        versaoId:S.versaoK,
+        versaoId:vidImp,
         paiRedmine:upd.iss.parent?String(upd.iss.parent.id):''
       });
       var pvUpd=PJ.ok?ProjCore.vinculoPorPai(S.oss[idx],PJ.projetos):null;
