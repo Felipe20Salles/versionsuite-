@@ -115,7 +115,8 @@ alter table projetos add constraint projetos_crit_check
          and 0 <= all(array_remove(crit, null)) and 3 >= all(array_remove(crit, null))));
 
 -- ── 4. Migração de dados (idempotente) ───────────────────────────────────────
--- Tipos de atividade: das etapas ativas para o papel (só papéis ainda sem tipos)
+-- Tipos de atividade: das etapas ativas para o papel (só papéis internos ainda sem tipos;
+-- papel externo não entra no realizado do plano)
 update projeto_papeis pp set tipos_atividade = s.tipos
 from (
   select e.papel_id, array_agg(distinct t order by t) as tipos
@@ -123,14 +124,15 @@ from (
   where e.ativo and e.papel_id is not null
   group by e.papel_id
 ) s
-where s.papel_id = pp.id and pp.tipos_atividade = '{}';
+where s.papel_id = pp.id and not pp.externo and pp.tipos_atividade = '{}';
 
--- Horas por papel: soma das horas estimadas das etapas, agrupada pelo papel da etapa
+-- Horas por papel: soma das horas estimadas das etapas, agrupada pelo papel (interno) da etapa
 with h as (
   select c.projeto_id, e.papel_id, sum(c.horas_estimadas) as horas
   from projeto_etapa_config c
   join projeto_etapas e on e.id = c.etapa_id
-  where e.papel_id is not null
+  join projeto_papeis pp on pp.id = e.papel_id
+  where not pp.externo
   group by c.projeto_id, e.papel_id
   having sum(c.horas_estimadas) > 0
 ), j as (
@@ -165,6 +167,13 @@ update projetos p set posicao = coalesce(b.maxpos, 0) + r.rn
 from r join base b on true
 where r.id = p.id and b.workspace_id = p.workspace_id;
 
+-- Posição só existe no plano
+update projetos set posicao = null where status <> 'plano' and posicao is not null;
+
+-- Entregues antigas: data de entrega aproximada pela última alteração
+update projetos set entregue_em = coalesce(atualizado_em, criado_em)
+where status = 'entregue' and entregue_em is null;
+
 alter table projetos enable trigger user;
 
 -- ── 5. RLS ───────────────────────────────────────────────────────────────────
@@ -196,16 +205,18 @@ create policy versao_capacidade_write on versao_capacidade for all
     and exists (select 1 from projeto_papeis pp where pp.id = papel_id and pp.workspace_id = versao_capacidade.workspace_id)
   );
 
--- Linha de base: só leitura e inserção (gravada ao iniciar a versão; não muda depois)
+-- Linha de base: só leitura e inserção por quem gere (gravada ao iniciar a versão; não muda depois)
 drop policy if exists plano_linha_base_select on plano_linha_base;
 create policy plano_linha_base_select on plano_linha_base for select using (is_workspace_member(workspace_id));
 drop policy if exists plano_linha_base_insert on plano_linha_base;
 create policy plano_linha_base_insert on plano_linha_base for insert
   with check (
-    is_workspace_member(workspace_id)
+    pode_gerir_projetos(workspace_id)
     and exists (select 1 from versoes v
                 where v.id = versao_id and v.workspace_id = plano_linha_base.workspace_id and v.ativa)
-    and exists (select 1 from projetos p where p.id = projeto_id and p.workspace_id = plano_linha_base.workspace_id)
+    and exists (select 1 from projetos p
+                where p.id = projeto_id and p.workspace_id = plano_linha_base.workspace_id
+                  and p.status in ('plano', 'entregue'))
   );
 
 -- Demandas: membros criam em triagem, como autores, sem campos de decisão
@@ -244,7 +255,8 @@ create policy projeto_eventos_insert on projeto_eventos for insert
 
 -- ── 6. Guarda de update ──────────────────────────────────────────────────────
 -- Sem "Gerir o plano", um membro só edita a própria demanda enquanto ela está em triagem,
--- sem mexer em critérios, posição, pai do Redmine, decisão nem entrega.
+-- e só os campos da lista abaixo (lista de permitidos: coluna nova fica travada por padrão).
+-- horas_origem entra porque o client grava 'vs' junto com as horas; o check limita os valores.
 create or replace function projetos_guarda_update()
 returns trigger language plpgsql set search_path = public, pg_temp as $$
 begin
@@ -252,11 +264,10 @@ begin
   if (auth.uid() is null and current_user not in ('anon', 'authenticated'))
      or pode_gerir_projetos(old.workspace_id) then return new; end if;
   if old.sugerido_por = auth.uid() and old.status = 'triagem' and new.status = 'triagem'
-     and (new.workspace_id, new.sugerido_por, new.criado_em, new.crit, new.posicao, new.pai_redmine,
-          new.decisao_obs, new.decidido_em, new.decidido_por, new.entregue_em)
-         is not distinct from
-         (old.workspace_id, old.sugerido_por, old.criado_em, old.crit, old.posicao, old.pai_redmine,
-          old.decisao_obs, old.decidido_em, old.decidido_por, old.entregue_em) then
+     and (to_jsonb(new) - array['titulo', 'descricao', 'produto', 'solicitante',
+                                'horas_papeis', 'horas_origem', 'atualizado_em'])
+         = (to_jsonb(old) - array['titulo', 'descricao', 'produto', 'solicitante',
+                                  'horas_papeis', 'horas_origem', 'atualizado_em']) then
     return new;
   end if;
   raise exception 'Sem permissão para alterar esta demanda (requer "Gerir o plano").';
@@ -287,6 +298,10 @@ begin
       new.decisao_obs := null;
       new.decidido_por := null;
       new.entregue_em := null;
+      -- Colunas antigas (fora da interface) também não vêm de quem não gere
+      new.prioridade := null;
+      new.etapa_id := null;
+      new.data_alvo := null;
     end if;
   else
     new.atualizado_em := now();
@@ -303,7 +318,10 @@ begin
     raise exception 'Horas não podem ser negativas.';
   end if;
 
-  -- Entrar no plano sem posição: vai para o fim
+  -- Posição só existe no plano; ao (re)entrar sem posição, vai para o fim
+  if new.status is distinct from 'plano' then
+    new.posicao := null;
+  end if;
   if new.status = 'plano' and new.posicao is null
      and (tg_op = 'INSERT' or old.status is distinct from 'plano') then
     new.posicao := coalesce((select max(p.posicao) from projetos p
