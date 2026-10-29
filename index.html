@@ -20,6 +20,7 @@
   --green:#3ecf8e;--green-dim:#1a3d2e;--green-text:#3ecf8e;
   --amber:#f5a623;--amber-dim:#3d2e0a;--amber-text:#f5a623;
   --red:#f56565;--red-dim:#3d1010;--red-text:#f56565;
+  --blue:#6f9bd1;
   --radius:8px;--radius-lg:12px;--radius-xl:16px;
   --font:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
 }
@@ -102,27 +103,32 @@ textarea.form-input{resize:vertical;min-height:70px}
 .kanban-col-count{font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:10px;background:var(--card2);color:var(--hint)}
 .kanban-col-body{display:flex;flex-direction:column;gap:8px;min-height:80px}
 .empty-col{border:1px dashed var(--border);border-radius:var(--radius-lg);padding:24px;text-align:center;color:var(--hint);font-size:12px}
-/* PROJETOS */
-.pj-tab{background:none;border:none;border-bottom:2px solid transparent;padding:8px 14px;font-size:13px;color:var(--muted);cursor:pointer;font-family:var(--font)}
-.pj-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
-.pj-sug{border:1px solid var(--accent);background:var(--accent-glow);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:16px}
-.pj-sug-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px}
-.pj-sug-h span{font-size:12px;color:var(--muted)}
-.pj-sug-row{display:flex;align-items:center;gap:14px;padding:10px 0;border-top:1px solid var(--border2);flex-wrap:wrap}
-.pj-sug-num{font-family:var(--mono);font-size:12px;color:var(--muted);width:52px;flex-shrink:0}
-.pj-sug-meta{font-size:12px;color:var(--muted);margin-top:2px}
-.pj-sug-vazio{font-size:12px;color:var(--muted);background:var(--card);border:1px dashed var(--border2);border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:16px}
-.pj-sug-and{background:var(--green-dim);color:var(--green-text)}
-.pj-row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:8px;cursor:pointer}
-.pj-row:hover{border-color:var(--accent)}
-.pj-prio{font-family:var(--mono);font-size:18px;font-weight:600;min-width:46px;text-align:center}
-.pj-board{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;align-items:flex-start}
-.pj-col{flex:0 0 240px;min-width:240px}
-.pj-col.drop{outline:2px dashed var(--accent);outline-offset:4px;border-radius:var(--radius-lg)}
-.pj-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;cursor:pointer}
-.pj-card:hover{border-color:var(--accent)}
-.pj-bar{height:4px;background:var(--card2);border-radius:2px;overflow:hidden;margin:6px 0}
-.pj-bar>div{height:100%;background:var(--green)}
+/* PLANO */
+.pl-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.pl-pilulas{display:flex;gap:6px;flex-wrap:wrap}
+.pl-chip{display:flex;align-items:baseline;gap:7px;padding:6px 12px;border-radius:999px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;color:var(--muted)}
+.pl-chip b{font-size:15px;font-weight:600;color:var(--text)}
+.pl-chip i{width:8px;height:8px;border-radius:50%;display:inline-block;align-self:center}
+.pl-chip[aria-pressed=true]{border-color:rgba(var(--accent-rgb),.6);color:var(--text);background:rgba(var(--accent-rgb),.12)}
+.pl-chip:focus-visible,.pl-busca input:focus-visible,.pl-busca select:focus-visible,.pl-vf:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pl-busca{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.pl-busca input,.pl-busca select{background:var(--card);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:6px 10px;font-size:12.5px}
+.pl-busca input{width:230px;max-width:100%}
+.pl-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;margin-bottom:16px}
+.pl-panel-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.pl-panel-h h2{font-size:14px;font-weight:600}
+.pl-hint{font-size:12px;color:var(--muted);margin-top:2px}
+.pl-vf{background:var(--card);border:1px solid var(--border2);color:var(--text);border-radius:var(--radius);padding:5px 10px;font-size:12.5px}
+.pl-resumo{display:flex;gap:18px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+.pl-resumo b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.pl-resumo .pl-ruim b{color:var(--red)}
+#pl-grade{width:100%;height:auto;display:block;margin-top:8px;touch-action:none}
+#pl-potes-wrap{position:relative;overflow-x:auto;margin-top:8px}
+#pl-potes{display:block;height:auto;touch-action:none}
+.pl-tip{position:fixed;pointer-events:none;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:8px 10px;font-size:12px;max-width:300px;opacity:0;transition:opacity .12s;z-index:260;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.pl-tip b{display:block;font-weight:500;color:var(--text)}.pl-tip span{color:var(--muted)}
+.pl-relatorio summary{cursor:pointer;font-size:14px;font-weight:600}
+@media (prefers-reduced-motion:reduce){.pl-tip{transition:none}}
 .pj-drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);background:var(--surface);border-left:1px solid var(--border2);z-index:250;overflow-y:auto;padding:20px 22px;transform:translateX(100%);transition:transform .2s}
 .pj-drawer.open{transform:none}
 .pj-sec{margin-top:18px}
@@ -563,7 +569,7 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div class="nav-section" id="nav-sec-estrategico" style="display:none">
         <div class="nav-label">Estratégico</div>
         <div id="nav-projetos" class="nav-item" onclick="goScreen('projetos')">
-          <svg class="nav-icon" viewBox="0 0 16 16"><path d="M8 1.5l6.5 6.5L8 14.5 1.5 8z"/></svg>Projetos
+          <svg class="nav-icon" viewBox="0 0 16 16"><path d="M3 13V8M8 13V3M13 13V6"/></svg>Plano
         </div>
       </div>
       <div class="nav-section">
@@ -624,13 +630,34 @@ textarea.form-input{resize:vertical;min-height:70px}
 
       <!-- PROJETOS -->
       <div id="screen-projetos" class="screen">
-        <div style="display:flex;gap:4px;border-bottom:1px solid var(--border);margin-bottom:16px">
-          <button id="pj-tab-btn-backlog" class="pj-tab active" onclick="pjTab('backlog')">Backlog de ideias</button>
-          <button id="pj-tab-btn-quadro" class="pj-tab" onclick="pjTab('quadro')">Projetos</button>
-        </div>
         <div id="pj-aviso"></div>
-        <div id="pj-tab-backlog"></div>
-        <div id="pj-tab-quadro" style="display:none"></div>
+        <div id="pl-corpo">
+          <div class="pl-chips" id="pl-chips">
+            <div class="pl-pilulas" id="pl-pilulas" role="group" aria-label="Filtrar por situação"></div>
+            <div class="pl-busca">
+              <input id="pl-busca" type="search" placeholder="Buscar ID, título ou solicitante…" aria-label="Buscar demanda" oninput="planoSetBusca(this.value)">
+              <select id="pl-produto" aria-label="Filtrar por produto" onchange="planoSetProduto(this.value)"></select>
+            </div>
+          </div>
+          <section class="pl-panel">
+            <div class="pl-panel-h"><div><h2>Projetos</h2><div class="pl-hint">Cada bolha é uma demanda; o tamanho é o esforço. Clique para avaliar e decidir, ou arraste para um pote para incluir no plano.</div></div></div>
+            <svg id="pl-grade" viewBox="0 0 1000 452" role="img" aria-label="Demandas agrupadas por prioridade e esforço"></svg>
+          </section>
+          <section class="pl-panel">
+            <div class="pl-panel-h">
+              <div style="flex:1;min-width:280px">
+                <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><h2>Capacidade por versão</h2><select id="pl-visao" class="pl-vf" aria-label="Filtrar capacidade por versão" onchange="planoSetVisao(this.value)"></select></div>
+                <div class="pl-hint" id="pl-dica"></div>
+              </div>
+              <div class="pl-resumo" id="pl-resumo"></div>
+            </div>
+            <div id="pl-potes-wrap"><svg id="pl-potes" aria-label="Potes de capacidade por versão"></svg></div>
+          </section>
+          <details class="pl-panel pl-relatorio" id="pl-relatorio" hidden>
+            <summary>Plano × realizado</summary>
+            <div id="pl-relatorio-corpo"></div>
+          </details>
+        </div>
       </div>
 
       <!-- DASHBOARD -->
@@ -2826,7 +2853,7 @@ function goScreen(name){
   document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active')});
   var el=document.getElementById('screen-'+name);if(el)el.classList.add('active');
   document.querySelectorAll('.nav-item').forEach(function(b){if(b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+name+"'"))b.classList.add('active')});
-  var titles={dashboard:'Dashboard',kanban:'Demandas',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda',projetos:'Projetos'};
+  var titles={dashboard:'Dashboard',kanban:'Demandas',boletim:'Boletim da Versão',ponto:'Ponto & Horas',historico:'Histórico',preferencias:'Preferências',agenda:'Agenda',projetos:'Plano'};
   var isVisitor=CURRENT_USER&&CURRENT_USER.isVisitor;
   var acts={
     dashboard:isVisitor?'':'<button class="btn btn-primary btn-sm" onclick="openNovaVersao()">+ Nova versão</button>',
@@ -2834,7 +2861,7 @@ function goScreen(name){
     boletim:'',
     ponto:'',
     historico:'',preferencias:'',
-    projetos:(!isVisitor&&PJ.ok)?'<button class="btn btn-primary btn-sm" onclick="openPjIdeia()">+ Nova ideia</button>':'',
+    projetos:'', // preenchido por planoTopbar() em renderProjetos
     agenda:(!isVisitor&&can('agenda_editar'))?'<button class="btn btn-primary btn-sm" onclick="openNovaPublicacao()">+ Nova publicação</button> <button class="btn btn-sm btn-ghost" onclick="openNewAgendaEvent()">+ Evento pontual</button>':''
   };
   document.getElementById('topbar-title').textContent=titles[name]||name;
@@ -6083,69 +6110,477 @@ async function projRegistrarVinculo(os,antigoId,novoId,motivo){
   }catch(e){console.warn('Evento de vínculo falhou:',e)}
 }
 
-// ── PROJETOS: tela ──────────────────────────────────────────────────────────
-var _pjTab='backlog';
-function pjTab(nome){
-  _pjTab=nome;
-  ['backlog','quadro'].forEach(function(t){
-    document.getElementById('pj-tab-'+t).style.display=t===nome?'':'none';
-    document.getElementById('pj-tab-btn-'+t).classList.toggle('active',t===nome);
+// ── PLANO: tela (grade de bolhas, potes por versão e por papel) ─────────────
+// Desenho em plano-viz.js (window.PlanoViz); regras em projetos-core.js (window.ProjCore).
+var _plano={filtro:null,busca:'',produto:'',visao:'todas',dist:null};
+var _planoTampa=null;   // {chave, orig:{papelId:h}} enquanto uma tampa é arrastada
+var _planoOcupado=false; // um arrasto de bolha sendo gravado
+var PLANO_ST={
+  triagem:{n:'Em triagem',chip:'Em triagem',c:'var(--muted)'},
+  pauta:{n:'Em pauta',chip:'Em pauta',c:'var(--amber)'},
+  plano:{n:'No plano',chip:'No plano',c:'var(--accent)'},
+  adiada:{n:'Adiada',chip:'Adiadas',c:'var(--blue)'},
+  descartada:{n:'Descartada',chip:'Descartadas',c:'var(--red)'},
+  entregue:{n:'Entregue',chip:'Entregues',c:'var(--green)'}
+};
+var PLANO_TONS=['#7c6ff7','#9a90fa','#5c55cc','#b4acfb','#6a5de0','#8579f8','#a59cfa','#6c63e8'];
+var PLANO_COR_PAPEL=['#7c6ff7','#9a90fa','#6f9bd1','#b4acfb','#5c55cc'];
+
+function planoTela(){var s=document.getElementById('screen-projetos');return!!(s&&s.classList.contains('active'))}
+function planoFmtH(h){return String(Math.round((+h||0)*10)/10).replace('.',',')}
+function planoTom(id){
+  for(var i=0;i<PJ.projetos.length;i++)if(PJ.projetos[i].id===id)return PLANO_TONS[i%PLANO_TONS.length];
+  return PLANO_TONS[0];
+}
+function planoHa(ts){
+  var m=Math.max(0,Math.round((Date.now()-new Date(ts).getTime())/60000));
+  if(m<60)return m+' min';
+  var h=Math.round(m/60);
+  if(h<48)return h+' h';
+  return Math.round(h/24)+' dias';
+}
+function _planoPorData(a,b){
+  if(a.data==null&&b.data==null)return 0;
+  if(a.data==null)return 1;if(b.data==null)return -1;
+  return a.data<b.data?-1:a.data>b.data?1:0;
+}
+// Versões que entram na cascata (ativas, depois planejadas), no formato de distribuirPlano
+function planoVersoes(){
+  var vs=(S.versoes||[]).filter(function(v){return v.ativa||v.planejada}).map(function(v){
+    return{id:v.id,nome:v.nome,data:v.data||null,ativa:!!v.ativa,planejada:!!v.planejada,capacidade:planoCapTotal(v.id)};
   });
-  if(nome==='backlog')renderPjBacklog();else renderPjQuadro();
+  var at=vs.filter(function(v){return v.ativa}).sort(_planoPorData);
+  var pl=vs.filter(function(v){return!v.ativa}).sort(_planoPorData);
+  return at.concat(pl);
+}
+function planoVersaoPorId(id){
+  var vs=planoVersoes();
+  for(var i=0;i<vs.length;i++)if(String(vs[i].id)===String(id))return vs[i];
+  return null;
+}
+function planoDemandas(){return PJ.projetos.map(planoDemanda)}
+function planoDistribuir(){
+  _plano.dist=ProjCore.distribuirPlano(planoDemandas(),planoVersoes(),PJ.real);
+  return _plano.dist;
+}
+// Ids das demandas no plano, na ordem da cascata
+function planoOrdem(){
+  return planoDemandas().filter(function(d){return d.status==='plano'}).sort(ProjCore.compararPlano)
+    .map(function(d){return d.id});
+}
+function planoNomesPrevistas(ids){
+  var out=[];
+  (ids||[]).forEach(function(vid){
+    var v=vid==null?null:planoVersaoPorId(vid);
+    var n=vid==null?'sem versão':(v?v.nome:'?');
+    if(out[out.length-1]!==n)out.push(n);
+  });
+  return out.join(' → ');
+}
+function planoUnicos(lista){
+  var vistos={},out=[];
+  lista.forEach(function(x){if(!vistos[x]){vistos[x]=1;out.push(x)}});
+  return out;
+}
+
+// ── filtros ──
+function planoBate(p){
+  if(_plano.filtro&&p.status!==_plano.filtro)return false;
+  if(_plano.produto&&(p.produto||'')!==_plano.produto)return false;
+  var q=(_plano.busca||'').trim().toLowerCase().replace(/^#/,'');
+  if(q){
+    var alvo=[p.pai_redmine==null?'':String(p.pai_redmine),p.titulo||'',p.solicitante||''].join(' ').toLowerCase();
+    if(alvo.indexOf(q)<0)return false;
+  }
+  return true;
+}
+function planoRenderChips(){
+  var el=document.getElementById('pl-pilulas');if(!el)return;
+  var cont={};
+  PJ.projetos.forEach(function(p){cont[p.status]=(cont[p.status]||0)+1});
+  var ks=['triagem','pauta','plano','adiada','descartada'];
+  if(cont.entregue||_plano.filtro==='entregue')ks.push('entregue');
+  function chip(k,n,rot,cor){
+    var on=k===null?_plano.filtro===null:_plano.filtro===k;
+    return'<button type="button" class="pl-chip" aria-pressed="'+on+'" onclick="planoSetFiltro('+(k===null?'null':'\''+k+'\'')+')">'+
+      (cor?'<i style="background:'+cor+'"></i>':'')+'<b>'+n+'</b>'+escHtml(rot)+'</button>';
+  }
+  el.innerHTML=chip(null,PJ.projetos.length,'Todas')+ks.map(function(k){return chip(k,cont[k]||0,PLANO_ST[k].chip,PLANO_ST[k].c)}).join('');
+  var sel=document.getElementById('pl-produto');
+  if(sel){
+    var prods={};
+    ((S.prefs&&S.prefs.produtos)||[]).forEach(function(n){if(n)prods[n]=1});
+    PJ.projetos.forEach(function(p){if(p.produto)prods[p.produto]=1});
+    if(_plano.produto)prods[_plano.produto]=1;
+    sel.innerHTML='<option value="">Todos os produtos</option>'+Object.keys(prods).sort().map(function(n){
+      return'<option value="'+escHtml(String(n))+'">'+escHtml(String(n))+'</option>';
+    }).join('');
+    sel.value=_plano.produto;
+  }
+}
+function planoSetFiltro(k){
+  _plano.filtro=(k===null||_plano.filtro===k)?null:k;
+  planoRenderChips();planoDesenharGrade();
+}
+function planoSetBusca(v){_plano.busca=v||'';planoDesenharGrade()}
+function planoSetProduto(v){_plano.produto=v||'';planoDesenharGrade()}
+function planoSetVisao(v){_plano.visao=(!v||v==='todas')?'todas':v;planoEsconderTip();planoDesenharPotes()}
+function planoTituloPote(chave){if(String(chave).indexOf('v:')===0)planoSetVisao(String(chave).slice(2))}
+
+// ── tooltip ──
+function planoTipEl(){
+  var t=document.getElementById('pl-tip');
+  if(!t){t=document.createElement('div');t.id='pl-tip';t.className='pl-tip';t.setAttribute('role','tooltip');document.body.appendChild(t)}
+  return t;
+}
+function planoEsconderTip(){var t=document.getElementById('pl-tip');if(t)t.style.opacity=0}
+function planoPassar(id,on,ev){
+  PlanoViz.realcar(id,on);
+  if(!on){planoEsconderTip();return}
+  var p=projById(id);if(!p)return;
+  var d=planoDemanda(p),st=PLANO_ST[p.status],partes=[];
+  partes.push(p.pai_redmine?'#'+p.pai_redmine:'Criada no VS');
+  partes.push(st?st.n:String(p.status||''));
+  partes.push(d.horas>0?planoFmtH(d.horas)+'h':'sem horas');
+  if(d.prioridade!=null)partes.push('prioridade '+d.prioridade);
+  var prev=p.status==='plano'&&_plano.dist?_plano.dist.previstas[id]:null;
+  if(prev&&prev.length&&d.horas>0)partes.push('prevista: '+planoNomesPrevistas(prev));
+  var t=planoTipEl();
+  t.innerHTML='<b>'+escHtml(String(p.titulo||'Demanda'))+'</b><span>'+escHtml(partes.join(' · '))+'</span>';
+  var x=ev&&ev.clientX||0,y=ev&&ev.clientY||0;
+  t.style.left=Math.max(8,Math.min(window.innerWidth-320,x+14))+'px';
+  t.style.top=(y+14)+'px';
+  t.style.opacity=1;
+}
+function planoClicar(id){planoEsconderTip();planoAbrir(id)}
+
+// ── grade prioridade × esforço ──
+function planoDesenharGrade(){
+  var svg=document.getElementById('pl-grade');if(!svg||!window.PlanoViz)return;
+  var cfg=PJ.cfg,fp=cfg.faixas_prioridade,fe=cfg.faixas_esforco,max=0;
+  cfg.criterios.forEach(function(c){max+=3*(+c.peso||0)});
+  var linhas=[
+    {chave:'alta',titulo:'Prioridade alta',sub:(fp.media_ate+1)+' a '+max,cor:'var(--green)'},
+    {chave:'media',titulo:'Prioridade média',sub:(fp.baixa_ate+1)+' a '+fp.media_ate,cor:'var(--amber)'},
+    {chave:'baixa',titulo:'Prioridade baixa',sub:'0 a '+fp.baixa_ate,cor:'var(--red)'},
+    {chave:'sem',titulo:'Sem avaliação',sub:'em triagem',cor:'var(--muted)'}
+  ];
+  var colunas=[
+    {chave:'pequeno',titulo:'Pequeno',sub:'até '+fe.pequeno_ate+'h'},
+    {chave:'medio',titulo:'Médio',sub:(fe.pequeno_ate+1)+' a '+fe.medio_ate+'h'},
+    {chave:'grande',titulo:'Grande',sub:'mais de '+fe.medio_ate+'h'},
+    {chave:'sem',titulo:'Sem estimativa',sub:'aguardando horas'}
+  ];
+  var lista=PJ.projetos.map(function(p){return{p:p,d:planoDemanda(p)}});
+  lista.sort(function(a,b){
+    var pa=a.d.prioridade,pb=b.d.prioridade;
+    if(pa!==pb){if(pa==null)return 1;if(pb==null)return -1;return pb-pa}
+    if(a.d.horas!==b.d.horas)return b.d.horas-a.d.horas;
+    return String(a.p.criado_em||'').localeCompare(String(b.p.criado_em||''));
+  });
+  PlanoViz.grade(svg,{
+    linhas:linhas,colunas:colunas,
+    destaque:{linha:'alta',coluna:'pequeno',texto:'Alto retorno, pouco esforço'},
+    bolhas:lista.map(function(x){
+      var st=PLANO_ST[x.p.status]||PLANO_ST.triagem;
+      return{id:x.p.id,linha:x.d.faixaP||'sem',coluna:x.d.faixaE,horas:x.d.horas,cor:st.c,
+        anel:x.p.status==='pauta',tracejada:!(x.d.horas>0),apagada:!planoBate(x.p),rotulo:x.p.titulo||'Demanda'};
+    }),
+    podeArrastar:can('gerir_projetos'),
+    aoClicar:planoClicar,aoSoltar:planoSoltar,aoPassar:planoPassar
+  });
+}
+
+// ── potes ──
+function planoIdsPapeis(){return planoPapeis().map(function(p){return p.id})}
+// Capacidade de cada papel do plano na versão (0 quando não há linha)
+function planoCapPapeisPlano(vid){
+  var o=planoCapPorPapel(vid),out={};
+  planoIdsPapeis().forEach(function(id){out[id]=o[id]||0});
+  return out;
+}
+function planoCargaPapeis(vid,itens){
+  var ids=planoIdsPapeis(),rest={};
+  (itens||[]).forEach(function(it){
+    if(rest[it.id])return;
+    var p=projById(it.id);
+    rest[it.id]=ProjCore.restantePorPapel(p?p.horas_papeis:[],(PJ.real.porPapel||{})[String(it.id)]||{},ids);
+  });
+  return ProjCore.repartirPorPapel(itens||[],rest,(PJ.real.porVersaoPapel||{})[String(vid)]||{},ids,planoCapPorPapel(vid));
+}
+function planoItemPote(it,partes){
+  return{id:it.id,horas:(it.horas||0)+(it.realizado||0),realizado:it.realizado||0,cor:planoTom(it.id),dividida:(partes||1)>1};
+}
+function planoDesenharPotes(){
+  var svg=document.getElementById('pl-potes'),wrap=document.getElementById('pl-potes-wrap');
+  if(!svg||!window.PlanoViz)return;
+  var dist=planoDistribuir(),vers=planoVersoes(),gerir=can('gerir_projetos');
+  if(_plano.visao!=='todas'&&!planoVersaoPorId(_plano.visao))_plano.visao='todas';
+  var sel=document.getElementById('pl-visao');
+  if(sel){
+    sel.innerHTML='<option value="todas">Todas as versões</option>'+vers.map(function(v){
+      return'<option value="'+escHtml(String(v.id))+'">'+escHtml(String(v.nome||''))+'</option>';
+    }).join('');
+    sel.value=String(_plano.visao);
+  }
+  var opts={podeArrastar:gerir,aoClicar:planoClicar,aoSoltar:planoSoltar,aoPassar:planoPassar,
+    aoTampa:planoTampa,aoTitulo:planoTituloPote};
+  var r=_plano.visao==='todas'?planoPotesTodas(dist,vers,gerir):planoPotesVersao(dist,planoVersaoPorId(_plano.visao),gerir);
+  opts.potes=r.potes;
+  document.getElementById('pl-dica').textContent=r.dica;
+  document.getElementById('pl-resumo').innerHTML=r.resumo;
+  PlanoViz.potes(svg,wrap,opts);
+}
+function planoPotesTodas(dist,vers,gerir){
+  var porId={};vers.forEach(function(v){porId[String(v.id)]=v});
+  var potes=dist.versoes.map(function(dv){
+    var v=porId[String(dv.id)]||{};
+    var acimaP=planoCargaPapeis(dv.id,dv.itens).filter(function(l){return l.acima>0.05}).map(function(l){
+      var pp=projPapel(l.papelId);return pp?pp.nome:'?';
+    });
+    var r2=acimaP.length?{t:'⚠ '+acimaP.join(', ')+' acima',c:'var(--amber)'}
+      :dv.livres>0.05?{t:Math.round(dv.livres)+'h livres',c:'var(--green)'}:{t:'cheio',c:'var(--muted)'};
+    return{chave:'v:'+dv.id,tipo:'versao',titulo:v.nome||'Versão',
+      sub:v.ativa?'● ativa':'planejada',subCor:v.ativa?'var(--green)':'var(--hint)',
+      capacidade:dv.capacidade,usado:dv.usado,realizado:dv.realizado,acima:Math.max(dv.usado-dv.capacidade,0),
+      rodape:Math.round(dv.usado)+' de '+planoFmtH(dv.capacidade)+'h',rodape2:r2.t,rodape2Cor:r2.c,
+      corBorda:v.ativa?'rgba(62,207,142,.45)':null,editavel:gerir,tituloClicavel:true,
+      itens:dv.itens.map(function(it){return planoItemPote(it,it.partes)})};
+  });
+  var semH=0,semIds=[];
+  dist.semVersao.forEach(function(s){semH+=s.horas;semIds.push(s.id)});
+  var nSem=planoUnicos(semIds).length;
+  potes.push({chave:'sem',tipo:'sem',titulo:'Sem versão ainda',sub:'não coube nas versões',subCor:'var(--hint)',
+    capacidade:0,usado:0,rodape:Math.round(semH)+'h',rodapeCor:'var(--red)',
+    rodape2:nSem+(nSem===1?' demanda':' demandas'),rodape2Cor:'var(--muted)',
+    itens:dist.semVersao.map(function(s){return planoItemPote(s,s.partes)})});
+  var planH=0,capT=0,ult=null;
+  PJ.projetos.forEach(function(p){if(p.status==='plano')planH+=planoDemanda(p).horas});
+  dist.versoes.forEach(function(dv){capT+=dv.capacidade;if(dv.itens.length)ult=dv});
+  var fim=semH>0||!ult?'—':((porId[String(ult.id)]||{}).nome||'—');
+  var resumo='<span>No plano <b>'+planoFmtH(planH)+'h</b></span><span>Capacidade <b>'+planoFmtH(capT)+'h</b></span>'+
+    '<span>Plano termina em <b>'+escHtml(String(fim))+'</b></span>'+
+    (semH>0?'<span class="pl-ruim">Sem versão <b>'+Math.round(semH)+'h</b></span>':'')+
+    '<span>'+dist.semHoras.length+' no plano sem horas</span>';
+  var dica=!vers.length?'Nenhuma versão ativa ou planejada: tudo o que está no plano fica em "Sem versão ainda".'
+    :gerir?'O líquido é o volume de horas; as bolhas são as demandas. Arraste a tampa para mudar as horas, ou uma bolha para outro pote. Clique no nome da versão para ver por papel.'
+    :'O líquido é o volume de horas; as bolhas são as demandas. Clique no nome da versão para ver por papel.';
+  return{potes:potes,resumo:resumo,dica:dica};
+}
+function planoPotesVersao(dist,v,gerir){
+  var dv=null;
+  dist.versoes.forEach(function(x){if(String(x.id)===String(v.id))dv=x});
+  dv=dv||{id:v.id,capacidade:0,usado:0,realizado:0,livres:0,itens:[]};
+  var ps=planoPapeis(),cargas=planoCargaPapeis(v.id,dv.itens),partes={};
+  dv.itens.forEach(function(it){partes[it.id]=it.partes});
+  var potes=cargas.map(function(l,i){
+    var pp=ps[i]||{nome:'?'},acima=l.acima>0.05;
+    return{chave:'p:'+l.papelId,tipo:'papel',titulo:pp.nome,sub:'em '+(v.nome||''),subCor:'var(--hint)',
+      capacidade:l.capacidade,usado:l.usado,realizado:l.realizado,acima:l.acima,
+      rodape:Math.round(l.usado)+' de '+planoFmtH(l.capacidade)+'h',
+      rodape2:acima?Math.round(l.acima)+'h acima da capacidade':Math.round(l.livres)+'h livres',
+      rodape2Cor:acima?'var(--red)':'var(--green)',
+      corTampa:PLANO_COR_PAPEL[i%PLANO_COR_PAPEL.length],editavel:gerir,
+      itens:l.itens.map(function(it){return planoItemPote(it,partes[it.id])})};
+  });
+  var nDem=planoUnicos(dv.itens.map(function(it){return it.id})).length;
+  var resumo='<span>Capacidade em '+escHtml(String(v.nome||''))+' <b>'+planoFmtH(dv.capacidade)+'h</b></span>'+
+    '<span>Planejado <b>'+Math.round(dv.usado)+'h</b></span><span>'+nDem+(nDem===1?' demanda':' demandas')+'</span>'+
+    cargas.filter(function(l){return l.acima>0.05}).map(function(l,i){
+      var pp=projPapel(l.papelId);
+      return'<span class="pl-ruim">'+escHtml(String(pp?pp.nome:'?'))+' acima <b>'+Math.round(l.acima)+'h</b></span>';
+    }).join('');
+  var dica='Capacidade de cada papel em '+(v.nome||'')+'. As bolhas são a parte de cada demanda que cabe ao papel.'+
+    (gerir?' Arraste a tampa para ajustar as horas do papel.':'');
+  if(!ps.length)dica='Nenhum papel do plano configurado. Configure em Preferências › Plataforma › Plano.';
+  return{potes:potes,resumo:resumo,dica:dica};
+}
+
+// ── tampa (capacidade) ──
+function planoTampa(chave,horas,final){
+  if(!can('gerir_projetos'))return;
+  chave=String(chave);
+  if(chave.indexOf('v:')===0)planoSetCapTotal(chave.slice(2),horas,final);
+  else if(chave.indexOf('p:')===0&&_plano.visao!=='todas')planoSetCapPapel(_plano.visao,chave.slice(2),horas,final);
+}
+function planoCapLocal(vid,mapa){
+  Object.keys(mapa).forEach(function(pid){
+    var achou=false;
+    PJ.capac.forEach(function(c){
+      if(String(c.versao_id)===String(vid)&&c.papel_id===pid){
+        if(!achou){c.horas=mapa[pid];achou=true}else c.horas=0;
+      }
+    });
+    if(!achou)PJ.capac.push({versao_id:vid,papel_id:pid,horas:mapa[pid]});
+  });
+}
+function _planoSoma(o){var t=0;Object.keys(o).forEach(function(k){t+=o[k]||0});return t}
+async function planoGravarCap(vid,mapa,orig){
+  var linhas=Object.keys(mapa).filter(function(pid){return mapa[pid]!==orig[pid]}).map(function(pid){
+    return{workspace_id:CURRENT_WORKSPACE_ID,versao_id:vid,papel_id:pid,horas:mapa[pid]};
+  });
+  if(!linhas.length)return;
+  var r=await sb.from('versao_capacidade').upsert(linhas,{onConflict:'versao_id,papel_id'});
+  if(r.error){
+    toast('Erro ao gravar a capacidade: '+r.error.message,true);
+    planoCapLocal(vid,orig);
+    if(planoTela())planoDesenharPotes();
+  }
+}
+// Na visão "Todas": muda o total da versão, repartindo pelos papéis na proporção que já tinham
+async function planoSetCapTotal(versaoId,horas,final){
+  var chave='v:'+versaoId;
+  if(!_planoTampa||_planoTampa.chave!==chave)_planoTampa={chave:chave,orig:planoCapPapeisPlano(versaoId)};
+  var orig=_planoTampa.orig,tot=_planoSoma(orig);
+  var novo=horas===tot?orig:ProjCore.repartirTotal(orig,horas);
+  planoCapLocal(versaoId,novo);
+  if(final)_planoTampa=null;
+  if(planoTela())planoDesenharPotes();
+  if(!final||horas===tot)return; // clique na tampa sem mover não grava
+  await planoGravarCap(versaoId,novo,orig);
+}
+// Na visão de uma versão: muda a capacidade de um papel
+async function planoSetCapPapel(versaoId,papelId,horas,final){
+  var chave='p:'+versaoId+':'+papelId;
+  if(!_planoTampa||_planoTampa.chave!==chave)_planoTampa={chave:chave,orig:planoCapPapeisPlano(versaoId)};
+  var orig=_planoTampa.orig,novo={};
+  Object.keys(orig).forEach(function(k){novo[k]=orig[k]});
+  novo[papelId]=horas;
+  planoCapLocal(versaoId,novo);
+  if(final)_planoTampa=null;
+  if(planoTela())planoDesenharPotes();
+  if(!final||horas===(orig[papelId]||0))return;
+  var um={};um[papelId]=horas;
+  await planoGravarCap(versaoId,um,orig);
+}
+
+// ── decisão e ordem ──
+// semRedesenhar: uso interno (planoSoltar redesenha uma vez só, depois de reordenar)
+async function planoDecidir(id,para,obs,semRedesenhar){
+  var p=projById(id);if(!p)return false;
+  if(!can('gerir_projetos')){toast('Sem permissão para decidir sobre demandas',true);return false}
+  var de=p.status;
+  if(!ProjCore.podeMudarStatus(de,para)){
+    toast('Não dá para passar de "'+(ProjCore.STATUS_ROTULO[de]||de)+'" para "'+(ProjCore.STATUS_ROTULO[para]||para)+'"',true);
+    return false;
+  }
+  try{
+    await projSalvar(p,{status:para,decisao_obs:obs||null,decidido_em:new Date().toISOString(),decidido_por:CURRENT_USER.id},{status:de});
+    await projEvento(id,'decisao',de,para,obs||null);
+    await projRecarregar(id); // posicao vem do trigger
+  }catch(e){
+    toast('Erro ao decidir: '+e.message,true);
+    if(planoTela())renderProjetos();
+    return false;
+  }
+  if(!semRedesenhar&&planoTela())renderProjetos();
+  return true;
+}
+// Grava as posições que mudaram e um evento "posicao" para a demanda movida
+async function planoGravarOrdem(ordemIds,movidoId){
+  var atual={};
+  PJ.projetos.forEach(function(p){if(p.status==='plano'&&p.posicao!=null)atual[p.id]=+p.posicao});
+  var mud=ProjCore.renumerar(ordemIds,atual);
+  if(!mud.length)return;
+  if(!movidoId){ // sem indicação: a que mais andou
+    var maior=-1;
+    mud.forEach(function(m){var d=Math.abs((atual[m.id]==null?0:atual[m.id])-m.posicao);if(d>maior){maior=d;movidoId=m.id}});
+  }
+  var de=atual[movidoId]==null?null:atual[movidoId],erro=null;
+  for(var i=0;i<mud.length;i+=10){
+    var lote=mud.slice(i,i+10);
+    var res=await Promise.all(lote.map(function(m){return sb.from('projetos').update({posicao:m.posicao}).eq('id',m.id)}));
+    res.forEach(function(r,k){
+      if(r.error){erro=erro||r.error;return}
+      var p=projById(lote[k].id);if(p)p.posicao=lote[k].posicao;
+    });
+    if(erro)break;
+  }
+  if(erro)throw erro;
+  var para=ordemIds.indexOf(movidoId)+1;
+  if(para>0&&de!==para)await projEvento(movidoId,'posicao',de,para,null);
+}
+// Aplica o arrasto de uma bolha para um pote: inclui no plano e/ou reordena
+async function planoSoltar(id,alvo){
+  if(!alvo||!can('gerir_projetos')||_planoOcupado)return;
+  var p=projById(id);if(!p)return;
+  var novo=p.status!=='plano';
+  if(novo){
+    if(p.status==='entregue'){toast('Demanda entregue: para reabrir, use a ficha.',true);return}
+    if(!ProjCore.podeMudarStatus(p.status,'plano')){
+      toast(p.status==='triagem'?'Avalie a demanda antes de incluir no plano.':'Esta demanda não pode entrar no plano.',true);
+      return;
+    }
+  }
+  _planoOcupado=true;
+  try{
+    if(novo&&!(await planoDecidir(id,'plano',null,true)))return;
+    var dist=planoDistribuir(),ordem=planoOrdem(),chave=String(alvo.chave),idx;
+    if(chave==='sem')idx=ProjCore.indiceDeSoltura(ordem,id,null,null,null);
+    else{
+      var ehVersao=chave.indexOf('v:')===0;
+      var vid=ehVersao?chave.slice(2):_plano.visao,fr=ehVersao?alvo.fracao:1;
+      var doPote=null,antes=[];
+      dist.versoes.forEach(function(dv){
+        if(doPote)return;
+        var ids=planoUnicos(dv.itens.map(function(it){return it.id}));
+        if(String(dv.id)===String(vid))doPote=ids;else antes=antes.concat(ids);
+      });
+      if(!doPote){if(novo)renderProjetos();return}
+      idx=ProjCore.indiceDeSoltura(ordem,id,doPote,antes,fr);
+    }
+    var nova=ProjCore.moverPara(ordem,id,idx);
+    var mudou=nova.join('|')!==ordem.join('|');
+    if(mudou)await planoGravarOrdem(nova,id);
+    renderProjetos();
+    if(!novo&&!mudou)return;
+    var d=planoDemanda(p),prev=_plano.dist.previstas[id];
+    toast((novo?'Incluída no plano':'Movida para '+(nova.indexOf(id)+1)+'º')+' · '+
+      (d.horas>0&&prev&&prev.length?'prevista para '+planoNomesPrevistas(prev):'sem horas, não ocupa espaço'));
+  }catch(e){
+    toast('Erro ao mover a demanda: '+e.message,true);
+    renderProjetos();
+  }finally{_planoOcupado=false}
+}
+
+// ── topo e tela ──
+function planoTopbar(){
+  if(!planoTela())return;
+  document.getElementById('topbar-title').textContent=ProjCore.tituloPlano(planoVersoes());
+  var n=PJ.projetos.length,sub=PJ.ok?n+(n===1?' demanda':' demandas'):'';
+  var sync=PJ.ok&&PJ.cfg&&PJ.cfg.redmine_sync_em;
+  if(sync)sub+=' · Redmine sincronizado há '+planoHa(sync);
+  document.getElementById('topbar-sub').textContent=sub;
+  var rc=getRedmineConfig(),acts='';
+  if(PJ.ok&&can('gerir_projetos')&&rc.proxyUrl&&rc.proxy)acts+='<button class="btn btn-sm btn-ghost" onclick="planoSincronizar(false)">⟳ Sincronizar</button> ';
+  acts+='<button class="btn btn-sm btn-ghost" onclick="planoApresentar(true)">▣ Apresentar</button>';
+  if(PJ.ok)acts+=' <button class="btn btn-primary btn-sm" onclick="planoNova()">+ Nova demanda</button>';
+  document.getElementById('topbar-actions').innerHTML=acts;
 }
 function renderProjetos(){
-  var av=document.getElementById('pj-aviso');
-  if(!PJ.ok){av.innerHTML='<div class="empty-col">Módulo de projetos indisponível neste workspace (as tabelas não carregaram).</div>';return}
-  av.innerHTML='';
-  pjTab(_pjTab);
+  var av=document.getElementById('pj-aviso'),corpo=document.getElementById('pl-corpo');
+  planoTopbar();planoEsconderTip();
+  if(!PJ.ok){
+    av.innerHTML='<div class="empty-col">O Plano não está disponível neste workspace (os dados não carregaram).</div>';
+    corpo.style.display='none';return;
+  }
+  av.innerHTML='';corpo.style.display='';
+  planoRenderChips();
+  var b=document.getElementById('pl-busca');if(b&&b.value!==_plano.busca)b.value=_plano.busca;
+  planoDesenharPotes(); // antes da grade: calcula _plano.dist e registra os potes como alvo do arrasto
+  planoDesenharGrade();
   if(!_pjPaisBuscado&&can('gerir_projetos'))pjBuscarPaisNoRedmine();
-}
-
-var _pjMostrarRecusadas=false;
-function renderPjBacklog(){
-  var el=document.getElementById('pj-tab-backlog');if(!el)return;
-  var lista=PJ.projetos.filter(function(p){
-    return p.status==='ideia'||p.status==='avaliacao'||(_pjMostrarRecusadas&&p.status==='recusada');
-  }).sort(ProjCore.compararBacklog);
-  el.innerHTML=
-    '<div style="display:flex;justify-content:flex-end;margin-bottom:10px">'+
-      '<label class="form-check" style="margin:0"><input type="checkbox" '+(_pjMostrarRecusadas?'checked':'')+' onchange="_pjMostrarRecusadas=this.checked;renderPjBacklog()" style="width:15px;height:15px;accent-color:var(--accent)"><span class="form-check-label">Mostrar recusadas</span></label>'+
-    '</div>'+
-    pjSugestoesHtml()+
-    (lista.map(pjLinhaBacklog).join('')||'<div class="empty-col">Nenhuma ideia ainda. Use “+ Nova ideia”.</div>');
-}
-
-// ── Sugestões de projeto a partir do pai das OSs no Redmine ──
-function _pjLerLS(k){try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return{}}}
-function _pjGravarLS(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
-var _pjSugOcupado=false,_pjBuscandoPais={};
-function pjTituloPai(pai){return _pjLerLS('vs_pj_pai_titulos')[pai]||('Pai #'+pai+' no Redmine')}
-// Busca no Redmine (pelo proxy, se ligado) o título dos pais ainda sem nome; re-renderiza ao chegar
-function pjBuscarTitulosPais(pais){
-  var cfg=getRedmineConfig();if(!cfg.proxyUrl||!cfg.proxy)return;
-  var cache=_pjLerLS('vs_pj_pai_titulos');
-  var falta=pais.filter(function(p){return!cache[p]&&!_pjBuscandoPais[p]});
-  if(!falta.length)return;
-  Promise.all(falta.map(function(pai){
-    _pjBuscandoPais[pai]=true;
-    return _redmineFetch(cfg,'/issues/'+encodeURIComponent(pai)+'.json','GET')
-      .then(function(r){return r.ok?r.json():null})
-      .then(function(d){if(d&&d.issue&&d.issue.subject){var c=_pjLerLS('vs_pj_pai_titulos');c[pai]=d.issue.subject;_pjGravarLS('vs_pj_pai_titulos',c);return true}})
-      .catch(function(){});
-  })).then(function(res){
-    if(res.some(Boolean)&&_pjTab==='backlog'&&document.getElementById('screen-projetos').classList.contains('active'))renderPjBacklog();
-  });
 }
 // Preenche o pai do Redmine das OSs que estão sem ele, consultando as issues pelo número da OS
 var _pjPaisBuscado=false,_pjPaisEstado='';
 function _pjOssSemPai(){return S.oss.filter(function(o){return!o.paiRedmine&&/^\d+$/.test(String(o.num||'').trim())})}
 async function pjBuscarPaisNoRedmine(){
   var cfg=getRedmineConfig();
-  if(!cfg.proxyUrl||!cfg.proxy){_pjPaisEstado='sem_proxy';_pjRenderSug();return}
+  if(!cfg.proxyUrl||!cfg.proxy){_pjPaisEstado='sem_proxy';return}
   var alvo=_pjOssSemPai();
   _pjPaisBuscado=true;
   if(!alvo.length){_pjPaisEstado='ok';return}
-  _pjPaisEstado='buscando';_pjRenderSug();
+  _pjPaisEstado='buscando';
   var achados=0;
   try{
     for(var i=0;i<alvo.length;i+=50){
@@ -6171,115 +6606,7 @@ async function pjBuscarPaisNoRedmine(){
     console.warn('Busca do pai no Redmine falhou:',e);
     _pjPaisEstado='erro';
   }
-  _pjRenderSug();
 }
-function _pjRenderSug(){
-  if(_pjTab==='backlog'&&document.getElementById('screen-projetos').classList.contains('active'))renderPjBacklog();
-}
-function pjSugestoes(){return ProjCore.sugestoesPorPai(S.oss,PJ.projetos,_pjLerLS('vs_pj_pais_ignorados'))}
-function pjSugestoesHtml(){
-  if(!can('gerir_projetos'))return'';
-  var sug=pjSugestoes();
-  if(!sug.length){
-    // Sem sugestão: diz o porquê, para não parecer que a função não funciona
-    var semPai=_pjOssSemPai().length;
-    var soltas=S.oss.filter(function(o){return o.paiRedmine&&!o.projetoId&&!o.projetoDesvinculado}).length;
-    var tentar=' <button class="btn btn-sm" style="margin-left:8px" onclick="pjBuscarPaisNoRedmine()">Buscar de novo</button>';
-    var msg=_pjPaisEstado==='buscando'?'Buscando no Redmine o pai de '+semPai+(semPai===1?' OS…':' OSs…')
-      :_pjPaisEstado==='sem_proxy'?'Para eu montar as sugestões sozinho, ligue o proxy do Redmine em Preferências › Integrações.'
-      :_pjPaisEstado==='erro'?'Não consegui falar com o Redmine. Confira se o proxy está rodando.'+tentar
-      :soltas?'Nenhum pai do Redmine reúne 2 OSs ou mais ainda sem projeto.'
-      :semPai?semPai+(semPai===1?' OS não tem':' OSs não têm')+' pai no Redmine, então não há o que agrupar.'+tentar:'';
-    return msg?'<div class="pj-sug-vazio">💡 '+msg+'</div>':'';
-  }
-  pjBuscarTitulosPais(sug.map(function(s){return s.pai}));
-  return'<div class="pj-sug">'+
-    '<div class="pj-sug-h"><strong>Encontrei estes grupos de OSs no Redmine</strong><span>OSs com o mesmo pai no Redmine</span></div>'+
-    sug.map(function(s){
-      var pai=s.pai.replace(/[^\w-]/g,''),p=s.projetoId?projById(s.projetoId):null;
-      var h=s.osIds.reduce(function(a,id){return a+horasOS(id)},0);
-      var n=s.osIds.length,meta=[n+(n===1?' OS':' OSs')+(p?' ainda não '+(n===1?'vinculada':'vinculadas'):'')];
-      if(h>0)meta.push(fmtHoras(h)+' apontadas');
-      if(s.andamento)meta.push('<span class="badge pj-sug-and">'+s.andamento+' em andamento</span>');
-      return'<div class="pj-sug-row">'+
-        '<span class="pj-sug-num">#'+escHtml(s.pai)+'</span>'+
-        '<div style="flex:1;min-width:180px">'+
-          '<div style="font-weight:500">'+escHtml(p?p.titulo:pjTituloPai(s.pai))+(p?' <span class="badge pj-badge-st">já existe o projeto</span>':'')+'</div>'+
-          '<div class="pj-sug-meta">'+meta.join(' · ')+'</div>'+
-        '</div>'+
-        '<div style="display:flex;gap:6px">'+
-          (p?'<button class="btn btn-primary btn-sm" onclick="pjVincularPai(\''+pai+'\')">Vincular</button>'
-            :'<button class="btn btn-primary btn-sm" onclick="pjCriarDoPai(\''+pai+'\')">Criar projeto</button>')+
-          '<button class="btn btn-sm" onclick="pjIgnorarPai(\''+pai+'\')">Ignorar</button>'+
-        '</div>'+
-      '</div>';
-    }).join('')+
-  '</div>';
-}
-function pjIgnorarPai(pai){
-  var ig=_pjLerLS('vs_pj_pais_ignorados');ig[pai]=true;_pjGravarLS('vs_pj_pais_ignorados',ig);
-  renderPjBacklog();toast('Sugestão escondida');
-}
-// Liga as OSs do grupo ao projeto, uma a uma (só a coluna do vínculo, sem regravar a OS inteira)
-async function _pjVincularOSs(p,osIds,motivo){
-  var n=0;
-  for(var i=0;i<osIds.length;i++){
-    var os=S.oss.find(function(o){return o.id===osIds[i]});
-    if(!os||os.projetoId)continue;
-    var r=await sb.from('oss').update({projeto_id:p.id,projeto_desvinculado:false}).eq('id',os.id);
-    if(r.error){console.warn('Vínculo da OS '+os.num+' falhou:',r.error);continue}
-    os.projetoId=p.id;os.projetoDesvinculado=false;n++;
-    await projRegistrarVinculo(os,null,p.id,motivo);
-    _projNotificarOS(os.id,{projetoId:p.id});
-  }
-  return n;
-}
-async function pjCriarDoPai(pai){
-  if(_pjSugOcupado)return;
-  var s=pjSugestoes().find(function(x){return x.pai===pai&&!x.projetoId});if(!s)return;
-  _pjSugOcupado=true;
-  try{
-    var campos={workspace_id:CURRENT_WORKSPACE_ID,sugerido_por:CURRENT_USER.id,status:'ideia',
-      titulo:pjTituloPai(pai),pai_redmine:pai,descricao:'Criado a partir do pai #'+pai+' no Redmine.'};
-    var r=await sb.from('projetos').insert(campos).select().single();
-    if(r.error)throw r.error;
-    var p=r.data;PJ.projetos.push(p);
-    await projEvento(p.id,'status',null,'ideia','Criado a partir do pai #'+pai+' no Redmine');
-    await projMudarStatus(p,'aprovada','Aprovado na criação a partir do Redmine');
-    var n=await _pjVincularOSs(p,s.osIds,'Pai #'+pai+' do Redmine');
-    toast('Projeto "'+p.titulo+'" criado com '+n+(n===1?' OS':' OSs'));
-    renderKanban();pjTab('quadro');
-  }catch(e){toast('Erro ao criar projeto: '+e.message,'err');renderProjetos()}
-  finally{_pjSugOcupado=false}
-}
-async function pjVincularPai(pai){
-  if(_pjSugOcupado)return;
-  var s=pjSugestoes().find(function(x){return x.pai===pai&&x.projetoId});if(!s)return;
-  var p=projById(s.projetoId);if(!p)return;
-  _pjSugOcupado=true;
-  try{
-    var n=await _pjVincularOSs(p,s.osIds,'Pai #'+pai+' do Redmine');
-    toast(n+(n===1?' OS vinculada':' OSs vinculadas')+' ao projeto "'+p.titulo+'"');
-    renderKanban();renderProjetos();
-  }catch(e){toast('Erro ao vincular: '+e.message,'err')}
-  finally{_pjSugOcupado=false}
-}
-function pjLinhaBacklog(p){
-  var c=ProjCore.calcPrioridade(p,projConfigs(p.id));
-  var autor=S_USERS.find(function(u){return u.id===p.sugerido_por});
-  var notas=c.valor!==null?'I'+p.nota_impacto+' · U'+p.nota_urgencia+' · A'+p.nota_alinhamento:'sem notas';
-  var esf=c.tamanho?' · esforço '+c.tamanho+(c.horas?' ('+c.horas+'h)':''):'';
-  return'<div class="pj-row" onclick="pjAbrir(\''+p.id+'\')">'+
-    '<div class="pj-prio" style="color:'+(c.prioridade===null?'var(--hint)':'var(--accent)')+'">'+(c.prioridade===null?'—':c.prioridade.toFixed(1))+'</div>'+
-    '<div style="flex:1;min-width:0">'+
-      '<div style="font-size:14px;color:var(--text);font-weight:500">'+escHtml(p.titulo)+'</div>'+
-      '<div style="font-size:11px;color:var(--hint);margin-top:2px">'+escHtml(autor?autor.displayName:'—')+' · '+notas+esf+'</div>'+
-    '</div>'+
-    (p.legal?'<span class="badge pj-badge-legal">Legal</span>':'')+
-    '<span class="badge pj-badge-st">'+PJ_STATUS[p.status]+'</span>'+
-  '</div>';
-}
-
 function pjPodeEditarIdeia(p){
   if(!p)return true;
   return can('gerir_projetos')||(p.status==='ideia'&&p.sugerido_por===CURRENT_USER.id);
@@ -6374,7 +6701,6 @@ async function pjAcao(id,acao){
 }
 var _pjAberto=null;
 
-var _pjMostrarFechados=false;
 function pjResponsavel(p,etapaId){
   var et=projEtapa(etapaId);if(!et)return'';
   var papel=projPapel(et.papel_id);
@@ -6386,75 +6712,6 @@ function pjResponsavel(p,etapaId){
   }else if(c&&c.responsavel_nome)nome=c.responsavel_nome;
   return(papel?papel.nome:'')+(nome?' · '+nome:'');
 }
-function pjAlvo(d){
-  if(!d)return null;
-  var dias=Math.round((new Date(d+'T12:00:00')-new Date(hojeLocal()+'T12:00:00'))/86400000);
-  var cor=dias<0?'var(--red-text)':dias<=7?'var(--amber-text)':'var(--muted)';
-  return{txt:fmtDate(d)+(dias<0?' · atrasado':dias<=7?' · faltam '+dias+'d':''),cor:cor};
-}
-function pjCard(p){
-  var oss=S.oss.filter(function(o){return o.projetoId===p.id});
-  var conc=oss.filter(function(o){return o.status==='concluido'}).length;
-  var est=ProjCore.calcPrioridade(p,projConfigs(p.id)).horas;
-  if(!est)est=oss.reduce(function(a,o){return a+(+o.estimatedHours||0)},0);
-  var apr=PJ.horasTot[p.id]||0;
-  var resp=p.etapa_id?pjResponsavel(p,p.etapa_id):'';
-  var dias=p.status==='execucao'||p.status==='pausada'?ProjCore.diasNaEtapaAtual(projEventos(p.id)):null;
-  var alvo=pjAlvo(p.data_alvo);
-  var drag=can('gerir_projetos')&&p.status==='execucao';
-  var et=projEtapa(p.etapa_id);
-  var avisos=[];
-  if(p.status==='pausada'&&oss.some(function(o){return o.status==='andamento'}))avisos.push('OS em andamento com o projeto pausado');
-  if(et&&et.ativo===false)avisos.push('Etapa desativada no fluxo: mova o projeto');
-  return'<div class="pj-card" '+(drag?'draggable="true" ondragstart="event.dataTransfer.setData(\'text/plain\',\''+p.id+'\')"':'')+' onclick="pjAbrir(\''+p.id+'\')">'+
-    '<div style="display:flex;justify-content:space-between;gap:6px"><div style="font-size:13px;font-weight:500;color:var(--text)">'+escHtml(p.titulo)+'</div>'+
-      (p.status==='pausada'||p.status==='concluida'?'<span class="badge pj-badge-st">'+PJ_STATUS[p.status]+'</span>':'')+'</div>'+
-    (resp?'<div style="font-size:11px;color:var(--muted);margin-top:4px">'+escHtml(resp)+'</div>':'')+
-    (dias!==null?'<div style="font-size:11px;color:var(--hint)">há '+dias+' dia'+(dias===1?'':'s')+' nesta etapa</div>':'')+
-    '<div class="pj-bar"><div style="width:'+(oss.length?Math.round(conc/oss.length*100):0)+'%"></div></div>'+
-    '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--hint)"><span>'+conc+'/'+oss.length+' OSs</span>'+
-      '<span style="font-family:var(--mono)">'+apr.toFixed(1)+'h / '+(+est||0).toFixed(0)+'h</span></div>'+
-    (alvo?'<div style="font-size:11px;margin-top:4px;color:'+alvo.cor+'">🎯 '+alvo.txt+'</div>':'')+
-    avisos.map(function(a){return'<div style="font-size:11px;color:var(--amber-text);margin-top:4px">⚠ '+a+'</div>'}).join('')+
-  '</div>';
-}
-function renderPjQuadro(){
-  var el=document.getElementById('pj-tab-quadro');if(!el)return;
-  var vis=PJ.projetos.filter(function(p){
-    return p.status==='aprovada'||p.status==='execucao'||(_pjMostrarFechados&&(p.status==='pausada'||p.status==='concluida'));
-  });
-  var etapas=projEtapasAtivas().concat(PJ.etapas.filter(function(e){
-    return e.ativo===false&&vis.some(function(p){return p.etapa_id===e.id&&p.status!=='aprovada'});
-  }));
-  var cols=[{id:'',nome:'Aguardando início',papel:null}].concat(etapas.map(function(e){
-    return{id:e.id,nome:e.nome+(e.ativo===false?' (desativada)':''),papel:projPapel(e.papel_id)};
-  }));
-  var gerir=can('gerir_projetos');
-  el.innerHTML=
-    '<div style="display:flex;justify-content:flex-end;margin-bottom:10px">'+
-      '<label class="form-check" style="margin:0"><input type="checkbox" '+(_pjMostrarFechados?'checked':'')+' onchange="_pjMostrarFechados=this.checked;renderPjQuadro()" style="width:15px;height:15px;accent-color:var(--accent)"><span class="form-check-label">Mostrar pausados e concluídos</span></label>'+
-    '</div>'+
-    '<div class="pj-board">'+cols.map(function(c){
-      var itens=vis.filter(function(p){return c.id===''?(p.status==='aprovada'||!p.etapa_id):(p.status!=='aprovada'&&p.etapa_id===c.id)});
-      var dnd=gerir&&c.id?' data-etapa="'+c.id+'" ondragover="pjDragOver(event,this)" ondragleave="this.classList.remove(\'drop\')" ondrop="pjDrop(event,this)"':'';
-      return'<div class="pj-col"'+dnd+'>'+
-        '<div class="kanban-col-header"><span class="kanban-col-title">'+escHtml(c.nome)+'</span><span class="kanban-col-count">'+itens.length+'</span></div>'+
-        (c.papel?'<div style="font-size:10px;color:var(--hint);margin:-6px 0 8px">'+escHtml(c.papel.nome)+'</div>':'')+
-        '<div class="kanban-col-body">'+(itens.map(pjCard).join('')||'<div class="empty-col">—</div>')+'</div>'+
-      '</div>';
-    }).join('')+'</div>';
-}
-function pjDragOver(ev,col){ev.preventDefault();col.classList.add('drop')}
-async function pjDrop(ev,col){
-  ev.preventDefault();col.classList.remove('drop');
-  var p=projById(ev.dataTransfer.getData('text/plain'));
-  if(!p||p.status!=='execucao'||!can('gerir_projetos'))return;
-  try{
-    await projMoverEtapa(p,col.getAttribute('data-etapa'));
-    renderPjQuadro();toast('Etapa: '+projEtapa(p.etapa_id).nome);
-  }catch(e){toast('Erro: '+e.message,'err')}
-}
-
 function pjFechar(){_pjAberto=null;document.getElementById('pj-drawer').classList.remove('open')}
 function pjPodeMexerNaOS(os){return can('gerir_projetos')||(os&&os.createdBy===CURRENT_USER.id)}
 function pjEventoTexto(e){
