@@ -129,6 +129,8 @@ textarea.form-input{resize:vertical;min-height:70px}
 .pl-tip b{display:block;font-weight:500;color:var(--text)}.pl-tip span{color:var(--muted)}
 .pl-relatorio summary{cursor:pointer;font-size:14px;font-weight:600}
 .pl-sair{display:none}
+.pl-sair:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#pl-grade circle:focus-visible,#pl-potes circle:focus-visible{outline:none;stroke:var(--accent);stroke-width:3}
 body.plano-apresentar .sidebar,body.plano-apresentar .topbar,body.plano-apresentar .pl-chips,body.plano-apresentar #pl-redmine-id{display:none!important}
 body.plano-apresentar #screen-projetos{zoom:1.15}
 body.plano-apresentar .pl-sair{display:inline-flex;position:fixed;top:12px;right:16px;z-index:300}
@@ -3339,7 +3341,8 @@ function renderKanban(){
   var vid=sel.value;S.versaoK=vid;
   var versao=S.versoes.find(function(v){return v.id===vid});
   // planejada (ainda nao iniciada) tem o mesmo tratamento de somente leitura de uma encerrada
-  var isEncerrada=!!versao&&!versao.ativa;
+  // somente leitura: versao nao ativa (encerrada ou planejada); o aviso de OS incompleta so vale para encerrada
+  var versaoSomenteLeitura=!!versao&&!versao.ativa;
   var oss=S.oss.filter(function(o){return o.versaoId===vid});
   if(S.filtro!=='todos')oss=oss.filter(function(o){return(PLINHA[o.produto]||'')===S.filtro});
   if(S.filtroProduto&&S.filtroProduto!=='todos')oss=oss.filter(function(o){return o.produto===S.filtroProduto});
@@ -3361,10 +3364,10 @@ function renderKanban(){
       var pips=Object.entries(os.entregas).filter(function(e){return e[1].aplicavel}).map(function(e){return'<div class="check-pip'+(e[1].feito?' done':'')+'" title="'+ELABELS[e[0]]+'"></div>'}).join('');
       var h=horasOS(os.id);
       var prevK=statusPrev(k),nextK=statusNext(k);
-      var isIncompleta=isEncerrada&&k!=='concluido';
+      var isIncompleta=!!versao&&versaoStatus(versao)==='encerrada'&&k!=='concluido';
       var isFoco=focusSt&&focusSt.osId===os.id&&k==='andamento';
       var focoAcc=isFoco?focusAccumulatedToday(os.id):0;
-      var prevBtn=prevK&&!isEncerrada?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+prevK+'\')">← '+statusLabel(prevK)+'</button>':'';
+      var prevBtn=prevK&&!versaoSomenteLeitura?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+prevK+'\')">← '+statusLabel(prevK)+'</button>':'';
       var nextBtn=nextK?'<button class="os-action-btn nav-btn" onclick="event.stopPropagation();moveOS(\''+os.id+'\',\''+nextK+'\')">'+(nextK==='concluido'?'✓ ':'')+statusLabel(nextK)+' →</button>':'';
       var clf=getOSClassificacao(os);
       var canEd=can('os_editar');
@@ -3422,7 +3425,7 @@ function populateProjetoSelOS(os){
 }
 function populateVersaoSelOS(){
   var sel=document.getElementById('os-versao-sel');if(!sel)return;
-  sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+'</option>'}).join('');
+  sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+escHtml(v.nome)+versaoOpcaoSufixo(v)+'</option>'}).join('');
   if(S.versaoK)sel.value=S.versaoK;
 }
 // Carrega lista de usuários (profiles) para o datalist de atribuição
@@ -3524,7 +3527,7 @@ function bolAdicionarOS(){
   var psel=document.getElementById('bol-add-produto');
   psel.innerHTML=S.prefs.produtos.map(function(p){return'<option value="'+p+'">'+p+'</option>'}).join('');
   var vsel=document.getElementById('bol-add-versao');
-  vsel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+'</option>'}).join('');
+  vsel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+escHtml(v.nome)+versaoOpcaoSufixo(v)+'</option>'}).join('');
   if(S.versaoK)vsel.value=S.versaoK;
   document.getElementById('bol-add-titulo').value='';
   bolAtualizarOSSelect();
@@ -4347,7 +4350,7 @@ function inlAdicionarOS(){
   var psel=document.getElementById('bol-add-produto');
   psel.innerHTML=S.prefs.produtos.map(function(p){return'<option value="'+p+'">'+p+'</option>'}).join('');
   var vsel=document.getElementById('bol-add-versao');
-  vsel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+'</option>'}).join('');
+  vsel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+escHtml(v.nome)+versaoOpcaoSufixo(v)+'</option>'}).join('');
   if(S.versaoK)vsel.value=S.versaoK;
   document.getElementById('bol-add-titulo').value='';
   bolAtualizarOSSelect();
@@ -5486,7 +5489,7 @@ function renderXLSXConfig(sheets){
   document.getElementById('xlsx-preview-abas').style.display='block';
   document.getElementById('btn-confirmar-xlsx').style.display='inline-flex';
   var vsel=document.getElementById('xlsx-versao-sel');
-  vsel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+'</option>'}).join('');
+  vsel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+escHtml(v.nome)+versaoOpcaoSufixo(v)+'</option>'}).join('');
   if(S.versaoK)vsel.value=S.versaoK;
   // Todos os produtos sem filtro por grupo
   var todosProds=S.prefs.produtos.map(function(p){return'<option value="'+p+'">'+p+'</option>'}).join('');
