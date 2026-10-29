@@ -283,6 +283,7 @@
     var totalW = (lastSem ? x : x - jgap) + 10;
     if (P.length === 0) totalW = 20;
     var totalH = J.top + J.H + 56, base = J.top + J.H;
+    var ceil = J.top - 16;   /* teto das bolhas: abaixo do titulo e do subtitulo do pote */
     svg.setAttribute('viewBox', '0 0 ' + totalW + ' ' + totalH);
     /* tamanho natural (1 unidade = 1px); o wrap rola na horizontal se nao couber */
     svg.style.width = totalW + 'px';
@@ -359,6 +360,12 @@
 
         // bolhas
         var A = w * k * 0.52, itens = pt.itens || [], q;
+        if (isSem) {
+          /* pote "sem": escala propria para a pilha caber no corpo (area das bolhas <= ~55% do corpo) */
+          var somaH = 0;
+          for (q = 0; q < itens.length; q++) somaH += Math.max(0, +itens[q].horas || 0);
+          if (somaH > 0) A = Math.min(A, 0.55 * w * (base - ceil) / somaH);
+        }
         for (q = 0; q < itens.length; q++) {
           (function (e, idx) {
             var hh = +e.horas || 0, key = pt.chave + ':' + e.id, bd, r;
@@ -372,7 +379,7 @@
               bd = { x: sx, y: sy, px: sx, py: sy };
               bodies[key] = bd;
             }
-            bd.r = r; bd.x0 = gx; bd.x1 = gx + w; bd.floor = base; bd.jar = pt.chave;
+            bd.r = r; bd.x0 = gx; bd.x1 = gx + w; bd.floor = base; bd.ceil = ceil; bd.jar = pt.chave;
             var cor = e.cor || 'var(--accent)';
             var c = el('circle', { r: r, fill: isSem ? 'url(#' + hatchId + ')' : cor, 'stroke-width': 1.5 }, lay.mar);
             c.setAttribute('stroke', e.dividida ? '#ffffffaa' : 'none');
@@ -465,6 +472,7 @@
           b = L[i];
           b.x = clamp(b.x, b.x0 + b.r, b.x1 - b.r);
           if (b.y > b.floor - b.r) b.y = b.floor - b.r;
+          if (b.ceil != null && b.y < b.ceil + b.r) b.y = Math.min(b.ceil + b.r, b.floor - b.r);
         }
       }
     }

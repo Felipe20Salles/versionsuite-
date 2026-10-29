@@ -6339,6 +6339,7 @@ function planoPotesTodas(dist,vers,gerir){
       var pp=projPapel(l.papelId);return pp?pp.nome:'?';
     });
     var r2=acimaP.length?{t:'⚠ '+acimaP.join(', ')+' acima',c:'var(--amber)'}
+      :dv.capacidade<=0?{t:'sem capacidade',c:'var(--muted)'}
       :dv.livres>0.05?{t:Math.round(dv.livres)+'h livres',c:'var(--green)'}:{t:'cheio',c:'var(--muted)'};
     return{chave:'v:'+dv.id,tipo:'versao',titulo:v.nome||'Versão',
       sub:v.ativa?'● ativa':'planejada',subCor:v.ativa?'var(--green)':'var(--hint)',
