@@ -373,10 +373,11 @@
             r = clamp(Math.sqrt(A * hh / Math.PI), 5, Math.max(5, w / 2 - 4));
             bd = has(bodies, key) ? bodies[key] : null;
             if (!bd) {
-              var sx = cx + ((idx % 7) - 3) * 6, sy = rimY - 30 - r;
-              if (firstRun) sy = J.top - 30 - idx * 30;
+              var sx = cx + ((idx % 7) - 3) * 6, sy = Math.max(ceil + r, rimY - 30 - r), wt = 0;
+              /* primeira abertura: cada bolha espera um pouco antes de cair, para a queda ser escalonada */
+              if (firstRun) { sy = ceil + r; wt = Math.min(pi * 10 + idx * 16, 420); }
               if (hint && hint.id === str(e.id)) { sx = clamp(hint.x, gx + r, gx + w - r); sy = Math.min(hint.y, rimY - r); }
-              bd = { x: sx, y: sy, px: sx, py: sy };
+              bd = { x: sx, y: sy, px: sx, py: sy, wait: wt || 0 };
               bodies[key] = bd;
             }
             bd.r = r; bd.x0 = gx; bd.x1 = gx + w; bd.floor = base; bd.ceil = ceil; bd.jar = pt.chave;
@@ -450,6 +451,7 @@
     for (key in bodies) {
       if (!has(bodies, key)) continue;
       b = bodies[key];
+      if (b.wait > 0) { b.wait--; b.px = b.x; b.py = b.y; continue; }
       vx = clamp((b.x - b.px) * 0.97, -12, 12); vy = clamp((b.y - b.py) * 0.97, -12, 12);
       b.px = b.x; b.py = b.y; b.x += vx; b.y += vy + 0.32;
       (byJar[b.jar] = byJar[b.jar] || []).push(b);
@@ -483,6 +485,8 @@
       if (!has(bodies, key)) continue;
       b = bodies[key];
       if (!b.el) continue;
+      var vis = b.wait > 0 ? 0 : 1;
+      b.el.setAttribute('opacity', vis); if (b.arc) b.arc.setAttribute('opacity', vis); if (b.txt) b.txt.setAttribute('opacity', vis);
       b.el.setAttribute('cx', b.x); b.el.setAttribute('cy', b.y);
       if (b.arc) { b.arc.setAttribute('cx', b.x); b.arc.setAttribute('cy', b.y); b.arc.setAttribute('transform', 'rotate(-90 ' + b.x + ' ' + b.y + ')'); }
       if (b.txt) { b.txt.setAttribute('x', b.x); b.txt.setAttribute('y', b.y + 4); }
@@ -495,7 +499,7 @@
   }
   function kick(settle) {
     var i;
-    if (settle) { for (i = 0; i < 900; i++) stepSim(); paintBodies(); return; }
+    if (settle) { for (i in bodies) { if (has(bodies, i)) bodies[i].wait = 0; } for (i = 0; i < 900; i++) stepSim(); paintBodies(); return; }
     simLeft = 420; paintBodies();
     if (!running) { running = true; requestAnimationFrame(loop); }
   }
