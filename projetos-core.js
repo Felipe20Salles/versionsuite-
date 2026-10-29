@@ -40,7 +40,7 @@
     return String(a.criado_em||'').localeCompare(String(b.criado_em||''));
   }
 
-  var ACEITA_OS=['aprovada','execucao','pausada','concluida'];
+  var ACEITA_OS=['plano','entregue'];
   function aceitaOS(status){return ACEITA_OS.indexOf(status)>-1}
 
   function primeiraEtapa(etapas,configs){
@@ -83,7 +83,7 @@
 
   // OSs soltas com o mesmo pai no Redmine viram sugestão: criar projeto (2+ OSs) ou
   // vincular ao projeto que já tem esse pai. Pai de ideia ainda não aprovada não sugere nada.
-  var PROJ_ENCERRADO=['cancelada','recusada'];
+  var PROJ_ENCERRADO=['descartada'];
   function sugestoesPorPai(oss,projetos,ignorados){
     var grupos={},ordem=[];
     (oss||[]).forEach(function(o){
@@ -176,6 +176,139 @@
     return{porEtapa:por,semEtapa:r2(sem),total:r2(total)};
   }
 
+  // ---- Plano: avaliação, estimativa e status ----
+  var PLANO_PADRAO={
+    criterios:[
+      {nome:'Facilidade de execução',pergunta:'Há barreiras para fazer?',opcoes:['Bloqueada','Difícil','Possível','Simples'],peso:1},
+      {nome:'Alinhamento estratégico',pergunta:'Contribui com os objetivos?',opcoes:['Nenhum','Pouco','Bastante','Total'],peso:2},
+      {nome:'Impacto no negócio',pergunta:'Quanto melhora o resultado?',opcoes:['Nenhum','Baixo','Médio','Alto'],peso:2},
+      {nome:'Alcance',pergunta:'Quantos são beneficiados?',opcoes:['Poucos','Alguns','Muitos','Todos'],peso:3}
+    ],
+    faixas_prioridade:{baixa_ate:8,media_ate:16},
+    faixas_esforco:{pequeno_ate:40,medio_ate:120},
+    papel_padrao_id:null,
+    redmine_sync_em:null
+  };
+
+  function configPlano(row){
+    var cfg=JSON.parse(JSON.stringify(PLANO_PADRAO));
+    if(row)Object.keys(cfg).forEach(function(k){
+      if(row[k]!==undefined&&row[k]!==null)cfg[k]=JSON.parse(JSON.stringify(row[k]));
+    });
+    return cfg;
+  }
+
+  function prioridade(crit,criterios){
+    if(!crit||!criterios)return null;
+    var soma=0;
+    for(var i=0;i<criterios.length;i++){
+      var n=crit[i];
+      if(typeof n!=='number'||isNaN(n))return null;
+      soma+=n*criterios[i].peso;
+    }
+    return soma;
+  }
+
+  function faixaPrioridade(valor,faixas){
+    if(valor===null||valor===undefined)return null;
+    if(valor<=faixas.baixa_ate)return'baixa';
+    if(valor<=faixas.media_ate)return'media';
+    return'alta';
+  }
+
+  function faixaEsforco(horas,faixas){
+    if(!(horas>0))return'sem';
+    if(horas<=faixas.pequeno_ate)return'pequeno';
+    if(horas<=faixas.medio_ate)return'medio';
+    return'grande';
+  }
+
+  function papeisDoPlano(papeis){
+    return(papeis||[]).filter(function(p){return!p.externo&&p.ativo!==false})
+      .sort(function(a,b){return a.ordem-b.ordem});
+  }
+
+  function papelExterno(papeis,id){
+    return(papeis||[]).some(function(p){return p.id===id&&p.externo});
+  }
+
+  function horasTotal(horasPapeis,papeis){
+    return r1((horasPapeis||[]).reduce(function(a,h){
+      return papelExterno(papeis,h.papel_id)?a:a+(num(h.horas)||0);
+    },0));
+  }
+
+  function horasDoPapel(horasPapeis,papelId){
+    var h=(horasPapeis||[]).find(function(x){return x.papel_id===papelId});
+    return h?(num(h.horas)||0):0;
+  }
+
+  function r1(n){return Math.round(n*10)/10}
+
+  function definirHoras(horasPapeis,papelId,horas){
+    var v=num(horas);
+    v=(v===null||v<0)?0:r1(v);
+    var achou=false;
+    var out=(horasPapeis||[]).map(function(h){
+      if(h.papel_id!==papelId)return{papel_id:h.papel_id,horas:h.horas};
+      achou=true;return{papel_id:papelId,horas:v};
+    });
+    if(!achou)out.push({papel_id:papelId,horas:v});
+    return out;
+  }
+
+  function situacaoEstimativa(horasPapeis,papeis){
+    var ps=papeisDoPlano(papeis);
+    var com=ps.filter(function(p){return horasDoPapel(horasPapeis,p.id)>0}).length;
+    if(!com)return'sem';
+    return com===ps.length?'completa':'parcial';
+  }
+
+  var STATUS=['triagem','pauta','plano','entregue','adiada','descartada'];
+  var STATUS_ROTULO={triagem:'Triagem',pauta:'Pauta',plano:'No plano',entregue:'Entregue',adiada:'Adiada',descartada:'Descartada'};
+  var TRANSICOES={
+    pauta:['plano','adiada','descartada'],
+    adiada:['plano','adiada','descartada'],
+    plano:['entregue','adiada','descartada'],
+    entregue:['plano']
+  };
+  function podeMudarStatus(de,para){
+    return(TRANSICOES[de]||[]).indexOf(para)>-1&&de!==para;
+  }
+
+  function statusAposCriterios(status,crit){
+    if(status!=='triagem')return status;
+    var completo=!!crit&&crit.length>=4&&crit.every(function(n){return typeof n==='number'&&!isNaN(n)});
+    return completo?'pauta':'triagem';
+  }
+
+  function cmpNulo(a,b,desc){
+    var na=a===null||a===undefined,nb=b===null||b===undefined;
+    if(na&&nb)return 0;
+    if(na)return 1;
+    if(nb)return -1;
+    return desc?b-a:a-b;
+  }
+
+  function compararPlano(a,b){
+    var c=cmpNulo(a.posicao,b.posicao,false);
+    if(c)return c;
+    c=cmpNulo(a.prioridade==null?null:+a.prioridade,b.prioridade==null?null:+b.prioridade,true);
+    if(c)return c;
+    c=cmpNulo(num(a.pai_redmine),num(b.pai_redmine),false);
+    if(c)return c;
+    return String(a.criado_em||'').localeCompare(String(b.criado_em||''));
+  }
+
+  function tituloPlano(versoes){
+    var anos=(versoes||[]).filter(function(v){return v.ativa||v.planejada})
+      .map(function(v){return parseInt(String(v.data).slice(0,4),10)})
+      .filter(function(a){return!isNaN(a)});
+    if(!anos.length)return'Plano';
+    var min=Math.min.apply(null,anos),max=Math.max.apply(null,anos);
+    return min===max?'Plano '+min:'Plano '+min+'/'+String(max).slice(-2);
+  }
+
   var api={
     horasPorEtapa:horasPorEtapa,
     intervalosEtapa:intervalosEtapa,tempoPorPapel:tempoPorPapel,diasNaEtapaAtual:diasNaEtapaAtual,
@@ -184,7 +317,12 @@
     calcPrioridade:calcPrioridade,compararBacklog:compararBacklog,
     ACEITA_OS:ACEITA_OS,aceitaOS:aceitaOS,primeiraEtapa:primeiraEtapa,
     gatilhosDaOS:gatilhosDaOS,proximoStatusAuto:proximoStatusAuto,vinculoPorPai:vinculoPorPai,
-    sugestoesPorPai:sugestoesPorPai
+    sugestoesPorPai:sugestoesPorPai,
+    PLANO_PADRAO:PLANO_PADRAO,configPlano:configPlano,prioridade:prioridade,faixaPrioridade:faixaPrioridade,
+    faixaEsforco:faixaEsforco,papeisDoPlano:papeisDoPlano,horasTotal:horasTotal,horasDoPapel:horasDoPapel,
+    definirHoras:definirHoras,situacaoEstimativa:situacaoEstimativa,STATUS:STATUS,STATUS_ROTULO:STATUS_ROTULO,
+    podeMudarStatus:podeMudarStatus,statusAposCriterios:statusAposCriterios,compararPlano:compararPlano,
+    tituloPlano:tituloPlano
   };
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.ProjCore=api;
 })(typeof window!=='undefined'?window:this);

@@ -44,11 +44,6 @@ test('compararBacklog: legal primeiro, depois prioridade, nulas no fim, empate p
   assert.deepEqual(itens.sort(C.compararBacklog).map(x => x.id), ['c', 'd', 'e', 'a', 'b']);
 });
 
-test('aceitaOS', () => {
-  ['aprovada', 'execucao', 'pausada', 'concluida'].forEach(s => assert.equal(C.aceitaOS(s), true));
-  ['ideia', 'avaliacao', 'recusada', 'cancelada'].forEach(s => assert.equal(C.aceitaOS(s), false));
-});
-
 test('primeiraEtapa: menor ordem, ativa e não pulada', () => {
   const etapas = [
     { id: 'e3', ordem: 3 }, { id: 'e1', ordem: 1, ativo: false }, { id: 'e2', ordem: 2 }, { id: 'e4', ordem: 4 },
@@ -82,9 +77,9 @@ test('proximoStatusAuto', () => {
 
 test('vinculoPorPai', () => {
   const projetos = [
-    { id: 'p1', pai_redmine: '500', status: 'cancelada' },
-    { id: 'p2', pai_redmine: '500', status: 'execucao' },
-    { id: 'p3', pai_redmine: '600', status: 'ideia' },
+    { id: 'p1', pai_redmine: '500', status: 'descartada' },
+    { id: 'p2', pai_redmine: '500', status: 'plano' },
+    { id: 'p3', pai_redmine: '600', status: 'triagem' },
   ];
   assert.equal(C.vinculoPorPai({ paiRedmine: '500' }, projetos), 'p2');
   assert.equal(C.vinculoPorPai({ paiRedmine: 500 }, projetos), 'p2');
@@ -188,9 +183,9 @@ test('sugestoesPorPai: agrupa OSs soltas pelo pai do Redmine', () => {
     { id: 'm', paiRedmine: '4900' }, { id: 'n', paiRedmine: '4900' }   // ignorado
   ];
   const projetos = [
-    { id: 'p1', pai_redmine: '4388', status: 'execucao' },
-    { id: 'p2', pai_redmine: '4700', status: 'avaliacao' },
-    { id: 'p3', pai_redmine: '4800', status: 'cancelada' }
+    { id: 'p1', pai_redmine: '4388', status: 'plano' },
+    { id: 'p2', pai_redmine: '4700', status: 'triagem' },
+    { id: 'p3', pai_redmine: '4800', status: 'descartada' }
   ];
   const s = C.sugestoesPorPai(oss, projetos, { '4900': true });
   assert.deepEqual(s.map(x => x.pai), ['4521', '4800', '4388']);
@@ -198,4 +193,113 @@ test('sugestoesPorPai: agrupa OSs soltas pelo pai do Redmine', () => {
   assert.equal(s[1].projetoId, null);
   assert.deepEqual(s[2], { pai: '4388', projetoId: 'p1', osIds: ['h'], andamento: 0, concluidas: 0 });
   assert.deepEqual(C.sugestoesPorPai([], [], null), []);
+});
+
+test('configPlano: sem linha usa o padrão; linha sobrepõe só o que veio', () => {
+  const c = C.configPlano(null);
+  assert.equal(c.criterios.length, 4);
+  assert.deepEqual(c.criterios.map(x => x.peso), [1, 2, 2, 3]);
+  assert.deepEqual(c.criterios[0].opcoes, ['Bloqueada', 'Difícil', 'Possível', 'Simples']);
+  assert.deepEqual(c.faixas_prioridade, { baixa_ate: 8, media_ate: 16 });
+  assert.deepEqual(c.faixas_esforco, { pequeno_ate: 40, medio_ate: 120 });
+  const d = C.configPlano({ faixas_esforco: { pequeno_ate: 20, medio_ate: 80 }, criterios: null });
+  assert.equal(d.faixas_esforco.pequeno_ate, 20);
+  assert.equal(d.criterios.length, 4);
+  c.criterios[0].peso = 99;
+  assert.equal(C.configPlano(null).criterios[0].peso, 1);
+});
+
+test('prioridade: soma pontos × peso; nula se faltar critério', () => {
+  const cr = C.PLANO_PADRAO.criterios;
+  assert.equal(C.prioridade([3, 3, 3, 3], cr), 24);
+  assert.equal(C.prioridade([3, 2, 2, 0], cr), 11);
+  assert.equal(C.prioridade([0, 0, 0, 0], cr), 0);
+  assert.equal(C.prioridade([3, null, 2, 0], cr), null);
+  assert.equal(C.prioridade(null, cr), null);
+});
+
+test('faixaPrioridade e faixaEsforco nas bordas', () => {
+  const fp = C.PLANO_PADRAO.faixas_prioridade, fe = C.PLANO_PADRAO.faixas_esforco;
+  assert.equal(C.faixaPrioridade(8, fp), 'baixa');
+  assert.equal(C.faixaPrioridade(9, fp), 'media');
+  assert.equal(C.faixaPrioridade(16, fp), 'media');
+  assert.equal(C.faixaPrioridade(17, fp), 'alta');
+  assert.equal(C.faixaPrioridade(null, fp), null);
+  assert.equal(C.faixaEsforco(0, fe), 'sem');
+  assert.equal(C.faixaEsforco(40, fe), 'pequeno');
+  assert.equal(C.faixaEsforco(40.5, fe), 'medio');
+  assert.equal(C.faixaEsforco(120, fe), 'medio');
+  assert.equal(C.faixaEsforco(121, fe), 'grande');
+});
+
+const PAPEIS = [
+  { id: 'an', nome: 'Analista', externo: false, ordem: 1 },
+  { id: 'cl', nome: 'Cliente', externo: true, ordem: 2 },
+  { id: 'de', nome: 'Desenvolvedor', externo: false, ordem: 3 },
+  { id: 'te', nome: 'Testador', externo: false, ordem: 4, ativo: false },
+];
+
+test('papeisDoPlano: sem externo nem inativo, por ordem', () => {
+  assert.deepEqual(C.papeisDoPlano(PAPEIS).map(p => p.id), ['an', 'de']);
+});
+
+test('horasTotal ignora externo; inativo e desconhecido contam', () => {
+  const h = [{ papel_id: 'an', horas: 10 }, { papel_id: 'cl', horas: 50 }, { papel_id: 'te', horas: 4 }, { papel_id: 'xx', horas: 1 }];
+  assert.equal(C.horasTotal(h, PAPEIS), 15);
+  assert.equal(C.horasTotal(null, PAPEIS), 0);
+  assert.equal(C.horasDoPapel(h, 'an'), 10);
+  assert.equal(C.horasDoPapel(h, 'de'), 0);
+});
+
+test('definirHoras: imutável, arredonda e não aceita negativo', () => {
+  const h = [{ papel_id: 'an', horas: 10 }];
+  const n = C.definirHoras(h, 'de', 7.26);
+  assert.deepEqual(n, [{ papel_id: 'an', horas: 10 }, { papel_id: 'de', horas: 7.3 }]);
+  assert.deepEqual(h, [{ papel_id: 'an', horas: 10 }]);
+  assert.deepEqual(C.definirHoras(h, 'an', -3), [{ papel_id: 'an', horas: 0 }]);
+  assert.deepEqual(C.definirHoras(h, 'an', 'x'), [{ papel_id: 'an', horas: 0 }]);
+});
+
+test('situacaoEstimativa olha só os papéis do plano', () => {
+  assert.equal(C.situacaoEstimativa([], PAPEIS), 'sem');
+  assert.equal(C.situacaoEstimativa([{ papel_id: 'an', horas: 5 }], PAPEIS), 'parcial');
+  assert.equal(C.situacaoEstimativa([{ papel_id: 'an', horas: 5 }, { papel_id: 'de', horas: 1 }], PAPEIS), 'completa');
+});
+
+test('podeMudarStatus e statusAposCriterios', () => {
+  assert.equal(C.podeMudarStatus('pauta', 'plano'), true);
+  assert.equal(C.podeMudarStatus('adiada', 'descartada'), true);
+  assert.equal(C.podeMudarStatus('plano', 'entregue'), true);
+  assert.equal(C.podeMudarStatus('plano', 'adiada'), true);
+  assert.equal(C.podeMudarStatus('entregue', 'plano'), true);
+  assert.equal(C.podeMudarStatus('triagem', 'plano'), false);
+  assert.equal(C.podeMudarStatus('descartada', 'plano'), false);
+  assert.equal(C.podeMudarStatus('pauta', 'pauta'), false);
+  assert.equal(C.statusAposCriterios('triagem', [1, 2, 3, 0]), 'pauta');
+  assert.equal(C.statusAposCriterios('triagem', [1, null, 3, 0]), 'triagem');
+  assert.equal(C.statusAposCriterios('plano', [1, 2, 3, 0]), 'plano');
+});
+
+test('compararPlano: posição, prioridade, pai do Redmine numérico, criação', () => {
+  const itens = [
+    { id: 'a', posicao: null, prioridade: 20, criado_em: '2026-01-01' },
+    { id: 'b', posicao: 2, prioridade: 5, criado_em: '2026-01-01' },
+    { id: 'c', posicao: 1, prioridade: 5, criado_em: '2026-01-01' },
+    { id: 'd', posicao: 2, prioridade: 9, criado_em: '2026-01-01' },
+    { id: 'e', posicao: null, prioridade: 20, pai_redmine: '900', criado_em: '2026-01-01' },
+    { id: 'f', posicao: null, prioridade: 20, pai_redmine: '1000', criado_em: '2026-01-01' },
+  ];
+  assert.deepEqual(itens.sort(C.compararPlano).map(x => x.id), ['c', 'd', 'b', 'e', 'f', 'a']);
+});
+
+test('tituloPlano pelos anos das versões ativas e planejadas', () => {
+  assert.equal(C.tituloPlano([{ data: '2026-11-10', ativa: true }, { data: '2027-03-01', planejada: true }]), 'Plano 2026/27');
+  assert.equal(C.tituloPlano([{ data: '2026-11-10', ativa: true }]), 'Plano 2026');
+  assert.equal(C.tituloPlano([{ data: '2025-01-01', ativa: false }]), 'Plano');
+});
+
+test('aceitaOS com os status novos', () => {
+  assert.equal(C.aceitaOS('plano'), true);
+  assert.equal(C.aceitaOS('entregue'), true);
+  ['triagem', 'pauta', 'adiada', 'descartada'].forEach(s => assert.equal(C.aceitaOS(s), false));
 });
