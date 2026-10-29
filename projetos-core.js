@@ -195,6 +195,21 @@
     if(row)Object.keys(cfg).forEach(function(k){
       if(row[k]!==undefined&&row[k]!==null)cfg[k]=JSON.parse(JSON.stringify(row[k]));
     });
+    var pad=PLANO_PADRAO;
+    function fin(v,d){return typeof v==='number'&&isFinite(v)?v:d}
+    function str(v,d){return v==null?d:String(v)}
+    if(!Array.isArray(cfg.criterios))cfg.criterios=JSON.parse(JSON.stringify(pad.criterios));
+    cfg.criterios=cfg.criterios.map(function(c,i){
+      var d=pad.criterios[i]||pad.criterios[0];c=c&&typeof c==='object'?c:{};
+      var ops=Array.isArray(c.opcoes)?c.opcoes:[];
+      return{nome:str(c.nome,d.nome),pergunta:str(c.pergunta,d.pergunta),
+        opcoes:[0,1,2,3].map(function(k){return str(ops[k],d.opcoes[k])}),peso:fin(c.peso,d.peso)};
+    });
+    ['faixas_prioridade','faixas_esforco'].forEach(function(k){
+      var o=cfg[k]&&typeof cfg[k]==='object'?cfg[k]:{};
+      Object.keys(pad[k]).forEach(function(f){o[f]=fin(o[f],pad[k][f])});
+      cfg[k]=o;
+    });
     return cfg;
   }
 

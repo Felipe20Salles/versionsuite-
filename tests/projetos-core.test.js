@@ -471,3 +471,16 @@ test('capacidadeSugerida: média das 3 últimas encerradas', () => {
   assert.deepEqual(C.capacidadeSugerida(enc, vp, ['an', 'de']), { an: 20, de: 20 });
   assert.deepEqual(C.capacidadeSugerida([], vp, ['an']), {});
 });
+
+test('configPlano: valores não numéricos caem no padrão', () => {
+  const ok = (n) => ({ nome: n, pergunta: 'q', opcoes: ['a', 'b', 'c', 'd'], peso: 2 });
+  const c = C.configPlano({
+    criterios: [{ nome: 'A', pergunta: 'q', opcoes: ['a', 'b', 'c', 'd'], peso: '"><img>' }, ok('B'), ok('C'), ok('D')],
+    faixas_prioridade: { baixa_ate: 'x', media_ate: 16 }
+  });
+  assert.equal(c.criterios[0].peso, 1);
+  assert.equal(c.criterios[1].peso, 2);
+  assert.equal(c.faixas_prioridade.baixa_ate, 8);
+  assert.equal(c.faixas_prioridade.media_ate, 16);
+  assert.equal(c.faixas_esforco.medio_ate, 120);
+});

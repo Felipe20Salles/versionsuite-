@@ -6638,7 +6638,7 @@ function renderPlanoPrefs(){
     return'<div style="padding:10px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px">'+
       '<div style="display:flex;gap:8px;margin-bottom:6px">'+
         '<input class="form-input" id="pl-c'+i+'-nome" style="flex:1" placeholder="Nome" value="'+escHtml(c.nome)+'">'+
-        '<label style="font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:center">Peso <input class="form-input" id="pl-c'+i+'-peso" type="number" min="0" max="9" step="1" '+num+' value="'+c.peso+'"></label>'+
+        '<label style="font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:center">Peso <input class="form-input" id="pl-c'+i+'-peso" type="number" min="0" max="9" step="1" '+num+' value="'+escHtml(String(c.peso))+'"></label>'+
       '</div>'+
       '<input class="form-input" id="pl-c'+i+'-perg" style="width:100%;margin-bottom:6px" placeholder="Pergunta" value="'+escHtml(c.pergunta)+'">'+
       '<div style="display:flex;gap:6px">'+ops+'</div>'+
@@ -6671,11 +6671,11 @@ function renderPlanoPrefs(){
     htmlCrit+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:10px 0">'+
       '<div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Faixas de prioridade</div>'+
-        '<div style="display:flex;gap:8px"><label style="font-size:12px;color:var(--muted)">Baixa até <input class="form-input" id="pl-fp-baixa" type="number" min="0" '+num+' value="'+fp.baixa_ate+'"></label>'+
-        '<label style="font-size:12px;color:var(--muted)">Média até <input class="form-input" id="pl-fp-media" type="number" min="0" '+num+' value="'+fp.media_ate+'"></label></div></div>'+
+        '<div style="display:flex;gap:8px"><label style="font-size:12px;color:var(--muted)">Baixa até <input class="form-input" id="pl-fp-baixa" type="number" min="0" '+num+' value="'+escHtml(String(fp.baixa_ate))+'"></label>'+
+        '<label style="font-size:12px;color:var(--muted)">Média até <input class="form-input" id="pl-fp-media" type="number" min="0" '+num+' value="'+escHtml(String(fp.media_ate))+'"></label></div></div>'+
       '<div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Faixas de esforço (horas)</div>'+
-        '<div style="display:flex;gap:8px"><label style="font-size:12px;color:var(--muted)">Pequeno até <input class="form-input" id="pl-fe-peq" type="number" min="0" '+num+' value="'+fe.pequeno_ate+'"></label>'+
-        '<label style="font-size:12px;color:var(--muted)">Médio até <input class="form-input" id="pl-fe-med" type="number" min="0" '+num+' value="'+fe.medio_ate+'"></label></div></div>'+
+        '<div style="display:flex;gap:8px"><label style="font-size:12px;color:var(--muted)">Pequeno até <input class="form-input" id="pl-fe-peq" type="number" min="0" '+num+' value="'+escHtml(String(fe.pequeno_ate))+'"></label>'+
+        '<label style="font-size:12px;color:var(--muted)">Médio até <input class="form-input" id="pl-fe-med" type="number" min="0" '+num+' value="'+escHtml(String(fe.medio_ate))+'"></label></div></div>'+
     '</div>'+
     '<button class="btn btn-sm btn-primary" onclick="planoSalvarCriterios()">Salvar critérios e faixas</button>'+
     '<div class="pj-sec-title" style="margin-top:18px">Papéis</div>'+
