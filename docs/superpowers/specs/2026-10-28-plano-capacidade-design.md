@@ -243,7 +243,7 @@ Resumo automático, comparando com a linha de base da versão:
 Aparece no encerramento da versão (tela de versões existente), no modo Apresentar e numa seção recolhível da tela de Plano.
 
 ### 6.6 Telas existentes
-- **Versões:** campo "Horas para o plano", marca de versão planejada e o resumo da seção 6.5 nas encerradas.
+- **Versões:** capacidade para o plano por papel, marca de versão planejada e o resumo da seção 6.5 nas encerradas.
 - **Modal da OS e cartão do kanban:** o campo e o selo "Projeto" passam a se chamar "Demanda". Aceitam vínculo só demandas `plano` ou `entregue`. Vincular a uma entregue não reabre a demanda (*decisão minha*); o gestor reabre se quiser.
 - **Preferências → Plataforma:** "Fluxo de projetos" vira **"Plano"** (critérios, faixas e papéis com trackers e tipos de atividade).
 - **Papéis:** a permissão `gerir_projetos` passa a ser exibida como "Gerir o plano". O menu `projetos` mantém a chave.
