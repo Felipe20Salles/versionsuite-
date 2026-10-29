@@ -128,6 +128,22 @@ textarea.form-input{resize:vertical;min-height:70px}
 .pl-tip{position:fixed;pointer-events:none;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:8px 10px;font-size:12px;max-width:300px;opacity:0;transition:opacity .12s;z-index:260;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .pl-tip b{display:block;font-weight:500;color:var(--text)}.pl-tip span{color:var(--muted)}
 .pl-relatorio summary{cursor:pointer;font-size:14px;font-weight:600}
+.v-capac{margin:2px 0 12px}
+.v-capac-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;margin-top:6px}
+.v-capac-grade label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.v-erro{padding:8px 12px;background:var(--red-dim);border:1px solid var(--red-text);border-radius:var(--radius);font-size:13px;color:var(--red-text);margin-bottom:10px}
+.vr{display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.vr-linha{display:grid;grid-template-columns:96px 1fr;gap:10px}
+.vr-rot{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--hint);padding-top:1px}
+.vr b{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums}
+.vr-lista{margin:4px 0 0;padding-left:16px}
+.vr-vazio{font-size:12.5px;color:var(--hint)}
+.vr-titulo{font-size:13px;color:var(--text);font-weight:500;margin:10px 0 8px}
+.hist-resumo{margin-top:8px;font-size:12px}
+.hist-resumo summary{cursor:pointer;color:var(--muted);font-size:12px}
+.hist-resumo .vr{margin-top:8px}
+.modal-encerrar-resumo{background:var(--card2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-bottom:16px}
+.modal-encerrar-resumo:empty{display:none}
 @media (prefers-reduced-motion:reduce){.pl-tip{transition:none}}
 /* Ficha da demanda (painel lateral do Plano) */
 .pj-drawer{position:fixed;top:0;right:0;height:100vh;width:420px;max-width:100vw;background:var(--surface);border-left:1px solid var(--border2);box-shadow:-24px 0 60px rgba(0,0,0,.5);z-index:250;display:flex;flex-direction:column;transform:translateX(100%);visibility:hidden;transition:transform .25s cubic-bezier(.2,.8,.2,1),visibility 0s linear .25s}
@@ -751,6 +767,10 @@ textarea.form-input{resize:vertical;min-height:70px}
           <div class="metrics-row" id="dash-metrics"></div>
           <div class="section-head"><span class="section-title">Versões ativas</span></div>
           <div class="grid-2" id="dash-versoes"></div>
+          <div id="dash-planejadas-wrap" hidden>
+            <div class="section-head" style="margin-top:20px"><span class="section-title">Versões planejadas</span></div>
+            <div class="grid-2" id="dash-planejadas"></div>
+          </div>
         </div>
         <!-- Tab: Central de Ajuda -->
         <div id="dash-screen-ajuda" style="display:none">
@@ -1433,12 +1453,13 @@ textarea.form-input{resize:vertical;min-height:70px}
 
 <!-- MODAL ENCERRAR VERSÃO -->
 <div class="modal-overlay" id="modal-encerrar">
-  <div class="modal" style="max-width:420px">
+  <div class="modal" style="max-width:480px">
     <div class="modal-title">Encerrar versão</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">
       Tem certeza que deseja encerrar a versão <strong id="modal-encerrar-nome"></strong>?<br>
       OSs não concluídas receberão aviso visual e a versão será movida para o Histórico.
     </div>
+    <div class="modal-encerrar-resumo" id="modal-encerrar-resumo"></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-encerrar')">Cancelar</button>
       <button class="btn btn-primary" onclick="confirmarEncerrarVersao()">Encerrar versão</button>
@@ -1529,6 +1550,12 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div class="form-group"><label class="form-label">Data da versão</label><input type="date" class="form-input" id="v-data"></div>
       <div class="form-group"><label class="form-label">Data do boletim</label><input type="date" class="form-input" id="v-boletim"></div>
     </div>
+    <label class="form-check" id="v-planejada-wrap"><input type="checkbox" id="v-planejada" onchange="versaoModalErro('')"><span class="form-check-label">Versão planejada (ainda não iniciada)<div class="form-check-hint">Entra no plano depois das versões ativas. A linha de base é gravada quando ela for iniciada.</div></span></label>
+    <div class="v-capac" id="v-capac-wrap" hidden>
+      <div class="form-label">Capacidade para o plano</div>
+      <div class="v-capac-grade" id="v-capac"></div>
+    </div>
+    <div class="v-erro" id="v-erro" role="alert" hidden></div>
     <div class="modal-footer">
       <button class="btn" onclick="closeModal('modal-versao')">Cancelar</button>
       <button class="btn btn-primary" id="btn-salvar-versao" onclick="salvarVersao()">Criar versão</button>
@@ -2937,9 +2964,14 @@ function goScreen(name){
 
 // ── DASHBOARD ────────────────────────────────────────────────────────────────
 function versaoStatus(v){
-  // ativa, encerrada
+  // ativa, planejada (ainda não iniciada), encerrada
+  if(v.planejada&&!v.ativa&&!v.encerradaEm)return'planejada';
   if(!v.ativa)return'encerrada';
   return'ativa';
+}
+function versaoOpcaoSufixo(v){
+  var st=versaoStatus(v);
+  return st==='planejada'?' (planejada)':st==='encerrada'?' ✓':'';
 }
 function renderDash(){
   var tabEqBtn=document.getElementById('dash-tab-btn-equipe');
@@ -2990,6 +3022,7 @@ function renderDash(){
   });
   document.getElementById('dash-banners').innerHTML=banners;
 
+  renderDashPlanejadas();
   var ativasEl=document.getElementById('dash-versoes');
   if(!ativas.length){ativasEl.innerHTML='<div style="color:var(--hint);font-size:13px;grid-column:1/-1">Nenhuma versão ativa. Clique em "+ Nova versão".</div>';return}
   ativasEl.innerHTML=ativas.map(function(v){
@@ -3000,7 +3033,7 @@ function renderDash(){
     var hv=pontosV.reduce(function(a,p){return a+(p.horasTrabalhadas||0)},0);
     return'<div class="versao-card ativa-border" onclick="goKanban(\''+v.id+'\')">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'+
-        '<div style="font-size:15px;font-weight:500">'+v.nome+'</div>'+
+        '<div style="font-size:15px;font-weight:500">'+escHtml(v.nome)+'</div>'+
         '<div style="display:flex;gap:6px;align-items:center">'+
           '<span class="badge badge-purple">Ativa</span>'+
           '<button class="btn btn-xs" onclick="event.stopPropagation();encerrarVersao(\''+v.id+'\')" title="Encerrar versão" style="padding:2px 7px;font-size:10px;color:var(--muted)">Encerrar</button>'+
@@ -3009,6 +3042,26 @@ function renderDash(){
       '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">'+fmtDate(v.data,'Versão: ')+(v.boletim?' · '+fmtDate(v.boletim,'Boletim: '):' ')+'</div>'+
       '<div class="versao-stats"><div class="versao-stat"><span>'+tot+'</span> OSs</div><div class="versao-stat"><span>'+cn+'</span> concluídas</div><div class="versao-stat"><span>'+pct+'%</span></div><div class="versao-stat"><span>'+hv.toFixed(1)+'h</span></div></div>'+
       '<div class="versao-prog-bar"><div class="versao-prog-fill" style="width:'+pct+'%"></div></div></div>';
+  }).join('');
+}
+function renderDashPlanejadas(){
+  var wrap=document.getElementById('dash-planejadas-wrap'),el=document.getElementById('dash-planejadas');
+  if(!wrap||!el)return;
+  var pl=S.versoes.filter(function(v){return versaoStatus(v)==='planejada'}).sort(_planoPorData);
+  wrap.hidden=!pl.length;
+  el.innerHTML=pl.map(function(v){
+    var cap=PJ.ok?planoFmtH(planoCapTotal(v.id))+'h':'—';
+    return'<div class="versao-card" style="cursor:default">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;gap:8px">'+
+        '<div style="font-size:15px;font-weight:500">'+escHtml(v.nome)+'</div>'+
+        '<div style="display:flex;gap:6px;align-items:center">'+
+          '<span class="badge badge-gray">Planejada</span>'+
+          (canEditVersao(v)?'<button class="btn btn-xs" onclick="iniciarVersao(\''+v.id+'\')" title="Iniciar versão" style="padding:2px 9px;font-size:11px">Iniciar</button>':'')+
+        '</div>'+
+      '</div>'+
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">'+fmtDate(v.data,'Versão: ')+(v.boletim?' · '+fmtDate(v.boletim,'Boletim: '):' ')+'</div>'+
+      '<div class="versao-stats"><div class="versao-stat"><span>'+cap+'</span> de capacidade</div></div>'+
+    '</div>';
   }).join('');
 }
 function goKanban(vid){S.versaoK=vid;goScreen('kanban')}
@@ -3075,7 +3128,7 @@ function badgeTipoRedmine(tipo){
 function renderCicloView(){
   // Popula filtros
   var sel=document.getElementById('kanban-versao-sel');
-  sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+(v.ativa?'':' ✓')+'</option>'}).join('');
+  sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+escHtml(v.nome)+versaoOpcaoSufixo(v)+'</option>'}).join('');
   if(S.versaoK)sel.value=S.versaoK;
   var vid=sel.value;S.versaoK=vid;
 
@@ -3275,11 +3328,11 @@ function renderKanban(){
   if(filtroSel)filtroSel.value=S.filtro||'todos';
   populateFiltroProdutoSel();
   var sel=document.getElementById('kanban-versao-sel');
-  sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+(v.ativa?'':' ✓')+'</option>'}).join('');
+  sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+escHtml(v.nome)+versaoOpcaoSufixo(v)+'</option>'}).join('');
   if(S.versaoK)sel.value=S.versaoK;
   var vid=sel.value;S.versaoK=vid;
   var versao=S.versoes.find(function(v){return v.id===vid});
-  var isEncerrada=versao&&!versao.ativa;
+  var isEncerrada=!!versao&&versaoStatus(versao)==='encerrada';
   var oss=S.oss.filter(function(o){return o.versaoId===vid});
   if(S.filtro!=='todos')oss=oss.filter(function(o){return(PLINHA[o.produto]||'')===S.filtro});
   if(S.filtroProduto&&S.filtroProduto!=='todos')oss=oss.filter(function(o){return o.produto===S.filtroProduto});
@@ -5638,6 +5691,7 @@ function renderHist(){
   var el=document.getElementById('hist-list');
   if(!S.versoes.length){el.innerHTML='<div style="color:var(--hint);font-size:13px">Nenhuma versão ainda.</div>';return}
   el.innerHTML=S.versoes.map(function(v){
+    var vst=versaoStatus(v);
     var voss=S.oss.filter(function(o){return o.versaoId===v.id});
     var tot=voss.length,cn=voss.filter(function(o){return o.status==='concluido'}).length;
     var pontosV=S.pontos.filter(function(p){return p.versaoId===v.id});
@@ -5647,12 +5701,13 @@ function renderHist(){
     var incompletas=tot-cn;
     return'<div class="hist-item">'+
       '<div style="flex:1" onclick="goKanban(\''+v.id+'\')">'+
-        '<div style="font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px">'+v.nome+
-          (v.ativa?'<span class="badge badge-purple" style="font-size:10px">Ativa</span>':'<span class="badge badge-gray" style="font-size:10px">Encerrada</span>')+
-          (incompletas>0&&!v.ativa?'<span class="badge badge-amber" style="font-size:10px">'+incompletas+' incompleta(s)</span>':'')+
+        '<div style="font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px">'+escHtml(v.nome)+
+          (vst==='ativa'?'<span class="badge badge-purple" style="font-size:10px">Ativa</span>':vst==='planejada'?'<span class="badge badge-gray" style="font-size:10px">Planejada</span>':'<span class="badge badge-gray" style="font-size:10px">Encerrada</span>')+
+          (incompletas>0&&vst==='encerrada'?'<span class="badge badge-amber" style="font-size:10px">'+incompletas+' incompleta(s)</span>':'')+
         '</div>'+
         '<div style="font-size:12px;color:var(--hint);margin-top:2px">'+fmtDate(v.data,'Versão: ')+(v.boletim?' · '+fmtDate(v.boletim,'Boletim: '):' ')+(v.encerradaEm?' · Encerrada em '+fmtDate(v.encerradaEm.slice(0,10)):'')+'</div>'+
         '<div class="prog-mini"><div class="prog-mini-fill" style="width:'+pct+'%"></div></div>'+
+        (vst==='encerrada'&&PJ.ok?'<details class="hist-resumo" onclick="event.stopPropagation()"><summary>Plano × realizado</summary>'+planoResumoHtml(v.id)+'</details>':'')+
       '</div>'+
       '<div class="hist-stat"><div class="hist-stat-val">'+tot+'</div><div class="hist-stat-lbl">OSs</div></div>'+
       '<div class="hist-stat"><div class="hist-stat-val">'+cn+'</div><div class="hist-stat-lbl">Concluídas</div></div>'+
@@ -5660,7 +5715,8 @@ function renderHist(){
       '<div class="hist-stat"><div class="hist-stat-val">'+horasAprop.toFixed(1)+'h</div><div class="hist-stat-lbl">Horas Aprop.</div></div>'+
       '<div class="hist-stat"><div class="hist-stat-val">'+pct+'%</div><div class="hist-stat-lbl">Progresso</div></div>'+
       '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">'+
-        (canEditVersao(v)&&!v.ativa?'<button class="btn btn-xs btn-ghost" onclick="reativarVersao(\''+v.id+'\')">Reativar</button>':'')+
+        (canEditVersao(v)&&vst==='planejada'?'<button class="btn btn-xs btn-ghost" onclick="iniciarVersao(\''+v.id+'\')">Iniciar</button>':'')+
+        (canEditVersao(v)&&vst==='encerrada'?'<button class="btn btn-xs btn-ghost" onclick="reativarVersao(\''+v.id+'\')">Reativar</button>':'')+
         (canEditVersao(v)?'<button class="btn btn-xs btn-ghost" onclick="editarVersao(\''+v.id+'\')" title="Editar versão">'+
           '<svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 2l3 3-9 9H2v-3L11 2z"/></svg>'+
         '</button>':'')+
@@ -5949,7 +6005,7 @@ async function load(){
     var {data:versoes}=await sb.from('versoes').select('*').eq('workspace_id',CURRENT_WORKSPACE_ID).order('created_at',{ascending:false});
     S.versoes=(versoes||[]).map(function(v){return{
       id:v.id,nome:v.nome,data:v.data,boletim:v.boletim,
-      ativa:v.ativa,encerradaEm:v.encerrada_em,createdBy:v.created_by||null
+      ativa:v.ativa,planejada:!!v.planejada,encerradaEm:v.encerrada_em,createdBy:v.created_by||null
     }});
 
     // OSs
@@ -6399,6 +6455,113 @@ function planoPotesVersao(dist,v,gerir){
   return{potes:potes,resumo:resumo,dica:dica};
 }
 
+// ── Versões planejadas: capacidade, linha de base e resumo plano × realizado ──
+function _planoEncerradas(){
+  return S.versoes.filter(function(v){return versaoStatus(v)==='encerrada'}).map(function(v){
+    return{id:v.id,nome:v.nome,data:v.data||String(v.encerradaEm||'').slice(0,10),encerradaEm:v.encerradaEm||''};
+  });
+}
+// Grava as horas por papel de uma versão (upsert) e atualiza PJ.capac
+async function planoGravarCapacidade(vid,linhas){
+  if(!linhas||!linhas.length)return;
+  var rows=linhas.map(function(l){return{workspace_id:CURRENT_WORKSPACE_ID,versao_id:vid,papel_id:l.papel_id,horas:l.horas}});
+  var r=await sb.from('versao_capacidade').upsert(rows,{onConflict:'versao_id,papel_id'});
+  if(r.error)throw r.error;
+  var mapa={};linhas.forEach(function(l){mapa[l.papel_id]=l.horas});
+  planoCapLocal(vid,mapa);
+}
+// Linha de base: o que o plano prevê para a versão no momento em que ela é iniciada.
+// Grava uma vez só: se a versão já tem linha de base, não faz nada.
+async function planoGravarLinhaBase(vid){
+  if(!PJ.ok||!can('gerir_projetos'))return 0;
+  var c=await sb.from('plano_linha_base').select('id',{count:'exact',head:true}).eq('versao_id',vid);
+  if(c.error)throw c.error;
+  if((c.count||0)>0)return 0;
+  var dist=_plano.dist||planoDistribuir(),col=null;
+  (dist.versoes||[]).forEach(function(x){if(String(x.id)===String(vid))col=x});
+  if(!col)return 0;
+  var por={},ordem=[];
+  col.itens.forEach(function(it){
+    var p=projById(it.id);
+    if(!p||(p.status!=='plano'&&p.status!=='entregue'))return;
+    if(!por[it.id]){por[it.id]=0;ordem.push(it.id)}
+    por[it.id]+=(+it.horas||0)+(+it.realizado||0);
+  });
+  if(!ordem.length)return 0;
+  var rows=ordem.map(function(id){
+    var p=projById(id);
+    return{workspace_id:CURRENT_WORKSPACE_ID,versao_id:vid,projeto_id:id,
+      horas_previstas:Math.round(por[id]*100)/100,posicao:p.posicao==null?null:p.posicao};
+  });
+  var r=await sb.from('plano_linha_base').insert(rows).select();
+  if(r.error){if(r.error.code==='23505')return 0;throw r.error}
+  (r.data||[]).forEach(function(x){PJ.linhaBase.push(x)});
+  return(r.data||[]).length;
+}
+async function iniciarVersao(vid){
+  var v=S.versoes.find(function(x){return x.id===vid});if(!v)return;
+  if(!canEditVersao(v)){toast('Sem permissão para iniciar esta versão',true);return}
+  var ok=await modalConfirm('Iniciar versão','Iniciar <strong>'+escHtml(v.nome)+'</strong>? O que o plano prevê para ela vira a linha de base.','Iniciar');
+  if(!ok)return;
+  try{
+    var r=await sb.from('versoes').update({ativa:true,planejada:false,encerrada_em:null}).eq('id',vid);
+    if(r.error)throw r.error;
+  }catch(e){toast('Erro ao iniciar a versão: '+(e&&e.message||e),true);return}
+  v.ativa=true;v.planejada=false;delete v.encerradaEm;
+  var msg='Versão iniciada';
+  if(PJ.ok){
+    planoDistribuir();
+    try{
+      var n=await planoGravarLinhaBase(vid);
+      if(n)msg+=' · linha de base com '+n+' demanda'+(n>1?'s':'');
+    }catch(e){toast('Versão iniciada, mas a linha de base não foi gravada: '+(e&&e.message||e),true);msg=null}
+  }
+  renderDash();renderHist();
+  if(planoTela())renderProjetos();
+  if(msg)toast(msg);
+}
+function _planoPct(a,b){return b>0?Math.round(a/b*100):null}
+// Resumo plano × realizado de uma versão (cumprimento, herdadas, precisão)
+function planoResumoHtml(vid){
+  if(!PJ.ok)return'';
+  var base=PJ.linhaBase.filter(function(b){return String(b.versao_id)===String(vid)});
+  var r=ProjCore.resumoVersao(vid,base,planoDemandas(),PJ.real);
+  if(!r.temLinhaBase)return'<div class="vr"><div class="vr-vazio">Sem linha de base: a versão não foi iniciada a partir do plano.</div></div>';
+  var pH=_planoPct(r.horasRealizadas,r.horasPrevistas);
+  var cump='<b>'+planoFmtH(r.horasRealizadas)+'h</b> realizadas de <b>'+planoFmtH(r.horasPrevistas)+'h</b> previstas'+(pH!=null?' ('+pH+'%)':'')+
+    ' · <b>'+r.entregues+'</b> de <b>'+r.previstas+'</b> demanda'+(r.previstas===1?'':'s')+' entregue'+(r.previstas===1?'':'s');
+  var her=r.herdadas.length
+    ?'<b>'+r.herdadas.length+'</b> continua'+(r.herdadas.length>1?'m':'')+' no plano<ul class="vr-lista">'+r.herdadas.map(function(id){
+        var p=projById(id);
+        return'<li>'+(p&&p.pai_redmine?'#'+escHtml(String(p.pai_redmine))+' ':'')+escHtml(String(p&&p.titulo||'Demanda'))+'</li>';
+      }).join('')+'</ul>'
+    :'nenhuma';
+  var prec;
+  if(!r.entregues)prec='nenhuma demanda entregue';
+  else{
+    var d=r.estimadoEntregues>0?Math.round((r.realizadoEntregues-r.estimadoEntregues)/r.estimadoEntregues*100):null;
+    prec='nas entregues, <b>'+planoFmtH(r.estimadoEntregues)+'h</b> estimadas × <b>'+planoFmtH(r.realizadoEntregues)+'h</b> realizadas'+
+      (d!=null?' ('+(d>0?'+':'')+d+'%)':'');
+  }
+  return'<div class="vr">'+
+    '<div class="vr-linha"><span class="vr-rot">Cumprimento</span><span>'+cump+'</span></div>'+
+    '<div class="vr-linha"><span class="vr-rot">Herdadas</span><span>'+her+'</span></div>'+
+    '<div class="vr-linha"><span class="vr-rot">Precisão</span><span>'+prec+'</span></div>'+
+  '</div>';
+}
+// Seção "Plano × realizado" da tela Plano: última versão encerrada
+function planoRenderRelatorio(){
+  var box=document.getElementById('pl-relatorio'),corpo=document.getElementById('pl-relatorio-corpo');
+  if(!box||!corpo)return;
+  var enc=_planoEncerradas().sort(function(a,b){
+    var x=a.encerradaEm||a.data||'',y=b.encerradaEm||b.data||'';return x<y?1:x>y?-1:0;
+  });
+  if(!PJ.ok||!enc.length){box.hidden=true;corpo.innerHTML='';return}
+  var v=enc[0];
+  corpo.innerHTML='<div class="vr-titulo">Última versão encerrada: '+escHtml(v.nome)+'</div>'+planoResumoHtml(v.id);
+  box.hidden=false;
+}
+
 // ── tampa (capacidade) ──
 function planoTampa(chave,horas,final){
   if(!can('gerir_projetos'))return;
@@ -6573,6 +6736,7 @@ function renderProjetos(){
   var b=document.getElementById('pl-busca');if(b&&b.value!==_plano.busca)b.value=_plano.busca;
   planoDesenharPotes(); // antes da grade: calcula _plano.dist e registra os potes como alvo do arrasto
   planoDesenharGrade();
+  planoRenderRelatorio();
   if(_plAberto){if(projById(_plAberto))planoAbrir(_plAberto);else planoFechar()}
   if(!_planoPaisBuscado&&can('gerir_projetos'))planoBuscarPaisNoRedmine();
   planoSyncAutoSeNecessario();
@@ -7230,7 +7394,7 @@ function planoToggleTipo(papelId,tipoId,on){
 async function dbSalvarVersao(v){
   var {data,error}=await sb.from('versoes').upsert({
     id:v.id,workspace_id:CURRENT_WORKSPACE_ID,nome:v.nome,data:v.data||null,boletim:v.boletim||null,
-    ativa:v.ativa,encerrada_em:v.encerradaEm||null,created_by:CURRENT_USER.id
+    ativa:v.ativa,planejada:!!v.planejada,encerrada_em:v.encerradaEm||null,created_by:CURRENT_USER.id
   }).select().single();
   if(error)throw error;
   return data;
@@ -7332,6 +7496,39 @@ async function dbSalvarPrefs(){
 
 var _editingVersaoId=null;
 
+function versaoModalErro(msg){
+  var e=document.getElementById('v-erro');if(!e)return;
+  e.textContent=msg||'';e.hidden=!msg;
+}
+// Bloco "Capacidade para o plano": um campo de horas por papel; placeholder = sugestão
+function versaoModalCapac(vid){
+  var wrap=document.getElementById('v-capac-wrap'),el=document.getElementById('v-capac');
+  if(!wrap||!el)return;
+  var ps=PJ.ok&&can('gerir_projetos')?planoPapeis():[];
+  wrap.hidden=!ps.length;
+  if(!ps.length){el.innerHTML='';return}
+  var sug=ProjCore.capacidadeSugerida(_planoEncerradas(),PJ.real.versaoPapel,ps.map(function(p){return p.id}),3);
+  var atual=vid?planoCapPorPapel(vid):{};
+  el.innerHTML=ps.map(function(p){
+    var ph=sug.hasOwnProperty(p.id)?'sugestão: '+planoFmtH(sug[p.id])+'h':'horas';
+    var val=atual.hasOwnProperty(p.id)?String(atual[p.id]):'';
+    return'<label>'+escHtml(String(p.nome||''))+'<input type="number" min="0" step="0.5" class="form-input" data-papel="'+escHtml(String(p.id))+'" placeholder="'+escHtml(ph)+'" value="'+escHtml(val)+'"></label>';
+  }).join('');
+}
+// Lê o bloco de capacidade: [{papel_id,horas}] dos campos preenchidos, ou null se algum for inválido
+function versaoModalLerCapac(){
+  var wrap=document.getElementById('v-capac-wrap');
+  if(!wrap||wrap.hidden)return[];
+  var out=[],ruim=false;
+  Array.prototype.forEach.call(wrap.querySelectorAll('input[data-papel]'),function(inp){
+    var t=String(inp.value||'').trim().replace(',','.');
+    if(t==='')return;
+    var h=parseFloat(t);
+    if(isNaN(h)||h<0){ruim=true;return}
+    out.push({papel_id:inp.getAttribute('data-papel'),horas:h});
+  });
+  return ruim?null:out;
+}
 function openNovaVersao(){
   _editingVersaoId=null;
   document.getElementById('modal-versao-title').textContent='Nova versão';
@@ -7339,6 +7536,9 @@ function openNovaVersao(){
   document.getElementById('v-nome').value='';
   document.getElementById('v-data').value='';
   document.getElementById('v-boletim').value='';
+  document.getElementById('v-planejada').checked=false;
+  document.getElementById('v-planejada-wrap').style.display='';
+  versaoModalErro('');versaoModalCapac(null);
   openModal('modal-versao');
 }
 
@@ -7351,6 +7551,11 @@ function editarVersao(vid){
   document.getElementById('v-nome').value=v.nome||'';
   document.getElementById('v-data').value=v.data||'';
   document.getElementById('v-boletim').value=v.boletim||'';
+  document.getElementById('v-planejada').checked=false;
+  document.getElementById('v-planejada-wrap').style.display='none';
+  versaoModalErro('');
+  if(versaoStatus(v)==='encerrada'){var cw=document.getElementById('v-capac-wrap');if(cw)cw.hidden=true}
+  else versaoModalCapac(vid);
   openModal('modal-versao');
 }
 
@@ -7358,12 +7563,20 @@ function salvarVersao(){
   var nome=document.getElementById('v-nome').value.trim();if(!nome)return;
   var data=document.getElementById('v-data').value||null;
   var boletim=document.getElementById('v-boletim').value||null;
+  var planejada=!_editingVersaoId&&document.getElementById('v-planejada').checked;
+  if(planejada&&!data){versaoModalErro('Informe a data da versão planejada.');return}
+  var capac=versaoModalLerCapac();
+  if(capac===null){versaoModalErro('Informe as horas de capacidade como números maiores ou iguais a zero.');return}
+  versaoModalErro('');
 
   if(_editingVersaoId){
     // Modo edição
     var v=S.versoes.find(function(x){return x.id===_editingVersaoId});if(!v)return;
     v.nome=nome;v.data=data;v.boletim=boletim;
     dbSalvarVersao(v).then(function(){
+      return planoGravarCapacidade(v.id,capac);
+    }).then(function(){
+      if(planoTela())renderProjetos();
       closeModal('modal-versao');
       _editingVersaoId=null;
       document.getElementById('modal-versao-title').textContent='Nova versão';
@@ -7371,12 +7584,17 @@ function salvarVersao(){
       renderHist();renderDash();toast('Versão atualizada');
     }).catch(function(e){toast('Erro: '+e.message,'err')});
   }else{
-    // Modo criação
-    var nv={id:uid(),nome:nome,data:data,boletim:boletim,ativa:true};
+    // Modo criação: planejada = ainda não iniciada; ativa = iniciada já (sem linha de base)
+    var nv={id:uid(),nome:nome,data:data,boletim:boletim,ativa:!planejada,planejada:planejada};
     dbSalvarVersao(nv).then(function(saved){
-      nv.id=saved.id;S.versoes.unshift(nv);if(!S.versaoK)S.versaoK=nv.id;
+      nv.id=saved.id;S.versoes.unshift(nv);if(!S.versaoK&&!planejada)S.versaoK=nv.id;
+      return planoGravarCapacidade(nv.id,capac).then(function(){return null},function(e){return e});
+    }).then(function(errCap){
       closeModal('modal-versao');document.getElementById('v-nome').value='';
-      renderDash();toast('Versão criada');
+      renderDash();renderHist();
+      if(planoTela())renderProjetos();
+      if(errCap)toast('Versão criada, mas a capacidade não foi gravada: '+(errCap.message||errCap),'err');
+      else toast(planejada?'Versão planejada criada':'Versão criada');
     }).catch(function(e){toast('Erro: '+e.message,'err')});
   }
 }
@@ -9870,7 +10088,11 @@ function encerrarVersao(vid){
   var v=S.versoes.find(function(x){return x.id===vid});if(!v)return;
   _encerrandoVid=vid;
   document.getElementById('modal-encerrar-nome').textContent=v.nome;
+  var rs=document.getElementById('modal-encerrar-resumo');
+  function preencher(){if(rs&&_encerrandoVid===vid)rs.innerHTML=PJ.ok?'<div class="vr-titulo" style="margin-top:0">Plano × realizado</div>'+planoResumoHtml(vid):''}
+  preencher();
   openModal('modal-encerrar');
+  if(PJ.ok)planoRecalcularReal().then(preencher).catch(function(){});
 }
 function confirmarEncerrarVersao(){
   if(!_encerrandoVid)return;
@@ -9880,7 +10102,9 @@ function confirmarEncerrarVersao(){
     var v=S.versoes.find(function(x){return x.id===vid});
     if(v){v.ativa=false;v.encerradaEm=new Date().toISOString()}
     if(S.versaoK===vid){var ativa=S.versoes.find(function(x){return x.ativa});S.versaoK=ativa?ativa.id:null}
-    renderDash();renderHist();renderKanban();toast('Versão encerrada');
+    renderDash();renderHist();renderKanban();
+    if(planoTela())renderProjetos();
+    toast('Versão encerrada');
   }).catch(function(e){toast('Erro: '+e.message,'err')});
 }
 
