@@ -6554,9 +6554,10 @@ function planoTopbar(){
   var sync=PJ.ok&&PJ.cfg&&PJ.cfg.redmine_sync_em;
   if(sync)sub+=' · Redmine sincronizado há '+planoHa(sync);
   document.getElementById('topbar-sub').textContent=sub;
-  var rc=getRedmineConfig(),acts='';
-  if(PJ.ok&&can('gerir_projetos')&&rc.proxyUrl&&rc.proxy)acts+='<button class="btn btn-sm btn-ghost" onclick="planoSincronizar(false)">⟳ Sincronizar</button> ';
+  var acts='',rok=PJ.ok&&planoRedmineOk();
+  if(rok)acts+='<button class="btn btn-sm btn-ghost" onclick="planoSincronizar(false)">⟳ Sincronizar</button> ';
   acts+='<button class="btn btn-sm btn-ghost" onclick="planoApresentar(true)">▣ Apresentar</button>';
+  if(rok)acts+=' <input id="pl-redmine-id" class="inp" type="text" inputmode="numeric" placeholder="Adicionar do Redmine #" aria-label="Adicionar do Redmine #" style="width:170px;height:28px" onkeydown="if(event.key===\'Enter\'){event.preventDefault();planoAdicionarDoCampo()}"><button class="btn btn-sm btn-ghost" onclick="planoAdicionarDoCampo()">Adicionar</button>';
   if(PJ.ok&&CURRENT_USER&&!CURRENT_USER.isVisitor)acts+=' <button class="btn btn-primary btn-sm" onclick="planoNova()">+ Nova demanda</button>';
   document.getElementById('topbar-actions').innerHTML=acts;
 }
@@ -6574,6 +6575,109 @@ function renderProjetos(){
   planoDesenharGrade();
   if(_plAberto){if(projById(_plAberto))planoAbrir(_plAberto);else planoFechar()}
   if(!_planoPaisBuscado&&can('gerir_projetos'))planoBuscarPaisNoRedmine();
+  planoSyncAutoSeNecessario();
+}
+// ── Redmine: adicionar por número e sincronizar estimativas ──
+var _planoSyncAuto=false,_planoSyncOcupado=false,PLANO_SYNC_PARALELO=5,PLANO_SYNC_INTERVALO_MS=3600000;
+function planoRedmineOk(){
+  if(!can('gerir_projetos'))return false;
+  var rc=getRedmineConfig();
+  return!!(rc.proxyUrl&&rc.proxy);
+}
+async function _planoRedmineJson(cfg,path){
+  var r=await _redmineFetch(cfg,path,'GET');
+  if(!r.ok){var e=new Error('HTTP '+r.status);e.status=r.status;throw e}
+  return r.json();
+}
+async function _planoFilhasDoPai(cfg,pai){
+  var d=await _planoRedmineJson(cfg,'/issues.json?parent_id='+encodeURIComponent(pai)+'&status_id=*&limit=100');
+  return d.issues||[];
+}
+function _planoHorasChave(hs){
+  return(hs||[]).map(function(x){return String(x.papel_id)+':'+(Math.round((+x.horas||0)*100)/100)}).sort().join('|');
+}
+function planoAdicionarDoCampo(){
+  var el=document.getElementById('pl-redmine-id');
+  if(!el)return;
+  var v=el.value;
+  planoAdicionarDoRedmine(v).then(function(ok){if(ok){var e2=document.getElementById('pl-redmine-id');if(e2)e2.value=''}});
+}
+async function planoAdicionarDoRedmine(id){
+  if(!PJ.ok||!planoRedmineOk())return false;
+  var num=String(id==null?'':id).replace(/^#/,'').trim();
+  if(!/^\d+$/.test(num)){toast('Informe o número do chamado pai no Redmine',true);return false}
+  var ex=PJ.projetos.filter(function(p){return String(p.pai_redmine||'')===num})[0];
+  if(ex){
+    toast('Já existe uma demanda para o chamado #'+num);
+    _plAberto=null;
+    planoAbrir(ex.id);
+    return true;
+  }
+  try{
+    var cfg=getRedmineConfig();
+    var iss=await _planoRedmineJson(cfg,'/issues/'+num+'.json');
+    var titulo=String(iss&&iss.issue&&iss.issue.subject||'').trim();
+    if(!titulo)throw new Error('Chamado sem título');
+    var filhas=await _planoFilhasDoPai(cfg,num);
+    var horas=ProjCore.horasDoRedmine(filhas,PJ.papeis,PJ.cfg.papel_padrao_id);
+    var r=await sb.from('projetos').insert({workspace_id:CURRENT_WORKSPACE_ID,titulo:titulo,status:'triagem',sugerido_por:CURRENT_USER.id,
+      pai_redmine:num,horas_redmine:horas,horas_papeis:horas,horas_origem:'redmine'}).select().single();
+    if(r.error)throw r.error;
+    PJ.projetos.push(r.data);
+    _plAberto=null;
+    if(planoTela())renderProjetos();
+    planoAbrir(r.data.id);
+    toast('Demanda criada a partir do chamado #'+num);
+    return true;
+  }catch(e){
+    toast(e&&e.status===404?'Chamado #'+num+' não encontrado no Redmine':'Erro ao buscar no Redmine: '+(e&&e.message),true);
+    return false;
+  }
+}
+async function planoSincronizar(auto){
+  if(!PJ.ok||!planoRedmineOk()||_planoSyncOcupado)return;
+  _planoSyncOcupado=true;
+  var cfg=getRedmineConfig(),alvo=PJ.projetos.filter(function(p){return p.pai_redmine}),atual=0,erros=[],fila=alvo.slice();
+  async function trabalhar(){
+    while(fila.length){
+      var p=fila.shift();
+      try{
+        var filhas=await _planoFilhasDoPai(cfg,p.pai_redmine);
+        var h=ProjCore.horasDoRedmine(filhas,PJ.papeis,PJ.cfg.papel_padrao_id);
+        var c=ProjCore.camposSync(p,h);
+        var mudou=_planoHorasChave(p.horas_redmine)!==_planoHorasChave(c.horas_redmine)||
+          (c.horas_papeis!==undefined&&_planoHorasChave(p.horas_papeis)!==_planoHorasChave(c.horas_papeis));
+        if(mudou){await projSalvar(p,c);atual++}
+      }catch(e){erros.push('#'+p.pai_redmine+': '+(e&&e.message))}
+    }
+  }
+  try{
+    var ts=[];
+    for(var i=0;i<Math.min(PLANO_SYNC_PARALELO,alvo.length);i++)ts.push(trabalhar());
+    await Promise.all(ts);
+    if(erros.length<alvo.length||!alvo.length){
+      var r=await sb.rpc('plano_marcar_sync',{p_workspace_id:CURRENT_WORKSPACE_ID});
+      if(r.error)erros.push('data da sincronização: '+r.error.message);
+      else{
+        if(!PJ.cfgRow)PJ.cfgRow={};
+        PJ.cfgRow.redmine_sync_em=r.data;PJ.cfg.redmine_sync_em=r.data;
+      }
+    }
+    if(erros.length)console.warn('Sincronização com o Redmine teve erros:',erros);
+    if(!auto){
+      toast('Sincronizado: '+atual+(atual===1?' demanda atualizada':' demandas atualizadas')+(erros.length?' ('+erros.length+' com erro)':''),erros.length>0&&atual===0);
+    }
+    if(planoTela()&&(atual>0||!auto))renderProjetos();
+  }catch(e){
+    console.warn('Sincronização com o Redmine falhou:',e);
+    if(!auto)toast('Erro ao sincronizar: '+(e&&e.message),true);
+  }finally{_planoSyncOcupado=false}
+}
+function planoSyncAutoSeNecessario(){
+  if(_planoSyncAuto||!PJ.ok||!planoRedmineOk())return;
+  _planoSyncAuto=true;
+  var s=PJ.cfg&&PJ.cfg.redmine_sync_em;
+  if(!s||Date.now()-new Date(s).getTime()>PLANO_SYNC_INTERVALO_MS)planoSincronizar(true);
 }
 // Preenche o pai do Redmine das OSs que estão sem ele, consultando as issues pelo número da OS
 var _planoPaisBuscado=false,_planoPaisEstado='';
