@@ -332,9 +332,10 @@
     plano.forEach(function(d){
       previstas[d.id]=[];
       var h=num(d.horas)||0;
-      if(!(h>0)){semHoras.push(d.id);return}
-      var left=Math.max(h-(total[d.id]||0),0),parts=[];
       var rv=act?((porVersao[act.v.id]||{})[d.id]||0):0;
+      var semEst=!(h>0);
+      if(semEst)semHoras.push(d.id);
+      var left=semEst?0:Math.max(h-(total[d.id]||0),0),parts=[];
       if(act&&rv>0)parts.push({col:act,h:0,r:rv});
       while(left>0&&i<cols.length){
         var c=cols[i],take=Math.min(left,Math.max(c.space,0));

@@ -402,3 +402,12 @@ test('repartirTotal mantém a proporção em inteiros', () => {
   assert.deepEqual(C.repartirTotal({ an: 0, de: 0 }, 11), { an: 6, de: 5 });
   assert.equal(Object.values(C.repartirTotal({ an: 1, de: 1, te: 1 }, 10)).reduce((a, b) => a + b), 10);
 });
+
+test('distribuirPlano: sem estimativa mas com realizado na ativa gera item e fica em semHoras', () => {
+  const vers = [V('v1', 10, { ativa: true, planejada: false })];
+  const r = C.distribuirPlano([D('a', 0, 1), D('b', 5, 2)], vers, { total: { a: 4 }, porVersao: { v1: { a: 4 } } });
+  assert.deepEqual(r.versoes[0].itens.map(i => [i.id, i.horas, i.realizado]), [['a', 0, 4], ['b', 5, 0]]);
+  assert.deepEqual(r.semHoras, ['a']);
+  assert.equal(r.versoes[0].usado, 9);
+  assert.equal(r.versoes[0].livres, 1);
+});
