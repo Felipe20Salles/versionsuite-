@@ -81,16 +81,17 @@ def main():
             if h > 0:
                 por_papel[papel] = round(por_papel.get(papel, 0) + h, 1)
         demandas.append(dict(
-            pai=pai, titulo=titulo, produto=g(5) or "WMS", solicitante=solicitante,
+            pai=pai, titulo=titulo, produto=g(5) or None, solicitante=solicitante,
             crit=[TECNICA.get(g(6)), ESTRATEGIA.get(g(8)), VALOR.get(g(10)), CLIENTES.get(g(12))],
             posicao=posicao, obs=g(18), decidido=decidido,
             status=SITUACAO.get(g(20), "triagem"), horas=por_papel))
 
+    tag = "carga_" + uuid.uuid4().hex
     out = []
     w = out.append
     w("-- Carga única da planilha 2026.xlsx (gerada por scripts/importar-planilha-2026.py)")
     w("-- Rodar como postgres no SQL Editor. Pode rodar de novo: não duplica (workspace_id + pai_redmine).")
-    w("do $carga$")
+    w("do $%s$" % tag)
     w("declare")
     w("  ws constant uuid := %s;" % lit(ws_id) + "")
     for p in PAPEIS:
@@ -116,7 +117,10 @@ def main():
         w("  where not exists (select 1 from projetos x where x.workspace_id = ws and x.pai_redmine = %s)" % lit(d["pai"]))
         w("  on conflict do nothing;")
     w("end;")
-    w("$carga$;")
+    w("$%s$;" % tag)
+    corpo = "\n".join(out)
+    if corpo.count(tag) != 2:
+        sys.exit("Valor da planilha contém a marca de dollar-quoting; abortando.")
     sys.stdout.buffer.write(("\n".join(out) + "\n").encode("utf-8"))
 
     cont = collections.Counter(d["status"] for d in demandas)
