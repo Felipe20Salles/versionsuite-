@@ -17,12 +17,13 @@ language sql security definer set search_path = public, pg_temp stable as $$
       and o.workspace_id = p_workspace_id
       and o.projeto_id is not null
   ),
+  -- Valores de horas malformados contam 0 (não derrubam a função inteira)
   linhas as (
-    select ap.projeto_id, ap.versao_id, b->>'activityTypeId' as activity_type_id, (b->>'horas')::numeric as horas
+    select ap.projeto_id, ap.versao_id, b->>'activityTypeId' as activity_type_id, case when (b->>'horas') ~ '^-?[0-9]+(\.[0-9]+)?$' then (b->>'horas')::numeric else 0 end as horas
     from ap cross join lateral jsonb_array_elements(ap.a->'breakdown') b
     where jsonb_typeof(ap.a->'breakdown') = 'array'
     union all
-    select ap.projeto_id, ap.versao_id, null, (ap.a->>'horas')::numeric
+    select ap.projeto_id, ap.versao_id, null, case when (ap.a->>'horas') ~ '^-?[0-9]+(\.[0-9]+)?$' then (ap.a->>'horas')::numeric else 0 end
     from ap
     where coalesce(jsonb_typeof(ap.a->'breakdown'), 'null') <> 'array'
        or jsonb_array_length(ap.a->'breakdown') = 0
