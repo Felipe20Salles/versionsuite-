@@ -310,3 +310,95 @@ test('STATUS_ROTULO: rótulos exatos', () => {
     adiada: 'Adiada', descartada: 'Descartada', entregue: 'Entregue'
   });
 });
+
+const V = (id, cap, extra) => Object.assign({ id, capacidade: cap, data: '2026-1' + id.slice(1) + '-01', planejada: true }, extra);
+const D = (id, h, pos, extra) => Object.assign({ id, status: 'plano', posicao: pos, prioridade: null, criado_em: '2026-01-01', horas: h }, extra);
+const R0 = { total: {}, porVersao: {} };
+
+test('distribuirPlano: enche em ordem e divide a demanda que não cabe', () => {
+  const r = C.distribuirPlano([D('d1', 6, 1), D('d2', 6, 2), D('d3', 10, 3)], [V('v1', 10), V('v2', 10)], R0);
+  assert.deepEqual(r.versoes[0].itens.map(i => [i.id, i.horas]), [['d1', 6], ['d2', 4]]);
+  assert.deepEqual(r.versoes[1].itens.map(i => [i.id, i.horas]), [['d2', 2], ['d3', 8]]);
+  assert.deepEqual(r.semVersao.map(i => [i.id, i.horas]), [['d3', 2]]);
+  assert.deepEqual(r.previstas.d2, ['v1', 'v2']);
+  assert.deepEqual(r.previstas.d3, ['v2', null]);
+  assert.equal(r.versoes[0].itens[1].partes, 2);
+  assert.equal(r.versoes[1].itens[0].parte, 1);
+  assert.equal(r.versoes[0].livres, 0);
+});
+
+test('distribuirPlano: só status plano; sem horas vai para semHoras; encerrada fica fora', () => {
+  const r = C.distribuirPlano(
+    [D('d1', 5, 1), D('d2', 0, 2), D('d3', 5, 3, { status: 'pauta' })],
+    [V('v1', 20), { id: 'vx', capacidade: 99, data: '2026-01-01', ativa: false, planejada: false }], R0);
+  assert.equal(r.versoes.length, 1);
+  assert.deepEqual(r.versoes[0].itens.map(i => i.id), ['d1']);
+  assert.deepEqual(r.semHoras, ['d2']);
+  assert.equal(r.versoes[0].livres, 15);
+});
+
+test('distribuirPlano: ativa antes da planejada e desconta o realizado da versão', () => {
+  const vers = [V('v2', 10), V('v1', 20, { ativa: true, planejada: false, data: '2026-12-31' })];
+  const real = { total: { d1: 5 }, porVersao: { v1: { d1: 5, dx: 3 } } };
+  const r = C.distribuirPlano([D('d1', 10, 1), D('d2', 20, 2)], vers, real);
+  assert.equal(r.versoes[0].id, 'v1');
+  assert.equal(r.versoes[0].realizado, 8);
+  assert.deepEqual(r.versoes[0].itens.map(i => [i.id, i.horas, i.realizado]), [['d1', 5, 5], ['d2', 7, 0]]);
+  assert.equal(r.versoes[0].usado, 20);
+  assert.deepEqual(r.versoes[1].itens.map(i => [i.id, i.horas]), [['d2', 10]]);
+  assert.deepEqual(r.semVersao.map(i => [i.id, i.horas]), [['d2', 3]]);
+});
+
+test('distribuirPlano: realizado acima do estimado ocupa 0 e não fica negativo', () => {
+  const vers = [V('v1', 10, { ativa: true, planejada: false })];
+  const r = C.distribuirPlano([D('d1', 4, 1), D('d2', 3, 2)], vers, { total: { d1: 6 }, porVersao: { v1: { d1: 6 } } });
+  assert.deepEqual(r.versoes[0].itens.map(i => [i.id, i.horas, i.realizado]), [['d1', 0, 6], ['d2', 3, 0]]);
+  assert.equal(r.versoes[0].livres, 1);
+});
+
+test('distribuirPlano: versão com capacidade 0 passa tudo adiante', () => {
+  const r = C.distribuirPlano([D('d1', 5, 1)], [V('v1', 0), V('v2', 10)], R0);
+  assert.deepEqual(r.versoes[0].itens, []);
+  assert.equal(r.versoes[0].livres, 0);
+  assert.deepEqual(r.previstas.d1, ['v2']);
+});
+
+test('distribuirPlano: sem posição ordena por prioridade', () => {
+  const r = C.distribuirPlano([D('a', 5, null, { prioridade: 3 }), D('b', 5, null, { prioridade: 20 })], [V('v1', 5)], R0);
+  assert.deepEqual(r.versoes[0].itens.map(i => i.id), ['b']);
+});
+
+test('restantePorPapel e repartirPorPapel', () => {
+  assert.deepEqual(C.restantePorPapel([{ papel_id: 'an', horas: 8 }, { papel_id: 'de', horas: 4 }], { an: 2, de: 6 }, ['an', 'de']), { an: 6, de: 0 });
+  const out = C.repartirPorPapel(
+    [{ id: 'd1', horas: 10, realizado: 2 }, { id: 'd2', horas: 4, realizado: 0 }],
+    { d1: { an: 6, de: 4 }, d2: { an: 0, de: 0 } },
+    { d1: { an: 2 } },
+    ['an', 'de'], { an: 5, de: 10 });
+  assert.equal(out[0].papelId, 'an');
+  assert.deepEqual(out[0].itens, [{ id: 'd1', horas: 6, realizado: 2 }]);
+  assert.equal(out[0].usado, 8);
+  assert.equal(out[0].acima, 3);
+  assert.equal(out[0].livres, 0);
+  assert.deepEqual(out[1].itens, [{ id: 'd1', horas: 4, realizado: 0 }]);
+  assert.equal(out[1].acima, 0);
+  assert.equal(out[1].livres, 6);
+});
+
+test('moverPara, renumerar e indiceDeSoltura', () => {
+  assert.deepEqual(C.moverPara(['a', 'b', 'c', 'd'], 'd', 1), ['a', 'd', 'b', 'c']);
+  assert.deepEqual(C.renumerar(['a', 'd', 'b', 'c'], { a: 1, b: 2, c: 3, d: 4 }), [{ id: 'd', posicao: 2 }, { id: 'b', posicao: 3 }, { id: 'c', posicao: 4 }]);
+  const ordem = ['a', 'b', 'c', 'd', 'e'];
+  assert.equal(C.indiceDeSoltura(ordem, 'e', ['b', 'c'], ['a'], 0), 1);
+  assert.equal(C.indiceDeSoltura(ordem, 'e', ['b', 'c'], ['a'], 1), 3);
+  assert.equal(C.indiceDeSoltura(ordem, 'a', ['c', 'd'], ['a', 'b'], 0.6), 2);
+  assert.equal(C.indiceDeSoltura(ordem, 'x', [], ['a', 'b'], 0.5), 2);
+  assert.equal(C.indiceDeSoltura(ordem, 'x', [], [], 0.5), 0);
+  assert.equal(C.indiceDeSoltura(ordem, 'b', ['c'], ['a'], null), 4);
+});
+
+test('repartirTotal mantém a proporção em inteiros', () => {
+  assert.deepEqual(C.repartirTotal({ an: 50, de: 80, te: 30 }, 200), { an: 63, de: 100, te: 37 });
+  assert.deepEqual(C.repartirTotal({ an: 0, de: 0 }, 11), { an: 6, de: 5 });
+  assert.equal(Object.values(C.repartirTotal({ an: 1, de: 1, te: 1 }, 10)).reduce((a, b) => a + b), 10);
+});
