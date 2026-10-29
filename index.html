@@ -129,15 +129,86 @@ textarea.form-input{resize:vertical;min-height:70px}
 .pl-tip b{display:block;font-weight:500;color:var(--text)}.pl-tip span{color:var(--muted)}
 .pl-relatorio summary{cursor:pointer;font-size:14px;font-weight:600}
 @media (prefers-reduced-motion:reduce){.pl-tip{transition:none}}
-.pj-drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);background:var(--surface);border-left:1px solid var(--border2);z-index:250;overflow-y:auto;padding:20px 22px;transform:translateX(100%);transition:transform .2s}
-.pj-drawer.open{transform:none}
+/* Ficha da demanda (painel lateral do Plano) */
+.pj-drawer{position:fixed;top:0;right:0;height:100vh;width:420px;max-width:100vw;background:var(--surface);border-left:1px solid var(--border2);box-shadow:-24px 0 60px rgba(0,0,0,.5);z-index:250;display:flex;flex-direction:column;transform:translateX(100%);visibility:hidden;transition:transform .25s cubic-bezier(.2,.8,.2,1),visibility 0s linear .25s}
+.pj-drawer.open{transform:none;visibility:visible;transition:transform .25s cubic-bezier(.2,.8,.2,1),visibility 0s}
+@media (prefers-reduced-motion:reduce){.pj-drawer,.pj-drawer.open{transition:none}}
 .pj-sec{margin-top:18px}
 .pj-sec-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
-.pj-badge-legal{background:var(--amber-dim);color:var(--amber-text)}
 .pj-badge-st{background:var(--card2);color:var(--muted)}
-.pj-tbl{width:100%;border-collapse:collapse;font-size:12px}
-.pj-tbl td,.pj-tbl th{padding:5px 4px;border-bottom:1px solid var(--border);text-align:left;vertical-align:middle}
-.pj-tbl th{font-size:10px;color:var(--hint);font-weight:500;text-transform:uppercase}
+.pf-h{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:10px}
+.pf-meta{font-size:12px;color:var(--muted)}
+.pf-h h3{font-size:16px;font-weight:600;line-height:1.3;margin-top:2px;color:var(--text);overflow-wrap:anywhere}
+.pf-x{font-size:20px;color:var(--muted);width:30px;height:30px;border-radius:8px;flex-shrink:0;background:transparent;border:0;cursor:pointer}
+.pf-x:hover{background:var(--card2);color:var(--text)}
+.pf-ti{width:100%;margin-top:4px;background:var(--card);border:1px solid var(--border2);border-radius:8px;color:var(--text);font-family:inherit;font-size:15px;font-weight:600;padding:6px 8px}
+.pf-campos{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.pf-campos .form-input{padding:5px 8px;font-size:12.5px}
+.pf-b{padding:4px 20px 24px;overflow-y:auto;flex:1}
+.pf-aviso{margin-top:14px;font-size:12px;color:var(--muted);background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px 10px}
+.pf-desc{margin-top:14px;font-size:12.5px;min-height:52px}
+.pf-desc-ro{margin-top:14px;font-size:12.5px;color:var(--muted);white-space:pre-wrap}
+.pf-sec{margin-top:18px}
+.pf-sec-t{font-size:11px;font-weight:500;color:var(--hint);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px}
+.pf-src{display:inline-flex;gap:2px;padding:2px;border-radius:8px;background:var(--card);border:1px solid var(--border);margin-bottom:10px}
+.pf-src button{padding:4px 10px;border-radius:6px;font-size:12px;color:var(--muted);background:transparent;border:0;cursor:pointer;font-family:inherit}
+.pf-src button.on{background:rgba(var(--accent-rgb),.2);color:var(--text)}
+.pf-src button:disabled{cursor:default}
+.pf-hbar{display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--card2)}
+.pf-hbar i{display:block;height:100%}
+.pf-ph{margin-top:8px;display:flex;flex-direction:column;gap:4px}
+.pf-ph-r{display:grid;grid-template-columns:8px 1fr 26px 58px 26px;gap:8px;align-items:center;font-size:12.5px;color:var(--text)}
+.pf-ph-r i{width:8px;height:8px;border-radius:2px}
+.pf-ph-r button{height:26px;border-radius:7px;border:1px solid var(--border2);color:var(--muted);background:transparent;cursor:pointer;font-family:inherit}
+.pf-ph-r button:hover:not(:disabled){color:var(--text);border-color:var(--accent)}
+.pf-ph-r button:disabled{opacity:.4;cursor:default}
+.pf-ph-r input{height:26px;width:100%;text-align:center;background:var(--card);border:1px solid var(--border2);border-radius:7px;color:var(--text);font-family:inherit;font-size:13px}
+.pf-ph-r input:focus{outline:2px solid var(--accent);outline-offset:0}
+.pf-ph-r .pf-ro{text-align:center}
+.pf-ph-t{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);padding:6px 2px 0;border-top:1px solid var(--border);margin-top:4px}
+.pf-ph-t b{color:var(--text);font-size:14px}
+.pf-sit{font-size:12px;color:var(--muted);margin-top:8px}
+.pf-sit b{font-weight:600}
+.pf-nota{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45}
+.pf-prio{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:10px;background:var(--card)}
+.pf-prio .pos{font-size:20px;font-weight:800;text-align:center;color:var(--text)}
+.pf-prio .sub{font-size:11.5px;color:var(--muted);text-align:center}
+.pf-prio button{width:32px;height:32px;border-radius:8px;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer}
+.pf-prio button:disabled{opacity:.35;cursor:default}
+.pf-kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pf-kv>div{background:var(--card);border-radius:10px;padding:8px 10px}
+.pf-kv .k{font-size:11px;color:var(--hint)}
+.pf-kv .v{font-size:14px;font-weight:600;color:var(--text)}
+.pf-kv .v span{font-size:12px;color:var(--muted);font-weight:400}
+.pf-oss{margin-top:10px}
+.pf-desvinc{background:transparent;border:0;color:var(--hint);cursor:pointer;font-size:14px;padding:0 4px}
+.pf-desvinc:hover{color:var(--red)}
+.pf-largo{margin-top:10px;width:100%;justify-content:center}
+.pf-cr{margin-bottom:9px}
+.pf-cr .q{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;margin-bottom:4px;color:var(--text)}
+.pf-cr .q span:last-child{color:var(--hint);font-size:11.5px;text-align:right}
+.pf-seg{display:grid;grid-template-columns:repeat(4,1fr);gap:3px}
+.pf-seg button{padding:5px 2px;border-radius:7px;border:1px solid var(--border);background:var(--card);font-size:11px;color:var(--muted);cursor:pointer;font-family:inherit}
+.pf-seg button.on{background:rgba(var(--accent-rgb),.18);border-color:var(--accent);color:var(--text)}
+.pf-seg button:disabled{cursor:default}
+.pf-seg button:disabled:not(.on){opacity:.6}
+.pf-score{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;background:var(--card)}
+.pf-score .big{font-weight:800;font-size:30px;line-height:1;min-width:48px}
+.pf-score .band{font-size:13px;font-weight:500}
+.pf-score .sub{font-size:11.5px;color:var(--muted)}
+.pf-dec{display:grid;gap:6px}
+.pf-dec button{padding:9px 6px;border-radius:8px;border:1px solid var(--border2);font-size:13px;font-weight:500;background:transparent;color:var(--text);cursor:pointer;font-family:inherit}
+.pf-dec .ap{background:var(--accent);border-color:var(--accent);color:#fff}
+.pf-dec .sb:hover{border-color:var(--blue);color:var(--blue)}
+.pf-dec .na:hover{border-color:var(--red);color:var(--red)}
+.pf-obs{width:100%;margin-top:8px;background:var(--card);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px;font-family:inherit;font-size:12.5px;resize:vertical}
+.pf-tl>div{font-size:12px;color:var(--muted);padding:5px 0 5px 12px;border-left:2px solid var(--border2)}
+.pf-tl b{color:var(--text);font-weight:500}
+.pf-com{color:var(--muted);font-size:11.5px;white-space:pre-wrap;margin-top:2px;padding-left:8px;border-left:2px solid var(--border)}
+.pf-coment{display:flex;gap:6px;margin-top:10px}
+.pf-coment .form-input{padding:5px 8px;font-size:12.5px}
+.pf-b button:focus-visible,.pf-x:focus-visible,.pf-ti:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pf-h .num,.pf-b .num{font-variant-numeric:tabular-nums}
 
 .os-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 14px;cursor:pointer;transition:all .15s;position:relative;overflow:hidden}
 .os-card:hover{border-color:var(--accent)}
@@ -1521,32 +1592,8 @@ textarea.form-input{resize:vertical;min-height:70px}
   </div>
 </div>
 
-<div class="pj-drawer" id="pj-drawer"></div>
+<div class="pj-drawer" id="pj-drawer" role="dialog" aria-label="Ficha da demanda"></div>
 
-<!-- MODAL IDEIA DE PROJETO -->
-<div class="modal-overlay" id="modal-pj-ideia">
-  <div class="modal" style="max-width:560px">
-    <div class="modal-title" id="pj-ideia-title">Nova ideia</div>
-    <input type="hidden" id="pj-ideia-id">
-    <div class="form-group"><label class="form-label">Título</label><input class="form-input" id="pj-ideia-titulo" placeholder="O que é a ideia, em uma linha"></div>
-    <div class="form-group"><label class="form-label">Descrição</label><textarea class="form-input" id="pj-ideia-desc" rows="3" placeholder="Problema, quem ganha, contexto"></textarea></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-      <div class="form-group"><label class="form-label">Impacto no cliente</label><select class="form-input" id="pj-nota-impacto"></select></div>
-      <div class="form-group"><label class="form-label">Urgência / legal</label><select class="form-input" id="pj-nota-urgencia" onchange="pjAtualizarLegal()"></select></div>
-      <div class="form-group"><label class="form-label">Alinhamento</label><select class="form-input" id="pj-nota-alinhamento"></select></div>
-    </div>
-    <label class="form-check"><input type="checkbox" id="pj-legal" style="width:15px;height:15px;accent-color:var(--accent)"><span class="form-check-label">Obrigação legal</span><span class="form-check-hint">exige urgência 5</span></label>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
-      <div class="form-group"><label class="form-label">Esforço total (h)</label><input type="number" min="0" step="1" class="form-input" id="pj-esforco-h" placeholder="opcional"></div>
-      <div class="form-group"><label class="form-label">ou só o tamanho</label><select class="form-input" id="pj-esforco-tam"><option value="">—</option><option>P</option><option>M</option><option>G</option><option>GG</option></select></div>
-    </div>
-    <div style="font-size:11px;color:var(--hint)">As horas por etapa são informadas no painel do projeto. Quando existem, elas valem no lugar do total.</div>
-    <div class="modal-footer">
-      <button class="btn" onclick="closeModal('modal-pj-ideia')">Cancelar</button>
-      <button class="btn btn-primary" onclick="pjSalvarIdeia()">Salvar</button>
-    </div>
-  </div>
-</div>
 
 <!-- MODAL VISITANTE -->
 <div class="modal-overlay" id="modal-visitor" style="z-index:600">
@@ -2849,6 +2896,7 @@ function goScreen(name){
     toast('Acesso restrito para visitantes','err');return;
   }
   refreshRoles(); // atualiza permissões silenciosamente a cada navegação
+  if(name!=='projetos'&&typeof planoFechar==='function')planoFechar();
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
   document.querySelectorAll('.nav-item').forEach(function(b){b.classList.remove('active')});
   var el=document.getElementById('screen-'+name);if(el)el.classList.add('active');
@@ -5915,7 +5963,6 @@ async function load(){
       tipoRedmine:o.tipo_redmine||'',paiRedmine:o.pai_redmine||''
       ,projetoId:o.projeto_id||null,projetoDesvinculado:!!o.projeto_desvinculado
     }});
-    _osDb={};S.oss.forEach(function(o){_osDb[o.id]={status:o.status,projetoId:o.projetoId}});
     await projCarregar();
 
     // Pontos (apenas do usuário)
@@ -5971,8 +6018,6 @@ async function save(){
 // ── PROJETOS: dados ─────────────────────────────────────────────────────────
 // Regras puras em projetos-core.js (window.ProjCore). Aqui só estado + Supabase.
 var PJ={projetos:[],papeis:[],eventos:[],cfgRow:null,cfg:ProjCore.configPlano(null),capac:[],linhaBase:[],realLinhas:[],real:ProjCore.agregarRealizado([],[],null),ok:false};
-var PJ_STATUS={ideia:'Ideia',avaliacao:'Em avaliação',aprovada:'Aprovada',recusada:'Recusada',execucao:'Em execução',pausada:'Pausada',concluida:'Concluída',cancelada:'Cancelada'};
-var _osDb={}; // último {status,projetoId} gravado de cada OS, para detectar transições
 
 async function projCarregar(){
   try{
@@ -6020,11 +6065,8 @@ function planoDemanda(p){
     horas:h,faixaP:ProjCore.faixaPrioridade(pr,PJ.cfg.faixas_prioridade),faixaE:ProjCore.faixaEsforco(h,PJ.cfg.faixas_esforco)};
 }
 function projById(id){return PJ.projetos.find(function(p){return p.id===id})||null}
-function projEtapa(id){return PJ.etapas.find(function(e){return e.id===id})||null}
 function projPapel(id){return PJ.papeis.find(function(x){return x.id===id})||null}
-function projConfigs(pid){return PJ.configs.filter(function(c){return c.projeto_id===pid})}
 function projEventos(pid){return PJ.eventos.filter(function(e){return e.projeto_id===pid})}
-function projEtapasAtivas(){return PJ.etapas.filter(function(e){return e.ativo!==false}).sort(function(a,b){return a.ordem-b.ordem})}
 
 async function projEvento(pid,tipo,de,para,comentario,papelId){
   var row={workspace_id:CURRENT_WORKSPACE_ID,projeto_id:pid,tipo:tipo,
@@ -6053,54 +6095,14 @@ async function projRecarregar(id){
   if(p)Object.assign(p,r.data);else{p=r.data;PJ.projetos.push(p)}
   return p;
 }
-async function projAtualizarPrioridade(p){
-  var pr=ProjCore.calcPrioridade(p,projConfigs(p.id)).prioridade;
-  if(pr!==(p.prioridade==null?null:+p.prioridade))await projSalvar(p,{prioridade:pr});
+// Mudança numa OS (salvar, mover, vincular): o status da demanda não muda sozinho;
+// só redesenha o Plano, se ele estiver aberto (o realizado pode ter mudado).
+async function projAposMudancaOS(){
+  if(!PJ.ok||!planoTela())return;
+  try{await planoRecalcularReal()}catch(e){console.warn('Realizado do plano não atualizou:',e)}
+  if(planoTela())renderProjetos();
 }
-// Muda o status e grava o histórico; ao entrar em execução, entra (ou reentra) numa etapa
-async function projMudarStatus(p,novo,comentario){
-  var de=p.status,campos={status:novo},entrar=null;
-  if(novo==='execucao'&&!p.etapa_id){entrar=ProjCore.primeiraEtapa(PJ.etapas,projConfigs(p.id));campos.etapa_id=entrar}
-  else if(novo==='execucao'&&de==='concluida')entrar=p.etapa_id;
-  await projSalvar(p,campos,{status:de});
-  await projEvento(p.id,'status',de,novo,comentario);
-  if(entrar){var et=projEtapa(entrar);await projEvento(p.id,'etapa',null,entrar,null,et&&et.papel_id)}
-}
-async function projMoverEtapa(p,etapaId){
-  if(!etapaId||p.etapa_id===etapaId)return;
-  var deId=p.etapa_id,de=projEtapa(deId),para=projEtapa(etapaId);
-  var tipo=(de&&para&&para.ordem<de.ordem)?'retorno':'etapa';
-  await projSalvar(p,{etapa_id:etapaId},{etapa_id:deId,status:'execucao'});
-  await projEvento(p.id,tipo,deId,etapaId,null,para&&para.papel_id);
-}
-var PJ_GATILHO_LABEL={os_vinculada:'OS vinculada',os_andamento:'OS em andamento',os_reaberta:'OS reaberta'};
-async function projAposMudancaOS(antes,depois){
-  if(!PJ.ok||!depois||!depois.projetoId)return;
-  var gs=ProjCore.gatilhosDaOS(antes,depois);
-  if(!gs.length)return;
-  var p=await projRecarregar(depois.projetoId);if(!p)return;
-  for(var i=0;i<gs.length;i++){
-    var novo=ProjCore.proximoStatusAuto(p.status,gs[i]);
-    if(!novo)continue;
-    try{
-      await projMudarStatus(p,novo,'Automático: '+PJ_GATILHO_LABEL[gs[i]]+(depois.num?' (OS '+depois.num+')':''));
-      toast('Projeto "'+p.titulo+'" → '+PJ_STATUS[novo]);
-      if(typeof renderProjetos==='function'&&document.getElementById('screen-projetos').classList.contains('active'))renderProjetos();
-    }catch(e){console.warn('Status automático do projeto falhou:',e)}
-    return;
-  }
-}
-function _projNotificarOS(id,mud){
-  var antes=_osDb[id]||{};
-  var os=S.oss.find(function(o){return o.id===id})||{};
-  var depois={
-    status:mud.status!==undefined?mud.status:antes.status,
-    projetoId:('projetoId' in mud)?mud.projetoId:(antes.projetoId!==undefined?antes.projetoId:(os.projetoId||null)),
-    num:mud.num||os.num
-  };
-  _osDb[id]={status:depois.status,projetoId:depois.projetoId};
-  projAposMudancaOS(antes,depois);
-}
+function _projNotificarOS(){projAposMudancaOS()}
 // Histórico de vínculo nos dois projetos envolvidos
 async function projRegistrarVinculo(os,antigoId,novoId,motivo){
   if(antigoId===novoId)return;
@@ -6555,7 +6557,7 @@ function planoTopbar(){
   var rc=getRedmineConfig(),acts='';
   if(PJ.ok&&can('gerir_projetos')&&rc.proxyUrl&&rc.proxy)acts+='<button class="btn btn-sm btn-ghost" onclick="planoSincronizar(false)">⟳ Sincronizar</button> ';
   acts+='<button class="btn btn-sm btn-ghost" onclick="planoApresentar(true)">▣ Apresentar</button>';
-  if(PJ.ok)acts+=' <button class="btn btn-primary btn-sm" onclick="planoNova()">+ Nova demanda</button>';
+  if(PJ.ok&&CURRENT_USER&&!CURRENT_USER.isVisitor)acts+=' <button class="btn btn-primary btn-sm" onclick="planoNova()">+ Nova demanda</button>';
   document.getElementById('topbar-actions').innerHTML=acts;
 }
 function renderProjetos(){
@@ -6570,18 +6572,19 @@ function renderProjetos(){
   var b=document.getElementById('pl-busca');if(b&&b.value!==_plano.busca)b.value=_plano.busca;
   planoDesenharPotes(); // antes da grade: calcula _plano.dist e registra os potes como alvo do arrasto
   planoDesenharGrade();
-  if(!_pjPaisBuscado&&can('gerir_projetos'))pjBuscarPaisNoRedmine();
+  if(_plAberto){if(projById(_plAberto))planoAbrir(_plAberto);else planoFechar()}
+  if(!_planoPaisBuscado&&can('gerir_projetos'))planoBuscarPaisNoRedmine();
 }
 // Preenche o pai do Redmine das OSs que estão sem ele, consultando as issues pelo número da OS
-var _pjPaisBuscado=false,_pjPaisEstado='';
-function _pjOssSemPai(){return S.oss.filter(function(o){return!o.paiRedmine&&/^\d+$/.test(String(o.num||'').trim())})}
-async function pjBuscarPaisNoRedmine(){
+var _planoPaisBuscado=false,_planoPaisEstado='';
+function _planoOssSemPai(){return S.oss.filter(function(o){return!o.paiRedmine&&/^\d+$/.test(String(o.num||'').trim())})}
+async function planoBuscarPaisNoRedmine(){
   var cfg=getRedmineConfig();
-  if(!cfg.proxyUrl||!cfg.proxy){_pjPaisEstado='sem_proxy';return}
-  var alvo=_pjOssSemPai();
-  _pjPaisBuscado=true;
-  if(!alvo.length){_pjPaisEstado='ok';return}
-  _pjPaisEstado='buscando';
+  if(!cfg.proxyUrl||!cfg.proxy){_planoPaisEstado='sem_proxy';return}
+  var alvo=_planoOssSemPai();
+  _planoPaisBuscado=true;
+  if(!alvo.length){_planoPaisEstado='ok';return}
+  _planoPaisEstado='buscando';
   var achados=0;
   try{
     for(var i=0;i<alvo.length;i+=50){
@@ -6601,233 +6604,374 @@ async function pjBuscarPaisNoRedmine(){
         }
       }
     }
-    _pjPaisEstado='ok';
+    _planoPaisEstado='ok';
     if(achados)toast('Pai do Redmine encontrado para '+achados+(achados===1?' OS':' OSs'));
   }catch(e){
     console.warn('Busca do pai no Redmine falhou:',e);
-    _pjPaisEstado='erro';
+    _planoPaisEstado='erro';
   }
 }
-function pjPodeEditarIdeia(p){
-  if(!p)return true;
-  return can('gerir_projetos')||(p.status==='ideia'&&p.sugerido_por===CURRENT_USER.id);
-}
-function pjNotasOpts(){return'<option value="">—</option>'+[1,2,3,4,5].map(function(n){return'<option>'+n+'</option>'}).join('')}
-function pjAtualizarLegal(){
-  var u=document.getElementById('pj-nota-urgencia').value,c=document.getElementById('pj-legal');
-  c.disabled=u!=='5';if(u!=='5')c.checked=false;
-}
-function openPjIdeia(id){
-  var p=id?projById(id):null;
-  if(p&&!pjPodeEditarIdeia(p)){toast('Sem permissão para editar esta ideia','err');return}
-  document.getElementById('pj-ideia-title').textContent=p?'Editar ideia':'Nova ideia';
-  document.getElementById('pj-ideia-id').value=p?p.id:'';
-  document.getElementById('pj-ideia-titulo').value=p?p.titulo:'';
-  document.getElementById('pj-ideia-desc').value=p&&p.descricao?p.descricao:'';
-  ['impacto','urgencia','alinhamento'].forEach(function(k){
-    var s=document.getElementById('pj-nota-'+k);s.innerHTML=pjNotasOpts();
-    s.value=p&&p['nota_'+k]!=null?String(p['nota_'+k]):'';
-  });
-  document.getElementById('pj-legal').checked=!!(p&&p.legal);
-  document.getElementById('pj-esforco-h').value=p&&p.esforco_total_h!=null?p.esforco_total_h:'';
-  document.getElementById('pj-esforco-tam').value=p&&p.esforco_tamanho?p.esforco_tamanho:'';
-  pjAtualizarLegal();
-  openModal('modal-pj-ideia');
-}
-async function pjSalvarIdeia(){
-  var id=document.getElementById('pj-ideia-id').value;
-  var titulo=document.getElementById('pj-ideia-titulo').value.trim();
-  if(!titulo){toast('Informe o título','err');return}
-  function nota(k){var x=document.getElementById('pj-nota-'+k).value;return x?parseInt(x,10):null}
-  var h=parseFloat(document.getElementById('pj-esforco-h').value);
-  var campos={
-    titulo:titulo,descricao:document.getElementById('pj-ideia-desc').value.trim()||null,
-    nota_impacto:nota('impacto'),nota_urgencia:nota('urgencia'),nota_alinhamento:nota('alinhamento'),
-    legal:document.getElementById('pj-legal').checked&&nota('urgencia')===5,
-    esforco_total_h:isNaN(h)||h<=0?null:h,
-    esforco_tamanho:document.getElementById('pj-esforco-tam').value||null
-  };
-  var p=id?projById(id):null;
-  campos.prioridade=ProjCore.calcPrioridade(Object.assign({},p||{},campos),p?projConfigs(p.id):[]).prioridade;
-  try{
-    if(!p){
-      campos.workspace_id=CURRENT_WORKSPACE_ID;campos.sugerido_por=CURRENT_USER.id;campos.status='ideia';
-      var r=await sb.from('projetos').insert(campos).select().single();
-      if(r.error)throw r.error;
-      p=r.data;PJ.projetos.push(p);
-      await projEvento(p.id,'status',null,'ideia','Ideia criada');
-    }else await projSalvar(p,campos);
-    // Só a pontuação de quem gere projetos leva Ideia → Em avaliação; nota de quem sugeriu é sugestão
-    if(p.status==='ideia'&&can('gerir_projetos')&&ProjCore.calcPrioridade(p,projConfigs(p.id)).valor!==null){
-      await projMudarStatus(p,'avaliacao','Pontuada');
-    }
-    closeModal('modal-pj-ideia');renderProjetos();
-    if(typeof _pjAberto!=='undefined'&&_pjAberto===p.id)pjAbrir(p.id);
-    toast('Ideia salva');
-  }catch(e){toast('Erro ao salvar ideia: '+e.message,'err')}
-}
+// ── PLANO: ficha da demanda (painel lateral #pj-drawer) ─────────────────────
+var _plAberto=null;
+var _planoFila={};      // gravações de horas em série, por demanda
+var _planoEvAdiado={};  // eventos agrupados (cliques seguidos em − / + e nos critérios viram um só)
+var PLANO_DECISAO={plano:{rot:'Incluir no plano',cls:'ap'},adiada:{rot:'Adiar',cls:'sb'},descartada:{rot:'Descartar',cls:'na'}};
 
-var PJ_ACOES={
-  ideia:['recusar','cancelar'],avaliacao:['aprovar','recusar','cancelar'],recusada:['reabrir'],
-  aprovada:['cancelar'],execucao:['pausar','concluir','cancelar'],pausada:['retomar','cancelar'],
-  concluida:['cancelar'],cancelada:[]
-};
-var PJ_ACAO_LABEL={aprovar:'✓ Aprovar',recusar:'Recusar',reabrir:'Reabrir',pausar:'Pausar',retomar:'Retomar',concluir:'✓ Concluir',cancelar:'Cancelar projeto'};
-var PJ_ACAO_STATUS={aprovar:'aprovada',recusar:'recusada',reabrir:'avaliacao',pausar:'pausada',retomar:'execucao',concluir:'concluida',cancelar:'cancelada'};
-function pjPedirComentario(titulo){
-  return modalConfirm(titulo,
-    '<div style="font-size:12px;color:var(--muted);margin-bottom:6px">Comentário (obrigatório)</div>'+
-    '<textarea class="form-input" id="pj-coment" rows="3"></textarea>','Confirmar','btn-primary'
-  ).then(function(ok){
-    if(!ok)return null;
-    var t=(document.getElementById('pj-coment').value||'').trim();
-    if(!t){toast('O comentário é obrigatório','err');return null}
-    return t;
-  });
-}
-async function pjAcao(id,acao){
-  var p=projById(id);
-  if(!p||!can('gerir_projetos'))return;
-  if((PJ_ACOES[p.status]||[]).indexOf(acao)===-1)return;
-  var coment=null;
-  if(acao==='recusar'||acao==='cancelar'){
-    coment=await pjPedirComentario(acao==='recusar'?'Recusar ideia':'Cancelar projeto');
-    if(coment===null)return;
-  }
-  try{
-    await projMudarStatus(p,PJ_ACAO_STATUS[acao],coment);
-    renderProjetos();if(_pjAberto===id)pjAbrir(id);
-    toast(PJ_STATUS[p.status]);
-  }catch(e){toast('Erro: '+e.message,'err')}
-}
-var _pjAberto=null;
-
-function pjResponsavel(p,etapaId){
-  var et=projEtapa(etapaId);if(!et)return'';
-  var papel=projPapel(et.papel_id);
-  var c=projConfigs(p.id).find(function(x){return x.etapa_id===etapaId});
-  var nome='';
-  if(c&&c.responsavel_user_id){
-    var u=S_USERS.find(function(x){return x.id===c.responsavel_user_id});
-    nome=u?u.displayName:((c.responsavel_nome||'?')+' (ex-membro)');
-  }else if(c&&c.responsavel_nome)nome=c.responsavel_nome;
-  return(papel?papel.nome:'')+(nome?' · '+nome:'');
-}
-function pjFechar(){_pjAberto=null;document.getElementById('pj-drawer').classList.remove('open')}
 function pjPodeMexerNaOS(os){return can('gerir_projetos')||(os&&os.createdBy===CURRENT_USER.id)}
-function pjEventoTexto(e){
-  if(e.tipo==='status')return(e.de?PJ_STATUS[e.de]+' → ':'')+(PJ_STATUS[e.para]||e.para);
-  if(e.tipo==='etapa'||e.tipo==='retorno'){var et=projEtapa(e.para);return(e.tipo==='retorno'?'↩ Retorno para ':'Etapa: ')+(et?et.nome:'?')}
-  if(e.tipo==='vinculo_os')return e.para?'Vinculada '+e.para.replace('os:','OS '):'Desvinculada '+String(e.de||'').replace('os:','OS ');
-  return'Comentário';
+// Sem "Gerir o plano", só o autor de uma demanda em triagem edita título, descrição, produto, solicitante e horas
+function planoPodeEditarBase(p){
+  if(!p)return false;
+  if(can('gerir_projetos'))return true;
+  return p.status==='triagem'&&!!CURRENT_USER&&!CURRENT_USER.isVisitor&&p.sugerido_por===CURRENT_USER.id;
 }
-function pjAbrir(id){
-  var p=projById(id);if(!p)return;
-  _pjAberto=id;
-  var gerir=can('gerir_projetos');
-  var c=ProjCore.calcPrioridade(p,projConfigs(id));
-  var acoes=gerir?(PJ_ACOES[p.status]||[]).map(function(a){
-    return'<button class="btn btn-sm '+(a==='aprovar'||a==='concluir'?'btn-primary':'btn-ghost')+'" onclick="pjAcao(\''+id+'\',\''+a+'\')">'+PJ_ACAO_LABEL[a]+'</button>';
-  }).join(' '):'';
-  var emFluxo=['aprovada','execucao','pausada','concluida'].indexOf(p.status)>-1;
-  var html=
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">'+
-      '<div><div style="font-size:17px;font-weight:600;color:var(--text)">'+escHtml(p.titulo)+'</div>'+
-      '<div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap"><span class="badge pj-badge-st">'+PJ_STATUS[p.status]+'</span>'+(p.legal?'<span class="badge pj-badge-legal">Legal</span>':'')+
-      '<span class="badge pj-badge-st">Prioridade '+(c.prioridade===null?'—':c.prioridade.toFixed(1))+'</span></div></div>'+
-      '<button class="btn btn-sm btn-ghost" onclick="pjFechar()">✕</button>'+
-    '</div>'+
-    '<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">'+
-      (pjPodeEditarIdeia(p)?'<button class="btn btn-sm btn-ghost" onclick="openPjIdeia(\''+id+'\')">✏ Editar ideia e notas</button>':'')+acoes+
-    '</div>'+
-    (p.descricao?'<div style="margin-top:12px;font-size:13px;color:var(--muted);white-space:pre-wrap">'+escHtml(p.descricao)+'</div>':'')+
-    '<div class="pj-sec"><div class="pj-sec-title">Dados</div>'+
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
-        '<div class="form-group"><label class="form-label">Data-alvo</label><input type="date" class="form-input" value="'+(p.data_alvo||'')+'" '+(gerir?'':'disabled')+' onchange="pjSetCampo(\''+id+'\',\'data_alvo\',this.value||null)"></div>'+
-        '<div class="form-group"><label class="form-label">Pai no Redmine</label><input class="form-input" value="'+escHtml(p.pai_redmine||'')+'" placeholder="nº da tarefa-pai" '+(gerir?'':'disabled')+' onchange="pjSetCampo(\''+id+'\',\'pai_redmine\',this.value.trim()||null)"></div>'+
-      '</div>'+
-      '<div style="font-size:11px;color:var(--hint)">Notas: '+(c.valor!==null?'Impacto '+p.nota_impacto+' · Urgência '+p.nota_urgencia+' · Alinhamento '+p.nota_alinhamento+' (valor '+c.valor+')':'—')+
-        ' · Esforço: '+(c.tamanho?c.tamanho+(c.horas?' ('+c.horas+'h)':''):'—')+'</div>'+
-    '</div>'+
-    '<div class="pj-sec"><div class="pj-sec-title">Fluxo do projeto</div><div id="pj-fluxo-'+id+'">'+pjFluxoHtml(p,null)+'</div></div>'+
-    (emFluxo?'<div class="pj-sec"><div class="pj-sec-title">Tempo por papel</div>'+pjTempoHtml(p)+'</div>':'')+
-    (emFluxo?'<div class="pj-sec"><div class="pj-sec-title">OSs vinculadas</div>'+pjOSsHtml(p)+'</div>':'')+
-    '<div class="pj-sec"><div class="pj-sec-title">Linha do tempo</div>'+
-      '<div style="display:flex;gap:6px;margin-bottom:10px"><input class="form-input" id="pj-novo-coment" placeholder="Comentar…"><button class="btn btn-sm" onclick="pjComentar(\''+id+'\')">Enviar</button></div>'+
-      pjTimelineHtml(p)+
-    '</div>';
-  var dr=document.getElementById('pj-drawer');dr.innerHTML=html;dr.classList.add('open');
-  if(emFluxo)pjCarregarRealizado(p);
+function planoJs(s){return escHtml(String(s==null?'':s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"))}
+function planoNumero(v){var n=parseFloat(String(v==null?'':v).replace(',','.'));return isNaN(n)?0:n}
+function planoUsuarioNome(id){
+  if(!id)return'Sistema';
+  var u=(typeof S_USERS!=='undefined'?S_USERS:[]).find(function(x){return x.id===id});
+  return u?u.displayName:'Ex-membro';
+}
+function planoFechar(){
+  _plAberto=null;
+  var dr=document.getElementById('pj-drawer');if(dr)dr.classList.remove('open');
+}
+// Depois de gravar: redesenha a tela (que reabre a ficha) ou só a ficha
+function planoAposMudar(){
+  if(planoTela())renderProjetos();
+  else if(_plAberto)planoAbrir(_plAberto);
+}
+function planoNaFila(id,fn){
+  var ant=_planoFila[id]||Promise.resolve();
+  var nx=ant.then(fn,fn);
+  _planoFila[id]=nx.catch(function(){});
+  return nx;
+}
+function planoEventoAdiado(id,tipo,para,ms){
+  var k=id+'|'+tipo;
+  clearTimeout(_planoEvAdiado[k]);
+  _planoEvAdiado[k]=setTimeout(function(){
+    delete _planoEvAdiado[k];
+    if(!projById(id))return;
+    projEvento(id,tipo,null,para(),null).then(function(){
+      if(_plAberto===id)planoAbrir(id);
+    },function(e){console.warn('Evento "'+tipo+'" não gravou:',e)});
+  },ms);
 }
 
-function pjFluxoHtml(p,real){
-  var gerir=can('gerir_projetos');
-  var etapas=projEtapasAtivas();
-  var linhas=etapas.map(function(e){
-    var c=projConfigs(p.id).find(function(x){return x.etapa_id===e.id})||{};
-    var papel=projPapel(e.papel_id);
-    var atual=p.etapa_id===e.id;
-    var userOpts='<option value="">— usuário —</option>'+S_USERS.map(function(u){
-      return'<option value="'+u.id+'"'+(c.responsavel_user_id===u.id?' selected':'')+'>'+escHtml(u.displayName)+'</option>';
-    }).join('');
-    var est=+c.horas_estimadas||0;
-    var rea=real?(real.porEtapa[e.id]||0):null;
-    var pct=rea!==null&&est>0?Math.round(rea/est*100):null;
-    var resp=gerir
-      ?'<select class="form-input" style="padding:3px 6px;font-size:11px" onchange="pjSetConfig(\''+p.id+'\',\''+e.id+'\',\'responsavel_user_id\',this.value||null)">'+userOpts+'</select>'+
-        (c.responsavel_user_id?'':'<input class="form-input" style="padding:3px 6px;font-size:11px;margin-top:3px" placeholder="ou nome livre" value="'+escHtml(c.responsavel_nome||'')+'" onchange="pjSetConfig(\''+p.id+'\',\''+e.id+'\',\'responsavel_nome\',this.value.trim()||null)">')
-      :escHtml(pjResponsavel(p,e.id).split(' · ')[1]||'—');
-    return'<tr style="'+(c.pulada?'opacity:.45;':'')+(atual?'background:var(--card2);':'')+'">'+
-      '<td>'+(atual?'▶ ':'')+escHtml(e.nome)+'<div style="font-size:10px;color:var(--hint)">'+escHtml(papel?papel.nome:'')+(papel&&papel.externo?' (externo)':'')+'</div></td>'+
-      '<td>'+resp+'</td>'+
-      '<td style="width:64px">'+(gerir?'<input type="number" min="0" step="1" class="form-input" style="padding:3px 6px;font-size:11px;width:58px" value="'+est+'" onchange="pjSetConfig(\''+p.id+'\',\''+e.id+'\',\'horas_estimadas\',parseFloat(this.value)||0)">':est+'h')+'</td>'+
-      '<td style="font-family:var(--mono);white-space:nowrap">'+(rea===null?'…':rea+'h'+(pct!==null?' <span style="color:'+(pct>100?'var(--red-text)':'var(--hint)')+'">('+pct+'%)</span>':''))+'</td>'+
-      '<td style="width:40px;text-align:center">'+(gerir?'<input type="checkbox" title="Pular etapa neste projeto" '+(c.pulada?'checked':'')+' onchange="pjSetConfig(\''+p.id+'\',\''+e.id+'\',\'pulada\',this.checked)" style="accent-color:var(--accent)">':(c.pulada?'pulada':''))+'</td>'+
-    '</tr>';
+// ── ficha: HTML ──
+function planoEventoTexto(e){
+  var R=ProjCore.STATUS_ROTULO;
+  function st(s){return R[s]||s||'?'}
+  switch(e.tipo){
+    case'decisao':return e.para==='plano'?'incluiu no plano':e.para==='adiada'?'adiou':e.para==='descartada'?'descartou':'mudou para '+st(e.para);
+    case'criterios':return'avaliou'+(e.para!=null&&e.para!==''?' · prioridade '+e.para:'');
+    case'posicao':return e.de!=null&&e.de!==''?'moveu de '+e.de+'º para '+e.para+'º':'moveu para '+e.para+'º';
+    case'entrega':return e.para==='entregue'?'marcou como entregue':'reabriu';
+    case'horas':return e.para==='redmine'?'voltou a usar o Redmine':'ajustou as horas (total '+planoFmtH(e.para)+'h)';
+    case'status':return e.de?'mudou de '+st(e.de)+' para '+st(e.para):'registrou como '+st(e.para);
+    case'etapa':case'retorno':return'mudou de etapa';
+    case'vinculo_os':return e.para?'vinculou a '+String(e.para).replace('os:','OS '):'desvinculou a '+String(e.de||'').replace('os:','OS ');
+    case'comentario':return'comentou';
+  }
+  return String(e.tipo||'');
+}
+function planoHistoricoHtml(p){
+  var evs=projEventos(p.id).slice().sort(function(a,b){return String(b.criado_em).localeCompare(String(a.criado_em))});
+  var lin=evs.map(function(e){
+    var dt=new Date(e.criado_em),ok=!isNaN(dt.getTime());
+    var curto=ok?dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'';
+    var longo=ok?dt.toLocaleString('pt-BR'):'';
+    return'<div><b>'+escHtml(planoUsuarioNome(e.autor_id))+'</b> '+escHtml(planoEventoTexto(e))+
+      (curto?' · <span title="'+escHtml(longo)+'">'+escHtml(curto)+'</span>':'')+
+      (e.comentario?'<div class="pf-com">'+escHtml(String(e.comentario))+'</div>':'')+'</div>';
   }).join('');
-  var sem=real&&real.semEtapa?'<tr><td colspan="3" style="color:var(--hint)">Sem etapa</td><td style="font-family:var(--mono)">'+real.semEtapa+'h</td><td></td></tr>':'';
-  var mover=gerir&&p.status==='execucao'?'<div style="margin-top:8px;display:flex;gap:6px;align-items:center;font-size:12px;color:var(--muted)">Mover para '+
-    '<select class="form-input" style="width:auto;padding:3px 6px;font-size:12px" onchange="pjMoverPeloPainel(\''+p.id+'\',this.value)"><option value="">—</option>'+
-    etapas.map(function(e){return'<option value="'+e.id+'">'+escHtml(e.nome)+'</option>'}).join('')+'</select></div>':'';
-  return'<table class="pj-tbl"><tr><th>Etapa</th><th>Responsável</th><th>Estim.</th><th>Realizado</th><th>Pular</th></tr>'+linhas+sem+'</table>'+
-    (real?'<div style="font-size:11px;color:var(--hint);margin-top:4px">Total apropriado: '+real.total+'h</div>':'')+mover;
+  if(!lin)lin='<div>Sem registros ainda.</div>';
+  var podeComentar=!!CURRENT_USER&&!CURRENT_USER.isVisitor;
+  return'<div class="pf-tl">'+lin+'</div>'+
+    (podeComentar?'<div class="pf-coment"><input class="form-input" id="pf-coment" placeholder="Comentar…" aria-label="Comentário" onkeydown="if(event.key===\'Enter\')planoComentar(\''+planoJs(p.id)+'\')">'+
+      '<button type="button" class="btn btn-sm" onclick="planoComentar(\''+planoJs(p.id)+'\')">Enviar</button></div>':'');
 }
-async function pjCarregarRealizado(p){
-  var r=await sb.rpc('projeto_horas_agregadas',{p_projeto_id:p.id});
-  if(r.error){console.warn(r.error);return}
-  var real=ProjCore.horasPorEtapa(r.data||[],projEventos(p.id),PJ.etapas);
-  var box=document.getElementById('pj-fluxo-'+p.id);
-  if(box&&_pjAberto===p.id)box.innerHTML=pjFluxoHtml(p,real);
+function planoFaixaRotulo(pr){
+  var f=ProjCore.faixaPrioridade(pr,PJ.cfg.faixas_prioridade);
+  if(f==='alta')return['Prioridade alta','var(--green)'];
+  if(f==='media')return['Prioridade média','var(--amber)'];
+  if(f==='baixa')return['Prioridade baixa','var(--red)'];
+  return['Ainda não avaliada','var(--hint)'];
 }
-async function pjMoverPeloPainel(id,etapaId){
-  var p=projById(id);if(!p||!etapaId)return;
-  try{await projMoverEtapa(p,etapaId);renderProjetos();pjAbrir(id)}catch(e){toast('Erro: '+e.message,'err')}
-}
-async function pjSetConfig(pid,etapaId,campo,valor){
-  var atual=PJ.configs.find(function(x){return x.projeto_id===pid&&x.etapa_id===etapaId});
-  var row=Object.assign({workspace_id:CURRENT_WORKSPACE_ID,projeto_id:pid,etapa_id:etapaId,horas_estimadas:0,pulada:false,responsavel_user_id:null,responsavel_nome:null},atual||{});
-  row[campo]=valor;
-  // Ao escolher um usuário, o nome fica guardado para aparecer como ex-membro se ele sair do workspace
-  if(campo==='responsavel_user_id'){var u=S_USERS.find(function(x){return x.id===valor});row.responsavel_nome=u?u.displayName:null}
-  if(campo==='responsavel_nome')row.responsavel_user_id=null;
-  var r=await sb.from('projeto_etapa_config').upsert(row,{onConflict:'projeto_id,etapa_id'}).select().single();
-  if(r.error){toast('Erro: '+r.error.message,'err');return}
-  if(atual)Object.assign(atual,r.data);else PJ.configs.push(r.data);
-  var p=projById(pid);
-  if(campo==='horas_estimadas')await projAtualizarPrioridade(p);
-  renderProjetos();pjAbrir(pid);
-}
-async function pjSetCampo(id,campo,valor){
-  var p=projById(id);if(!p||!can('gerir_projetos'))return;
-  var campos={};campos[campo]=valor;
-  try{await projSalvar(p,campos);renderProjetos();toast('Salvo')}catch(e){toast('Erro: '+e.message,'err')}
-}
+function planoFichaHtml(p){
+  var id=p.id,idJs=planoJs(id),gerir=can('gerir_projetos'),base=planoPodeEditarBase(p);
+  var nova=base&&!p.pai_redmine,d=planoDemanda(p),st=PLANO_ST[p.status]||PLANO_ST.triagem;
+  var origem=p.horas_origem==='redmine'?'redmine':'vs';
+  var prods={};((S.prefs&&S.prefs.produtos)||[]).forEach(function(n){if(n)prods[n]=1});
+  PJ.projetos.forEach(function(x){if(x.produto)prods[x.produto]=1});
 
-function pjTempoHtml(p){
-  var t=ProjCore.tempoPorPapel(projEventos(p.id));
-  var partes=Object.keys(t.dias).map(function(pid){var pp=projPapel(pid);return(pp?escHtml(pp.nome):'?')+' '+t.dias[pid]+'d'});
-  return'<div style="font-size:13px;color:var(--text)">'+(partes.join(' · ')||'—')+'</div>'+
-    '<div style="font-size:11px;color:var(--hint);margin-top:2px">'+t.retornos+' retorno'+(t.retornos===1?'':'s')+'</div>';
+  // Cabeçalho
+  var meta=[p.pai_redmine?'#'+p.pai_redmine:'Criada no VS'];
+  if(!nova){if(p.produto)meta.push(p.produto);if(p.solicitante)meta.push(p.solicitante)}
+  var h='<div class="pf-h"><div style="flex:1;min-width:0">'+
+    '<div class="pf-meta">'+escHtml(meta.join(' · '))+' · <span style="color:'+st.c+'">'+escHtml(st.n)+'</span></div>';
+  if(nova){
+    h+='<input class="pf-ti" id="pf-titulo" value="'+escHtml(String(p.titulo||''))+'" aria-label="Título da demanda" onchange="planoSetCampo(\''+idJs+'\',\'titulo\',this.value)">'+
+      '<div class="pf-campos">'+
+        '<input class="form-input" id="pf-produto" list="pf-produtos" placeholder="Produto" aria-label="Produto" value="'+escHtml(String(p.produto||''))+'" onchange="planoSetCampo(\''+idJs+'\',\'produto\',this.value)">'+
+        '<input class="form-input" id="pf-solicitante" placeholder="Solicitante" aria-label="Solicitante" value="'+escHtml(String(p.solicitante||''))+'" onchange="planoSetCampo(\''+idJs+'\',\'solicitante\',this.value)">'+
+      '</div><datalist id="pf-produtos">'+Object.keys(prods).sort().map(function(n){return'<option value="'+escHtml(n)+'">'}).join('')+'</datalist>';
+  }else h+='<h3>'+escHtml(String(p.titulo||'Demanda'))+'</h3>';
+  h+='</div><button type="button" class="pf-x" aria-label="Fechar" onclick="planoFechar()">×</button></div><div class="pf-b">';
+  if(!gerir)h+='<div class="pf-aviso">'+(base?'Você pode editar o título, a descrição, o produto, o solicitante e as horas enquanto a demanda está em triagem. Avaliar e decidir requer a permissão "Gerir o plano".'
+    :'Somente leitura: avaliar, decidir e editar requer a permissão "Gerir o plano".')+'</div>';
+  if(base)h+='<textarea class="form-input pf-desc" id="pf-desc" rows="2" placeholder="Descrição (opcional)" aria-label="Descrição" onchange="planoSetCampo(\''+idJs+'\',\'descricao\',this.value)">'+escHtml(String(p.descricao||''))+'</textarea>';
+  else if(p.descricao)h+='<div class="pf-desc-ro">'+escHtml(String(p.descricao))+'</div>';
+
+  // Esforço estimado
+  var ps=planoPapeis(),soma=0;
+  ps.forEach(function(pp){soma+=ProjCore.horasDoPapel(p.horas_papeis,pp.id)});
+  h+='<div class="pf-sec"><div class="pf-sec-t">Esforço estimado</div>';
+  if(p.pai_redmine){
+    var dis=base?'':' disabled';
+    h+='<div class="pf-src" role="group" aria-label="Origem das horas">'+
+      '<button type="button" aria-pressed="'+(origem==='vs')+'" class="'+(origem==='vs'?'on':'')+'"'+dis+' onclick="planoUsarVs(\''+idJs+'\')">Definido no VS</button>'+
+      '<button type="button" aria-pressed="'+(origem==='redmine')+'" class="'+(origem==='redmine'?'on':'')+'"'+dis+' onclick="planoUsarRedmine(\''+idJs+'\')">Do Redmine #'+escHtml(String(p.pai_redmine))+'</button></div>';
+  }
+  if(soma>0)h+='<div class="pf-hbar">'+ps.map(function(pp,i){
+    var x=ProjCore.horasDoPapel(p.horas_papeis,pp.id);
+    return x>0?'<i style="width:'+(x/soma*100)+'%;background:'+PLANO_COR_PAPEL[i%PLANO_COR_PAPEL.length]+'"></i>':'';
+  }).join('')+'</div>';
+  if(!ps.length)h+='<div class="pf-nota">Nenhum papel do plano configurado. Configure em Preferências › Plataforma › Plano.</div>';
+  h+='<div class="pf-ph">'+ps.map(function(pp,i){
+    var x=ProjCore.horasDoPapel(p.horas_papeis,pp.id),nome=escHtml(String(pp.nome||'')),pj=planoJs(pp.id),pid=escHtml(String(pp.id));
+    var cor='<i style="background:'+PLANO_COR_PAPEL[i%PLANO_COR_PAPEL.length]+'"></i><span>'+nome+'</span>';
+    if(!base)return'<div class="pf-ph-r">'+cor+'<span></span><span class="num pf-ro">'+planoFmtH(x)+'h</span><span></span></div>';
+    var menos=Math.max(0,Math.round((x-1)*10)/10),mais=Math.round((x+1)*10)/10;
+    return'<div class="pf-ph-r">'+cor+
+      '<button type="button" id="pf-menos-'+pid+'" aria-label="Menos 1 hora em '+nome+'" onclick="planoSetHoras(\''+idJs+'\',\''+pj+'\','+menos+')"'+(x<=0?' disabled':'')+'>−</button>'+
+      '<input class="num" id="pf-h-'+pid+'" inputmode="decimal" value="'+planoFmtH(x)+'" aria-label="Horas de '+nome+'" onfocus="this.select()" onchange="planoSetHoras(\''+idJs+'\',\''+pj+'\',planoNumero(this.value))">'+
+      '<button type="button" id="pf-mais-'+pid+'" aria-label="Mais 1 hora em '+nome+'" onclick="planoSetHoras(\''+idJs+'\',\''+pj+'\','+mais+')">+</button></div>';
+  }).join('')+'<div class="pf-ph-t"><span>Total</span><b class="num">'+planoFmtH(d.horas)+'h</b></div></div>';
+  var sit=ProjCore.situacaoEstimativa(p.horas_papeis,PJ.papeis);
+  var sitTxt={completa:['Completa','var(--green)'],parcial:['Parcial','var(--amber)'],sem:['Sem estimativa','var(--muted)']}[sit]||['Sem estimativa','var(--muted)'];
+  h+='<div class="pf-sit">Estimativa: <b style="color:'+sitTxt[1]+'">'+sitTxt[0]+'</b></div>';
+  h+='<div class="pf-nota">'+(origem==='vs'
+    ?(p.pai_redmine?'Horas ajustadas no VS. O Sincronizar não sobrescreve mais esta demanda; para voltar, clique em “Do Redmine”.'
+      :'Horas digitadas aqui. Se a demanda ganhar um chamado no Redmine depois, você pode passar a usar as estimativas de lá.')
+    :'Soma das tarefas filhas do chamado no Redmine, atualizada pelo Sincronizar. Se você mudar um valor aqui, a demanda passa a usar as horas do VS.')+'</div></div>';
+
+  // No plano
+  if(p.status==='plano'){
+    var ordem=planoOrdem(),pos=ordem.indexOf(id)+1;
+    var dist=_plano.dist||planoDistribuir(),prev=dist.previstas[id];
+    var sub=d.horas>0?'prevista: '+(planoNomesPrevistas(prev)||'—'):'sem horas, não ocupa espaço';
+    h+='<div class="pf-sec"><div class="pf-sec-t">No plano</div><div class="pf-prio">'+
+      (gerir?'<button type="button" id="pf-sobe" aria-label="Aumentar prioridade" onclick="planoMoverPasso(\''+idJs+'\',-1)"'+(pos<=1?' disabled':'')+'>↑</button>':'<span></span>')+
+      '<div><div class="pos num">'+pos+'º</div><div class="sub">'+escHtml(sub)+'</div></div>'+
+      (gerir?'<button type="button" id="pf-desce" aria-label="Diminuir prioridade" onclick="planoMoverPasso(\''+idJs+'\',1)"'+(pos>=ordem.length?' disabled':'')+'>↓</button>':'<span></span>')+
+      '</div></div>';
+  }
+
+  // Execução
+  if(p.status==='plano'||p.status==='entregue'){
+    var real=Math.round((((PJ.real&&PJ.real.total)||{})[String(id)]||0)*10)/10;
+    var exec=p.status==='entregue'?'Entregue':real>0?'Em andamento':'Prevista';
+    h+='<div class="pf-sec"><div class="pf-sec-t">Execução</div><div class="pf-kv">'+
+      '<div><div class="k">Realizado</div><div class="v num">'+planoFmtH(real)+'h <span>de '+planoFmtH(d.horas)+'h</span></div></div>'+
+      '<div><div class="k">Situação</div><div class="v" style="font-size:13px">'+exec+'</div></div></div>'+
+      '<div class="pf-oss">'+pjOSsHtml(p)+'</div>'+
+      (gerir?'<button type="button" class="btn pf-largo" id="pf-entrega" onclick="planoEntregar(\''+idJs+'\','+(p.status==='plano')+')">'+(p.status==='plano'?'Marcar como entregue':'Reabrir')+'</button>':'')+
+      '</div>';
+  }
+
+  // Avaliação
+  var max=0;PJ.cfg.criterios.forEach(function(c){max+=3*(+c.peso||0)});
+  var fx=planoFaixaRotulo(d.prioridade);
+  h+='<div class="pf-sec"><div class="pf-sec-t">Avaliação</div>'+PJ.cfg.criterios.map(function(c,i){
+    return'<div class="pf-cr"><div class="q"><span>'+escHtml(String(c.nome))+'</span><span>'+escHtml(String(c.pergunta))+'</span></div>'+
+      '<div class="pf-seg" role="group" aria-label="'+escHtml(String(c.nome))+'">'+c.opcoes.map(function(o,v){
+        var on=!!p.crit&&p.crit[i]===v;
+        return'<button type="button" id="pf-c-'+i+'-'+v+'" class="'+(on?'on':'')+'" aria-pressed="'+on+'"'+
+          (gerir?' onclick="planoCriterio(\''+idJs+'\','+i+','+v+')"':' disabled')+'>'+escHtml(String(o))+'</button>';
+      }).join('')+'</div></div>';
+  }).join('')+
+    '<div class="pf-score"><div class="big num" style="color:'+fx[1]+'">'+(d.prioridade==null?'—':d.prioridade)+'</div>'+
+    '<div><div class="band" style="color:'+fx[1]+'">'+fx[0]+'</div><div class="sub">nota de 0 a '+max+' pelos critérios</div></div></div></div>';
+
+  // Decisão
+  if(p.status==='pauta'||p.status==='adiada'||p.status==='plano'){
+    if(gerir){
+      var bts=['plano','adiada','descartada'].filter(function(k){return ProjCore.podeMudarStatus(p.status,k)});
+      h+='<div class="pf-sec"><div class="pf-sec-t">Decisão</div><div class="pf-dec" style="grid-template-columns:'+(bts.length===3?'1.4fr 1fr 1fr':'1fr 1fr')+'">'+
+        bts.map(function(k){
+          return'<button type="button" id="pf-dec-'+k+'" class="'+PLANO_DECISAO[k].cls+'" onclick="planoDecidirFicha(\''+idJs+'\',\''+k+'\')">'+PLANO_DECISAO[k].rot+'</button>';
+        }).join('')+'</div>'+
+        '<textarea class="pf-obs" id="pf-obs" rows="2" placeholder="Observação (opcional)" aria-label="Observação da decisão">'+escHtml(String(p.decisao_obs||''))+'</textarea></div>';
+    }else if(p.decisao_obs){
+      h+='<div class="pf-sec"><div class="pf-sec-t">Decisão</div><div class="pf-desc-ro">'+escHtml(String(p.decisao_obs))+'</div></div>';
+    }
+  }
+
+  // Histórico
+  h+='<div class="pf-sec"><div class="pf-sec-t">Histórico</div>'+planoHistoricoHtml(p)+'</div>';
+  return h+'</div>';
+}
+function planoAbrir(id){
+  var p=projById(id),dr=document.getElementById('pj-drawer');
+  if(!p||!dr)return;
+  var mesma=_plAberto===id&&dr.classList.contains('open');
+  var ae=document.activeElement,foco=null;
+  // Ao redesenhar a mesma ficha, preserva o foco, o texto ainda não salvo e a rolagem
+  if(mesma&&ae&&dr.contains(ae)&&ae.id){
+    foco={id:ae.id,valor:(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA')?ae.value:null};
+    try{foco.ini=ae.selectionStart;foco.fim=ae.selectionEnd}catch(e){}
+  }
+  var corpo=dr.querySelector('.pf-b'),rol=mesma&&corpo?corpo.scrollTop:0;
+  _plAberto=id;
+  dr.innerHTML=planoFichaHtml(p);
+  dr.classList.add('open');
+  corpo=dr.querySelector('.pf-b');if(corpo&&rol)corpo.scrollTop=rol;
+  if(foco){
+    var el=document.getElementById(foco.id);
+    if(el){
+      if(foco.valor!=null)el.value=foco.valor;
+      el.focus();
+      try{if(foco.ini!=null)el.setSelectionRange(foco.ini,foco.fim)}catch(e){}
+    }
+  }else if(!mesma){var x=dr.querySelector('.pf-x');if(x)x.focus()}
+}
+document.addEventListener('keydown',function(e){
+  if(e.key!=='Escape'||!_plAberto)return;
+  if(document.querySelector('.modal-overlay.open'))return;
+  planoFechar();
+});
+
+// ── ficha: ações ──
+async function planoNova(){
+  if(!PJ.ok||!CURRENT_USER||CURRENT_USER.isVisitor)return;
+  var r=await sb.from('projetos').insert({workspace_id:CURRENT_WORKSPACE_ID,titulo:'Nova demanda',status:'triagem',sugerido_por:CURRENT_USER.id}).select().single();
+  if(r.error){toast('Erro ao criar a demanda: '+r.error.message,true);return}
+  PJ.projetos.push(r.data);
+  _plAberto=null;
+  if(planoTela())renderProjetos();
+  planoAbrir(r.data.id);
+  var ti=document.getElementById('pf-titulo');if(ti){ti.focus();ti.select()}
+}
+// Campos da demanda que o autor também edita (lista da guarda do banco)
+async function planoSetCampo(id,campo,valor){
+  var p=projById(id);if(!p)return;
+  if(['titulo','descricao','produto','solicitante'].indexOf(campo)<0)return;
+  if(!planoPodeEditarBase(p)){toast('Sem permissão para editar esta demanda',true);return}
+  var v=String(valor==null?'':valor).trim();
+  if(campo==='titulo'&&!v){toast('Informe o título',true);planoAbrir(id);return}
+  var novo=v||null;
+  if((p[campo]||null)===novo)return;
+  var c={};c[campo]=novo;
+  try{await projSalvar(p,c)}catch(e){toast('Erro ao salvar: '+e.message,true)}
+  planoAposMudar();
+}
+// Grava o estado local das horas (a fila garante que a última gravação é a do último clique)
+function planoGravarHoras(p){
+  return sb.from('projetos').update({horas_papeis:p.horas_papeis,horas_origem:p.horas_origem}).eq('id',p.id).select('id').then(function(r){
+    if(r.error)throw r.error;
+    if(!r.data||!r.data.length)throw new Error('A demanda não pôde ser alterada.');
+  });
+}
+async function planoSetHoras(id,papelId,horas){
+  var p=projById(id);if(!p)return;
+  if(!planoPodeEditarBase(p)){toast('Sem permissão para editar esta demanda',true);return}
+  var v=Math.max(0,Math.round(planoNumero(horas)*10)/10);
+  if(ProjCore.horasDoPapel(p.horas_papeis,papelId)===v&&p.horas_origem!=='redmine'){planoAbrir(id);return}
+  p.horas_papeis=ProjCore.definirHoras(p.horas_papeis,papelId,v);
+  p.horas_origem='vs';
+  planoAposMudar(); // a bolha muda de tamanho já
+  try{
+    await planoNaFila(id,function(){return planoGravarHoras(p)});
+  }catch(e){
+    toast('Erro ao salvar as horas: '+e.message,true);
+    await projRecarregar(id);planoAposMudar();return;
+  }
+  // A policy de eventos só aceita "horas" de quem gere o plano
+  if(can('gerir_projetos'))planoEventoAdiado(id,'horas',function(){
+    var q=projById(id);return String(q?ProjCore.horasTotal(q.horas_papeis,PJ.papeis):0);
+  },1500);
+}
+async function planoUsarRedmine(id){
+  var p=projById(id);if(!p||p.horas_origem==='redmine')return;
+  if(!planoPodeEditarBase(p)){toast('Sem permissão para editar esta demanda',true);return}
+  var temR=Array.isArray(p.horas_redmine);
+  var c={horas_origem:'redmine'};
+  if(temR)c.horas_papeis=JSON.parse(JSON.stringify(p.horas_redmine));
+  try{
+    await planoNaFila(id,function(){return projSalvar(p,c)});
+    if(can('gerir_projetos'))await projEvento(id,'horas',null,'redmine',null);
+    toast(temR?'Voltou a usar as horas do Redmine':'Passa a usar o Redmine: as horas chegam no próximo Sincronizar');
+  }catch(e){toast('Erro ao mudar a origem das horas: '+e.message,true)}
+  planoAposMudar();
+}
+async function planoUsarVs(id){
+  var p=projById(id);if(!p||p.horas_origem!=='redmine')return;
+  if(!planoPodeEditarBase(p)){toast('Sem permissão para editar esta demanda',true);return}
+  try{
+    await planoNaFila(id,function(){return projSalvar(p,{horas_origem:'vs'})});
+    if(can('gerir_projetos'))await projEvento(id,'horas',null,String(ProjCore.horasTotal(p.horas_papeis,PJ.papeis)),null);
+    toast('As horas passam a ser definidas no VS');
+  }catch(e){toast('Erro ao mudar a origem das horas: '+e.message,true)}
+  planoAposMudar();
+}
+async function planoCriterio(id,i,v){
+  var p=projById(id);if(!p)return;
+  if(!can('gerir_projetos')){toast('Sem permissão para avaliar demandas',true);return}
+  var crit=[0,1,2,3].map(function(k){var x=p.crit?p.crit[k]:null;return typeof x==='number'?x:null});
+  if(crit[i]===v)return;
+  crit[i]=v;
+  var de=p.status;
+  try{
+    await projSalvar(p,{crit:crit});
+    planoEventoAdiado(id,'criterios',function(){
+      var q=projById(id),pr=q?ProjCore.prioridade(q.crit,PJ.cfg.criterios):null;
+      return pr==null?null:String(pr);
+    },1500);
+    await projRecarregar(id); // o trigger passa triagem → pauta com os 4 critérios
+    if(de==='triagem'&&p.status==='pauta')toast('Avaliação completa: a demanda está em pauta');
+  }catch(e){toast('Erro ao salvar a avaliação: '+e.message,true)}
+  planoAposMudar();
+}
+async function planoDecidirFicha(id,para){
+  var el=document.getElementById('pf-obs'),obs=el?el.value.trim():'';
+  var ok=await planoDecidir(id,para,obs||null);
+  if(!ok)return;
+  if(para==='plano'){
+    var p=projById(id),d=p?planoDemanda(p):null,prev=_plano.dist?_plano.dist.previstas[id]:null;
+    toast(d&&d.horas>0&&prev&&prev.length?'Incluída no plano · prevista para '+planoNomesPrevistas(prev):'Incluída no plano, mas sem horas: não ocupa espaço ainda');
+  }else toast(para==='adiada'?'Demanda adiada':'Demanda descartada');
+  if(!planoTela()&&_plAberto===id)planoAbrir(id);
+}
+async function planoMoverPasso(id,dir){
+  if(!can('gerir_projetos')||_planoOcupado)return;
+  var ordem=planoOrdem(),i=ordem.indexOf(id),j=i+dir;
+  if(i<0||j<0||j>=ordem.length)return;
+  _planoOcupado=true;
+  try{await planoGravarOrdem(ProjCore.moverPara(ordem,id,j),id)}
+  catch(e){toast('Erro ao mudar a ordem: '+e.message,true)}
+  finally{_planoOcupado=false}
+  planoAposMudar();
+}
+async function planoEntregar(id,on){
+  var p=projById(id);if(!p)return;
+  if(!can('gerir_projetos')){toast('Sem permissão para mudar a demanda',true);return}
+  var de=p.status,para=on?'entregue':'plano';
+  if(!ProjCore.podeMudarStatus(de,para))return;
+  try{
+    await projSalvar(p,{status:para},{status:de});
+    await projEvento(id,'entrega',de,para,null);
+    await projRecarregar(id); // reabrir: a posição vem do trigger
+    toast(on?'Demanda entregue':'Demanda reaberta');
+  }catch(e){toast('Erro ao mudar a entrega: '+e.message,true)}
+  planoAposMudar();
+}
+async function planoComentar(id){
+  var inp=document.getElementById('pf-coment'),t=inp?(inp.value||'').trim():'';
+  if(!t)return;
+  try{await projEvento(id,'comentario',null,null,t);inp.value=''}
+  catch(e){toast('Erro ao comentar: '+e.message,true);return}
+  if(_plAberto===id)planoAbrir(id);
 }
 function pjOSsHtml(p){
   var oss=S.oss.filter(function(o){return o.projetoId===p.id});
@@ -6835,49 +6979,34 @@ function pjOSsHtml(p){
   oss.forEach(function(o){(porVersao[o.versaoId]=porVersao[o.versaoId]||[]).push(o)});
   var grupos=Object.keys(porVersao).map(function(vid){
     var v=S.versoes.find(function(x){return x.id===vid});
-    return'<div style="font-size:11px;color:var(--hint);margin:8px 0 4px">'+escHtml(v?v.nome:'Sem versão')+'</div>'+
+    return'<div style="font-size:11px;color:var(--hint);margin:8px 0 4px">'+escHtml(String(v?v.nome:'Sem versão'))+'</div>'+
       porVersao[vid].map(function(o){
         return'<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0">'+
-          '<span style="font-family:var(--mono);color:var(--muted)">#'+escHtml(o.num)+'</span>'+
-          '<span style="flex:1;color:var(--text)">'+escHtml(o.titulo)+'</span>'+
-          '<span class="badge pj-badge-st">'+statusLabel(o.status)+'</span>'+
-          (pjPodeMexerNaOS(o)?'<span style="cursor:pointer;color:var(--hint)" title="Desvincular" onclick="pjVincularOS(\''+o.id+'\',null)">×</span>':'')+
+          '<span style="font-family:var(--mono);color:var(--muted)">#'+escHtml(String(o.num||''))+'</span>'+
+          '<span style="flex:1;color:var(--text)">'+escHtml(String(o.titulo||''))+'</span>'+
+          '<span class="badge pj-badge-st">'+escHtml(statusLabel(o.status))+'</span>'+
+          (pjPodeMexerNaOS(o)?'<button type="button" class="pf-desvinc" title="Desvincular da demanda" aria-label="Desvincular a OS '+escHtml(String(o.num||''))+'" onclick="pjVincularOS(\''+planoJs(o.id)+'\',null)">×</button>':'')+
         '</div>';
       }).join('');
   }).join('');
   var candidatas=ProjCore.aceitaOS(p.status)?S.oss.filter(function(o){return o.projetoId!==p.id&&pjPodeMexerNaOS(o)}):[];
-  var sel=candidatas.length?'<div style="display:flex;gap:6px;margin-top:10px"><select class="form-input" id="pj-vinc-sel" style="font-size:12px"><option value="">Vincular OS…</option>'+
-    candidatas.map(function(o){return'<option value="'+o.id+'">#'+escHtml(o.num)+' '+escHtml(o.titulo)+(o.projetoId?' (em outro projeto)':'')+'</option>'}).join('')+
-    '</select><button class="btn btn-sm" onclick="var v=document.getElementById(\'pj-vinc-sel\').value;if(v)pjVincularOS(v,\''+p.id+'\')">Vincular</button></div>':'';
-  return(grupos||'<div style="font-size:12px;color:var(--hint)">Nenhuma OS vinculada.</div>')+sel;
-}
-function pjTimelineHtml(p){
-  return projEventos(p.id).slice().reverse().map(function(e){
-    var u=S_USERS.find(function(x){return x.id===e.autor_id});
-    var quando=new Date(e.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
-    return'<div style="border-left:2px solid var(--border2);padding:2px 0 8px 10px;font-size:12px">'+
-      '<div style="color:var(--text)">'+escHtml(pjEventoTexto(e))+'</div>'+
-      (e.comentario?'<div style="color:var(--muted);white-space:pre-wrap">'+escHtml(e.comentario)+'</div>':'')+
-      '<div style="font-size:10px;color:var(--hint)">'+quando+(u?' · '+escHtml(u.displayName):'')+'</div>'+
-    '</div>';
-  }).join('')||'<div style="font-size:12px;color:var(--hint)">Sem eventos.</div>';
-}
-async function pjComentar(id){
-  var inp=document.getElementById('pj-novo-coment');var t=(inp.value||'').trim();if(!t)return;
-  try{await projEvento(id,'comentario',null,null,t);pjAbrir(id)}catch(e){toast('Erro: '+e.message,'err')}
+  var sel=candidatas.length?'<div style="display:flex;gap:6px;margin-top:10px"><select class="form-input" id="pj-vinc-sel" style="font-size:12px" aria-label="OS para vincular"><option value="">Vincular OS…</option>'+
+    candidatas.map(function(o){return'<option value="'+escHtml(String(o.id))+'">#'+escHtml(String(o.num||''))+' '+escHtml(String(o.titulo||''))+(o.projetoId?' (em outra demanda)':'')+'</option>'}).join('')+
+    '</select><button type="button" class="btn btn-sm" onclick="var v=document.getElementById(\'pj-vinc-sel\').value;if(v)pjVincularOS(v,\''+planoJs(p.id)+'\')">Vincular</button></div>':'';
+  return(grupos||'<div class="pf-nota">Nenhuma OS vinculada ainda. As OSs filhas do chamado no Redmine se vinculam sozinhas.</div>')+sel;
 }
 // projetoId null = desvincular (marca para o pai do Redmine não revincular)
 async function pjVincularOS(osId,projetoId){
   var os=S.oss.find(function(o){return o.id===osId});if(!os||!pjPodeMexerNaOS(os))return;
-  if(projetoId&&!ProjCore.aceitaOS((projById(projetoId)||{}).status)){toast('Este projeto não aceita OS no status atual','err');return}
+  if(projetoId&&!ProjCore.aceitaOS((projById(projetoId)||{}).status)){toast('Esta demanda não aceita OS no status atual',true);return}
   var antigo=os.projetoId||null;
   var campos={projeto_id:projetoId,projeto_desvinculado:!projetoId&&!!antigo};
   var {error}=await sb.from('oss').update(campos).eq('id',osId);
-  if(error){toast('Erro: '+error.message,'err');return}
+  if(error){toast('Erro: '+error.message,true);return}
   os.projetoId=projetoId;os.projetoDesvinculado=campos.projeto_desvinculado;
   await projRegistrarVinculo(os,antigo,projetoId,null);
-  _projNotificarOS(osId,{status:os.status,projetoId:projetoId});
-  renderProjetos();if(_pjAberto)pjAbrir(_pjAberto);
+  await planoRecalcularReal();
+  if(planoTela())renderProjetos();else if(_plAberto)planoAbrir(_plAberto);
   if(document.getElementById('screen-kanban').classList.contains('active'))renderKanban();
 }
 
