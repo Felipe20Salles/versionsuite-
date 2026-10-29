@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="projetos-core.js"></script>
+<script src="plano-viz.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -2262,7 +2263,7 @@ async function renderRolesPrefs(){
     'acoes.boletim_editar':'Editar Boletim','acoes.agenda_editar':'Editar Agenda','acoes.preferencias_admin':'Administrar Preferências',
     'acoes.dashboard_equipe':'Dashboard: ver equipe própria',
     'acoes.dashboard_todas_equipes':'Dashboard: ver todas as equipes',
-    'menus.projetos':'Projetos','acoes.gerir_projetos':'Gerir projetos'
+    'menus.projetos':'Plano','acoes.gerir_projetos':'Gerir o plano'
   };
 
   var {data:rolesData}=await sb.from('roles').select('*').eq('workspace_id',CURRENT_WORKSPACE_ID);
@@ -2384,7 +2385,7 @@ function openGerenciarRole(roleId){
       mkChk('menus.boletim','Boletim',!!(p.menus&&p.menus.boletim))+
       mkChk('menus.ponto','Ponto',!!(p.menus&&p.menus.ponto))+
       mkChk('menus.preferencias','Preferências',!!(p.menus&&p.menus.preferencias))+
-      mkChk('menus.projetos','Projetos',!!(p.menus&&p.menus.projetos))+
+      mkChk('menus.projetos','Plano',!!(p.menus&&p.menus.projetos))+
     '</div>'+
     '<div>'+
       '<div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Ações</div>'+
@@ -2396,7 +2397,7 @@ function openGerenciarRole(roleId){
       mkChk('acoes.preferencias_admin','Administrar Preferências',!!(p.acoes&&p.acoes.preferencias_admin))+
       mkChk('acoes.dashboard_equipe','Dashboard: ver equipe própria',!!(p.acoes&&p.acoes.dashboard_equipe))+
       mkChk('acoes.dashboard_todas_equipes','Dashboard: ver todas as equipes',!!(p.acoes&&p.acoes.dashboard_todas_equipes))+
-      mkChk('acoes.gerir_projetos','Gerir projetos (pontuar, aprovar, mover etapas)',!!(p.acoes&&p.acoes.gerir_projetos))+
+      mkChk('acoes.gerir_projetos','Gerir o plano (avaliar, decidir, ordenar e capacidade)',!!(p.acoes&&p.acoes.gerir_projetos))+
     '</div>';
   openModal('modal-gerenciar-role');
 }
@@ -2802,7 +2803,7 @@ function goPrefsTab(nome){
   });
   if(nome==='pessoal')loadSchedulePrefs();
   if(nome==='plataforma')loadRedmineProdOpts().then(renderProdutos);
-  if(nome==='plataforma')renderFluxoProjetosPrefs();
+  if(nome==='plataforma')renderPlanoPrefs();
 }
 
 // ── NAV ──────────────────────────────────────────────────────────────────────
@@ -5942,7 +5943,7 @@ async function save(){
 
 // ── PROJETOS: dados ─────────────────────────────────────────────────────────
 // Regras puras em projetos-core.js (window.ProjCore). Aqui só estado + Supabase.
-var PJ={projetos:[],etapas:[],papeis:[],configs:[],eventos:[],horasTot:{},ok:false};
+var PJ={projetos:[],papeis:[],eventos:[],cfgRow:null,cfg:ProjCore.configPlano(null),capac:[],linhaBase:[],realLinhas:[],real:ProjCore.agregarRealizado([],[],null),ok:false};
 var PJ_STATUS={ideia:'Ideia',avaliacao:'Em avaliação',aprovada:'Aprovada',recusada:'Recusada',execucao:'Em execução',pausada:'Pausada',concluida:'Concluída',cancelada:'Cancelada'};
 var _osDb={}; // último {status,projetoId} gravado de cada OS, para detectar transições
 
@@ -5951,18 +5952,45 @@ async function projCarregar(){
     var ws=CURRENT_WORKSPACE_ID;
     var r=await Promise.all([
       sb.from('projetos').select('*').eq('workspace_id',ws),
-      sb.from('projeto_etapas').select('*').eq('workspace_id',ws).order('ordem'),
       sb.from('projeto_papeis').select('*').eq('workspace_id',ws).order('ordem'),
-      sb.from('projeto_etapa_config').select('*').eq('workspace_id',ws),
       sb.from('projeto_eventos').select('*').eq('workspace_id',ws).order('criado_em'),
-      sb.rpc('projetos_horas_totais',{p_workspace_id:ws})
+      sb.from('plano_config').select('*').eq('workspace_id',ws).maybeSingle(),
+      sb.from('versao_capacidade').select('*').eq('workspace_id',ws),
+      sb.from('plano_linha_base').select('*').eq('workspace_id',ws),
+      sb.rpc('plano_realizado',{p_workspace_id:ws})
     ]);
     for(var i=0;i<r.length;i++)if(r[i].error)throw r[i].error;
-    PJ.projetos=r[0].data||[];PJ.etapas=r[1].data||[];PJ.papeis=r[2].data||[];
-    PJ.configs=r[3].data||[];PJ.eventos=r[4].data||[];
-    PJ.horasTot={};(r[5].data||[]).forEach(function(x){PJ.horasTot[x.projeto_id]=parseFloat(x.horas)||0});
+    PJ.projetos=r[0].data||[];PJ.papeis=r[1].data||[];PJ.eventos=r[2].data||[];
+    PJ.cfgRow=r[3].data||null;PJ.cfg=ProjCore.configPlano(PJ.cfgRow);
+    PJ.capac=(r[4].data||[]).map(function(x){return{versao_id:x.versao_id,papel_id:x.papel_id,horas:parseFloat(x.horas)||0}});
+    PJ.linhaBase=r[5].data||[];
+    PJ.realLinhas=(r[6].data||[]).map(function(x){return{projeto_id:x.projeto_id,versao_id:x.versao_id,activity_type_id:x.activity_type_id,horas:parseFloat(x.horas)||0}});
+    PJ.real=ProjCore.agregarRealizado(PJ.realLinhas,PJ.papeis,PJ.cfg.papel_padrao_id);
     PJ.ok=true;
-  }catch(e){console.warn('Projetos indisponíveis:',e&&e.message);PJ.ok=false}
+  }catch(e){console.warn('Plano indisponível:',e&&e.message);PJ.ok=false}
+}
+async function planoRecalcularReal(){
+  var r=await sb.rpc('plano_realizado',{p_workspace_id:CURRENT_WORKSPACE_ID});
+  if(r.error){console.warn('plano_realizado:',r.error.message);return}
+  PJ.realLinhas=(r.data||[]).map(function(x){return{projeto_id:x.projeto_id,versao_id:x.versao_id,activity_type_id:x.activity_type_id,horas:parseFloat(x.horas)||0}});
+  PJ.real=ProjCore.agregarRealizado(PJ.realLinhas,PJ.papeis,PJ.cfg.papel_padrao_id);
+}
+function planoPapeis(){return ProjCore.papeisDoPlano(PJ.papeis)}
+function planoCapPorPapel(versaoId){
+  var o={};
+  PJ.capac.forEach(function(c){if(String(c.versao_id)===String(versaoId))o[c.papel_id]=(o[c.papel_id]||0)+c.horas});
+  return o;
+}
+function planoCapTotal(versaoId){
+  var o=planoCapPorPapel(versaoId),t=0;
+  planoPapeis().forEach(function(p){t+=o[p.id]||0});
+  return t;
+}
+function planoDemanda(p){
+  var pr=ProjCore.prioridade(p.crit,PJ.cfg.criterios);
+  var h=ProjCore.horasTotal(p.horas_papeis,PJ.papeis);
+  return{id:p.id,status:p.status,posicao:p.posicao,prioridade:pr,pai_redmine:p.pai_redmine,criado_em:p.criado_em,
+    horas:h,faixaP:ProjCore.faixaPrioridade(pr,PJ.cfg.faixas_prioridade),faixaE:ProjCore.faixaEsforco(h,PJ.cfg.faixas_esforco)};
 }
 function projById(id){return PJ.projetos.find(function(p){return p.id===id})||null}
 function projEtapa(id){return PJ.etapas.find(function(e){return e.id===id})||null}
@@ -6595,82 +6623,114 @@ async function pjVincularOS(osId,projetoId){
   if(document.getElementById('screen-kanban').classList.contains('active'))renderKanban();
 }
 
-// ── PROJETOS: editor do fluxo (admin) ───────────────────────────────────────
-function renderFluxoProjetosPrefs(){
+// ── PLANO: preferências (admin) ─────────────────────────────────────────────
+function renderPlanoPrefs(){
   var box=document.getElementById('pref-fluxo-projetos');if(!box)return;
   if(!PJ.ok||!isAdmin()){box.style.display='none';return}
   box.style.display='';
-  var tipos=getTipoAtividades().filter(function(t){return t.id!=null});
+  var cfg=PJ.cfg,tipos=getTipoAtividades().filter(function(t){return t.id!=null});
   var papeis=PJ.papeis.slice().sort(function(a,b){return a.ordem-b.ordem});
-  var etapas=PJ.etapas.slice().sort(function(a,b){return a.ordem-b.ordem});
-  var htmlPapeis=papeis.map(function(pp){
-    return'<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">'+
-      '<input class="form-input" style="flex:1" value="'+escHtml(pp.nome)+'" onchange="fluxoUpd(\'projeto_papeis\',\''+pp.id+'\',{nome:this.value.trim()||\'Papel\'})">'+
-      '<label style="font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:center"><input type="checkbox" '+(pp.externo?'checked':'')+' onchange="fluxoUpd(\'projeto_papeis\',\''+pp.id+'\',{externo:this.checked})" style="accent-color:var(--accent)">externo</label>'+
-    '</div>';
-  }).join('');
-  var htmlEtapas=etapas.map(function(e,i){
-    var papelOpts=papeis.map(function(pp){return'<option value="'+pp.id+'"'+(pp.id===e.papel_id?' selected':'')+'>'+escHtml(pp.nome)+'</option>'}).join('');
-    var chips=tipos.map(function(t){
-      var tid=String(t.id).replace(/[^\w-]/g,''),meu=(e.tipos_atividade||[]).indexOf(tid)>-1;
-      var dono=!meu&&etapas.find(function(o){return o.id!==e.id&&o.ativo!==false&&(o.tipos_atividade||[]).indexOf(tid)>-1});
-      return'<label style="font-size:11px;display:inline-flex;gap:3px;align-items:center;margin:2px 8px 2px 0;color:'+(dono?'var(--hint)':'var(--muted)')+'" title="'+(dono?'Já ligado a '+escHtml(dono.nome):'')+'">'+
-        '<input type="checkbox" '+(meu?'checked':'')+(dono?' disabled':'')+' onchange="fluxoToggleTipo(\''+e.id+'\',\''+tid+'\',this.checked)" style="accent-color:var(--accent)">'+escHtml(t.name)+'</label>';
-    }).join('')||'<span style="font-size:11px;color:var(--hint)">Cadastre os tipos de atividade acima para ligar às etapas.</span>';
-    return'<div style="padding:10px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;'+(e.ativo===false?'opacity:.5':'')+'">'+
-      '<div style="display:flex;gap:8px;align-items:center">'+
-        '<span style="font-family:var(--mono);color:var(--hint);width:18px">'+(i+1)+'</span>'+
-        '<input class="form-input" style="flex:1" value="'+escHtml(e.nome)+'" onchange="fluxoUpd(\'projeto_etapas\',\''+e.id+'\',{nome:this.value.trim()||\'Etapa\'})">'+
-        '<select class="form-input" style="width:150px" onchange="fluxoUpd(\'projeto_etapas\',\''+e.id+'\',{papel_id:this.value})">'+papelOpts+'</select>'+
-        '<button class="btn btn-sm btn-ghost" onclick="fluxoMover(\''+e.id+'\',-1)">↑</button>'+
-        '<button class="btn btn-sm btn-ghost" onclick="fluxoMover(\''+e.id+'\',1)">↓</button>'+
-        '<button class="btn btn-sm btn-ghost" onclick="fluxoUpd(\'projeto_etapas\',\''+e.id+'\',{ativo:'+(e.ativo===false)+'})">'+(e.ativo===false?'Reativar':'Desativar')+'</button>'+
+  var num='style="width:70px"';
+  var htmlCrit=cfg.criterios.map(function(c,i){
+    var ops=[0,1,2,3].map(function(k){
+      return'<input class="form-input" id="pl-c'+i+'-o'+k+'" style="flex:1;min-width:0" placeholder="'+k+'" value="'+escHtml(c.opcoes[k]||'')+'">';
+    }).join('');
+    return'<div style="padding:10px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px">'+
+      '<div style="display:flex;gap:8px;margin-bottom:6px">'+
+        '<input class="form-input" id="pl-c'+i+'-nome" style="flex:1" placeholder="Nome" value="'+escHtml(c.nome)+'">'+
+        '<label style="font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:center">Peso <input class="form-input" id="pl-c'+i+'-peso" type="number" min="0" max="9" step="1" '+num+' value="'+c.peso+'"></label>'+
       '</div>'+
-      '<div style="margin:6px 0 0 26px">'+chips+'</div>'+
+      '<input class="form-input" id="pl-c'+i+'-perg" style="width:100%;margin-bottom:6px" placeholder="Pergunta" value="'+escHtml(c.pergunta)+'">'+
+      '<div style="display:flex;gap:6px">'+ops+'</div>'+
     '</div>';
   }).join('');
-  box.innerHTML=
-    '<div class="pref-section-title">Fluxo de projetos</div>'+
-    '<div style="font-size:12px;color:var(--hint);margin-bottom:10px">Etapas por que todo projeto passa, com o papel responsável. Os tipos de atividade ligam as horas apropriadas à etapa. Desativar não apaga o histórico.</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 2fr;gap:16px">'+
-      '<div><div class="pj-sec-title">Papéis</div>'+htmlPapeis+'<button class="btn btn-sm btn-ghost" onclick="fluxoNovoPapel()">+ Novo papel</button></div>'+
-      '<div><div class="pj-sec-title">Etapas</div>'+htmlEtapas+'<button class="btn btn-sm btn-ghost" onclick="fluxoNovaEtapa()">+ Nova etapa</button></div>'+
+  var fp=cfg.faixas_prioridade,fe=cfg.faixas_esforco;
+  var htmlPapeis=papeis.map(function(pp){
+    var chips=tipos.map(function(t){
+      var tid=String(t.id).replace(/[^\w-]/g,''),meu=(pp.tipos_atividade||[]).indexOf(tid)>-1;
+      var dono=!meu&&papeis.find(function(o){return o.id!==pp.id&&o.ativo!==false&&(o.tipos_atividade||[]).indexOf(tid)>-1});
+      return'<label style="font-size:11px;display:inline-flex;gap:3px;align-items:center;margin:2px 8px 2px 0;color:'+(dono?'var(--hint)':'var(--muted)')+'" title="'+(dono?'Já ligado a '+escHtml(dono.nome):'')+'">'+
+        '<input type="checkbox" '+(meu?'checked':'')+(dono?' disabled':'')+' onchange="planoToggleTipo(\''+pp.id+'\',\''+tid+'\',this.checked)" style="accent-color:var(--accent)">'+escHtml(t.name)+'</label>';
+    }).join('')||'<span style="font-size:11px;color:var(--hint)">Cadastre os tipos de atividade para ligar aos papéis.</span>';
+    return'<div style="padding:10px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;'+(pp.ativo===false?'opacity:.6':'')+'">'+
+      '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">'+
+        '<input class="form-input" style="flex:1" value="'+escHtml(pp.nome)+'" onchange="planoUpdPapel(\''+pp.id+'\',{nome:this.value.trim()||\'Papel\'})">'+
+        '<label style="font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:center"><input type="checkbox" '+(pp.externo?'checked':'')+' onchange="planoUpdPapel(\''+pp.id+'\',{externo:this.checked})" style="accent-color:var(--accent)">externo</label>'+
+        '<label style="font-size:12px;color:var(--muted);display:flex;gap:4px;align-items:center"><input type="checkbox" '+(pp.ativo!==false?'checked':'')+' onchange="planoUpdPapel(\''+pp.id+'\',{ativo:this.checked})" style="accent-color:var(--accent)">ativo</label>'+
+      '</div>'+
+      '<input class="form-input" style="width:100%;margin-bottom:6px" placeholder="Trackers do Redmine (separados por vírgula; nome ou id)" value="'+escHtml((pp.trackers||[]).join(', '))+'" onchange="planoUpdPapel(\''+pp.id+'\',{trackers:planoListaTexto(this.value)})">'+
+      '<div>'+chips+'</div>'+
     '</div>';
+  }).join('');
+  var padrao=ProjCore.papelPadrao(PJ.papeis,cfg.papel_padrao_id);
+  var optsPadrao=planoPapeis().map(function(pp){return'<option value="'+pp.id+'"'+(pp.id===padrao?' selected':'')+'>'+escHtml(pp.nome)+'</option>'}).join('');
+  box.innerHTML=
+    '<div class="pref-section-title">Plano</div>'+
+    '<div class="pj-sec-title">Critérios</div>'+
+    '<div style="font-size:12px;color:var(--hint);margin-bottom:10px">Cada demanda é avaliada de 0 a 3 em cada critério. A prioridade é a soma das notas vezes o peso.</div>'+
+    htmlCrit+
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:10px 0">'+
+      '<div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Faixas de prioridade</div>'+
+        '<div style="display:flex;gap:8px"><label style="font-size:12px;color:var(--muted)">Baixa até <input class="form-input" id="pl-fp-baixa" type="number" min="0" '+num+' value="'+fp.baixa_ate+'"></label>'+
+        '<label style="font-size:12px;color:var(--muted)">Média até <input class="form-input" id="pl-fp-media" type="number" min="0" '+num+' value="'+fp.media_ate+'"></label></div></div>'+
+      '<div><div style="font-size:12px;color:var(--muted);margin-bottom:4px">Faixas de esforço (horas)</div>'+
+        '<div style="display:flex;gap:8px"><label style="font-size:12px;color:var(--muted)">Pequeno até <input class="form-input" id="pl-fe-peq" type="number" min="0" '+num+' value="'+fe.pequeno_ate+'"></label>'+
+        '<label style="font-size:12px;color:var(--muted)">Médio até <input class="form-input" id="pl-fe-med" type="number" min="0" '+num+' value="'+fe.medio_ate+'"></label></div></div>'+
+    '</div>'+
+    '<button class="btn btn-sm btn-primary" onclick="planoSalvarCriterios()">Salvar critérios e faixas</button>'+
+    '<div class="pj-sec-title" style="margin-top:18px">Papéis</div>'+
+    '<div style="font-size:12px;color:var(--hint);margin-bottom:10px">Papéis externos não entram na capacidade nem na soma de horas. Os trackers e tipos de atividade ligam as horas ao papel.</div>'+
+    htmlPapeis+'<button class="btn btn-sm btn-ghost" onclick="planoNovoPapel()">+ Novo papel</button>'+
+    '<div class="pj-sec-title" style="margin-top:18px">Papel padrão</div>'+
+    '<select class="form-input" style="width:220px" onchange="planoSalvarCfg({papel_padrao_id:this.value||null})">'+optsPadrao+'</select>'+
+    '<div style="font-size:11px;color:var(--hint);margin-top:4px">Recebe horas de trackers e tipos de atividade sem papel.</div>';
 }
-async function fluxoUpd(tabela,id,campos){
-  var r=await sb.from(tabela).update(campos).eq('id',id).select().single();
+function planoListaTexto(v){
+  return String(v||'').split(',').map(function(x){return x.trim()}).filter(function(x){return x});
+}
+async function planoSalvarCfg(campos){
+  var row={workspace_id:CURRENT_WORKSPACE_ID,criterios:PJ.cfg.criterios,faixas_prioridade:PJ.cfg.faixas_prioridade,
+    faixas_esforco:PJ.cfg.faixas_esforco,papel_padrao_id:PJ.cfg.papel_padrao_id};
+  Object.keys(campos).forEach(function(k){row[k]=campos[k]});
+  var r=await sb.from('plano_config').upsert(row,{onConflict:'workspace_id'}).select().single();
+  if(r.error){toast('Erro: '+r.error.message,'err');return false}
+  PJ.cfgRow=r.data;PJ.cfg=ProjCore.configPlano(r.data);
+  await planoRecalcularReal();
+  renderPlanoPrefs();
+  if(typeof renderProjetos==='function'){try{renderProjetos()}catch(e){}}
+  return true;
+}
+async function planoSalvarCriterios(){
+  function v(id){var e=document.getElementById(id);return e?e.value:''}
+  function n(id,min){var x=parseFloat(v(id));return isNaN(x)||x<min?min:x}
+  var crit=PJ.cfg.criterios.map(function(c,i){
+    var peso=Math.round(n('pl-c'+i+'-peso',0));if(peso>9)peso=9;
+    return{nome:v('pl-c'+i+'-nome').trim()||c.nome,pergunta:v('pl-c'+i+'-perg').trim(),
+      opcoes:[0,1,2,3].map(function(k){return v('pl-c'+i+'-o'+k).trim()||String(k)}),peso:peso};
+  });
+  var fp={baixa_ate:n('pl-fp-baixa',0),media_ate:n('pl-fp-media',0)};
+  var fe={pequeno_ate:n('pl-fe-peq',0),medio_ate:n('pl-fe-med',0)};
+  if(fp.media_ate<fp.baixa_ate||fe.medio_ate<fe.pequeno_ate){toast('Faixa média não pode ser menor que a anterior','err');return}
+  if(await planoSalvarCfg({criterios:crit,faixas_prioridade:fp,faixas_esforco:fe}))toast('Plano salvo');
+}
+async function planoUpdPapel(id,campos){
+  var r=await sb.from('projeto_papeis').update(campos).eq('id',id).select().single();
   if(r.error){toast('Erro: '+r.error.message,'err');return}
-  var arr=tabela==='projeto_papeis'?PJ.papeis:PJ.etapas;
-  var i=arr.findIndex(function(x){return x.id===id});if(i>-1)arr[i]=r.data;
-  renderFluxoProjetosPrefs();
+  var i=PJ.papeis.findIndex(function(x){return x.id===id});if(i>-1)PJ.papeis[i]=r.data;
+  await planoRecalcularReal();
+  renderPlanoPrefs();
 }
-async function fluxoNovoPapel(){
+async function planoNovoPapel(){
   var ordem=PJ.papeis.reduce(function(m,x){return Math.max(m,x.ordem)},0)+1;
   var r=await sb.from('projeto_papeis').insert({workspace_id:CURRENT_WORKSPACE_ID,nome:'Novo papel',ordem:ordem}).select().single();
   if(r.error){toast('Erro: '+r.error.message,'err');return}
-  PJ.papeis.push(r.data);renderFluxoProjetosPrefs();
+  PJ.papeis.push(r.data);renderPlanoPrefs();
 }
-async function fluxoNovaEtapa(){
-  var ordem=PJ.etapas.reduce(function(m,x){return Math.max(m,x.ordem)},0)+1;
-  var papel=PJ.papeis[0];
-  var r=await sb.from('projeto_etapas').insert({workspace_id:CURRENT_WORKSPACE_ID,nome:'Nova etapa',ordem:ordem,papel_id:papel?papel.id:null}).select().single();
-  if(r.error){toast('Erro: '+r.error.message,'err');return}
-  PJ.etapas.push(r.data);renderFluxoProjetosPrefs();
-}
-async function fluxoMover(id,dir){
-  var lista=PJ.etapas.slice().sort(function(a,b){return a.ordem-b.ordem});
-  var i=lista.findIndex(function(e){return e.id===id}),j=i+dir;
-  if(i<0||j<0||j>=lista.length)return;
-  var a=lista[i],b=lista[j],oa=a.ordem,ob=b.ordem;
-  if(oa===ob)ob=oa+dir; // ordens iguais: força a troca
-  await fluxoUpd('projeto_etapas',a.id,{ordem:ob});
-  await fluxoUpd('projeto_etapas',b.id,{ordem:oa});
-}
-function fluxoToggleTipo(etapaId,tipoId,on){
-  var e=projEtapa(etapaId);if(!e)return;
-  var arr=(e.tipos_atividade||[]).map(String).filter(function(t){return t!==String(tipoId)});
+function planoToggleTipo(papelId,tipoId,on){
+  var p=projPapel(papelId);if(!p)return;
+  var arr=(p.tipos_atividade||[]).map(String).filter(function(t){return t!==String(tipoId)});
   if(on)arr.push(String(tipoId));
-  fluxoUpd('projeto_etapas',etapaId,{tipos_atividade:arr});
+  planoUpdPapel(papelId,{tipos_atividade:arr});
 }
 
 // ── OPERAÇÕES SUPABASE ────────────────────────────────────────────────────────
