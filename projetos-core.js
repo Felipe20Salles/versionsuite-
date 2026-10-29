@@ -265,7 +265,7 @@
   }
 
   var STATUS=['triagem','pauta','plano','entregue','adiada','descartada'];
-  var STATUS_ROTULO={triagem:'Triagem',pauta:'Pauta',plano:'No plano',entregue:'Entregue',adiada:'Adiada',descartada:'Descartada'};
+  var STATUS_ROTULO={triagem:'Em triagem',pauta:'Em pauta',plano:'No plano',entregue:'Entregue',adiada:'Adiada',descartada:'Descartada'};
   var TRANSICOES={
     pauta:['plano','adiada','descartada'],
     adiada:['plano','adiada','descartada'],

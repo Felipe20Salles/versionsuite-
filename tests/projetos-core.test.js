@@ -303,3 +303,10 @@ test('aceitaOS com os status novos', () => {
   assert.equal(C.aceitaOS('entregue'), true);
   ['triagem', 'pauta', 'adiada', 'descartada'].forEach(s => assert.equal(C.aceitaOS(s), false));
 });
+
+test('STATUS_ROTULO: rótulos exatos', () => {
+  assert.deepEqual(C.STATUS_ROTULO, {
+    triagem: 'Em triagem', pauta: 'Em pauta', plano: 'No plano',
+    adiada: 'Adiada', descartada: 'Descartada', entregue: 'Entregue'
+  });
+});
