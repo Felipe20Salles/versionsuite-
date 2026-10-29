@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fixture - plano-viz</title>
+<style>
+:root{
+  --accent:#7c6ff7;--accent-rgb:124,111,247;
+  --bg:#0e0e10;--surface:#16161a;--card:#1c1c21;--card2:#222228;
+  --border:#2a2a32;--border2:#35353f;
+  --text:#e8e8ee;--muted:#888894;--hint:#55555f;
+  --accent2:#5c55cc;--accent-glow:rgba(var(--accent-rgb),0.15);
+  --green:#3ecf8e;--amber:#f5a623;--red:#f56565;
+  --font:'DM Sans',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px}
+body{padding:16px 24px}
+h2{font-size:14px;margin:8px 0}
+#g{width:100%;height:auto;display:block;touch-action:none}
+#w{position:relative;overflow-x:auto}
+#p{display:block;height:auto;touch-action:none}
+#log{font-size:12px;color:var(--muted);margin-top:8px;min-height:18px}
+</style>
+</head>
+<body>
+<h2>Grade</h2>
+<svg id="g" role="img" aria-label="Demandas por prioridade e esforco"></svg>
+<h2>Potes</h2>
+<div id="w"><svg id="p" aria-label="Potes de capacidade"></svg></div>
+<div id="log"></div>
+<script src="../plano-viz.js"></script>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search), stat = q.has('static'), papel = q.get('v') === '1';
+  var log = document.getElementById('log');
+  function say(t) { log.textContent = t; }
+  var cores = ['#7c6ff7', '#9a90fa', '#5c55cc', '#b4acfb', '#6a5de0', '#8579f8'];
+
+  var linhas = [
+    { chave: 'a', titulo: 'Alta', sub: 'pontuacao 17 a 27', cor: 'var(--green)' },
+    { chave: 'm', titulo: 'Media', sub: 'pontuacao 9 a 16', cor: 'var(--amber)' },
+    { chave: 'b', titulo: 'Baixa', sub: 'pontuacao 0 a 8', cor: 'var(--red)' },
+    { chave: 's', titulo: 'Sem avaliacao', sub: 'faltam criterios', cor: 'var(--muted)' }
+  ];
+  var colunas = [
+    { chave: 'c1', titulo: 'Ate 8h', sub: 'pouco esforco' },
+    { chave: 'c2', titulo: '9 a 40h', sub: 'esforco medio' },
+    { chave: 'c3', titulo: '41 a 120h', sub: 'esforco alto' },
+    { chave: 'c4', titulo: 'Mais de 120h', sub: 'esforco muito alto' }
+  ];
+  var bolhas = [], i;
+  /* celulas vazias: (b,c4) e (s,c3) */
+  for (i = 0; i < 26; i++) bolhas.push({ id: 'z' + i, linha: 's', coluna: 'c1', horas: 0, cor: 'var(--muted)', tracejada: true });
+  bolhas.push({ id: 'big', linha: 'a', coluna: 'c4', horas: 337, cor: cores[0] });
+  var hs = [3, 6, 12, 20, 35, 60, 90, 150, 8, 25, 70, 5];
+  for (i = 0; i < hs.length; i++) {
+    bolhas.push({
+      id: 'b' + i, linha: ['a', 'm', 'b'][i % 3], coluna: hs[i] <= 8 ? 'c1' : hs[i] <= 40 ? 'c2' : hs[i] <= 120 ? 'c3' : 'c4',
+      horas: hs[i], cor: cores[i % cores.length], anel: i % 4 === 0, apagada: i === 5
+    });
+  }
+
+  var cb = {
+    aoClicar: function (x) { say('clicou ' + x); },
+    aoSoltar: function (x, alvo) { say('soltou ' + x + ' em ' + (alvo ? alvo.chave + ' fracao ' + alvo.fracao.toFixed(2) : 'fora')); },
+    aoPassar: function () {}
+  };
+
+  PlanoViz.grade(document.getElementById('g'), {
+    linhas: linhas, colunas: colunas, bolhas: bolhas,
+    destaque: { linha: 'a', coluna: 'c1', texto: 'Alto retorno, pouco esforco' },
+    podeArrastar: true, semAnimacao: stat,
+    aoClicar: cb.aoClicar, aoSoltar: cb.aoSoltar, aoPassar: cb.aoPassar
+  });
+
+  var potes;
+  if (papel) {
+    potes = [
+      { chave: 'p1', tipo: 'papel', titulo: 'Desenvolvimento', sub: 'em Versao A', capacidade: 60, usado: 55, realizado: 20,
+        rodape: '55 de 60h', rodape2: '5h livres', rodape2Cor: 'var(--green)', editavel: true, corTampa: '#7c6ff7',
+        itens: [{ id: 'b1', horas: 30, realizado: 20, cor: cores[1] }, { id: 'b2', horas: 25, cor: cores[2] }] },
+      { chave: 'p2', tipo: 'papel', titulo: 'Testes', sub: 'em Versao A', capacidade: 40, usado: 52, acima: 12,
+        rodape: '52 de 40h', rodape2: '12h acima da capacidade', rodape2Cor: 'var(--red)', editavel: true, corTampa: '#3ecf8e',
+        itens: [{ id: 'b3', horas: 30, cor: cores[3], dividida: true }, { id: 'b4', horas: 22, cor: cores[4] }] },
+      { chave: 'p3', tipo: 'papel', titulo: 'Analise', sub: 'em Versao A', capacidade: 30, usado: 8,
+        rodape: '8 de 30h', rodape2: '22h livres', rodape2Cor: 'var(--green)', editavel: true, corTampa: '#f5a623',
+        itens: [{ id: 'b5', horas: 8, cor: cores[5] }] }
+    ];
+  } else {
+    potes = [
+      { chave: 'v1', tipo: 'versao', titulo: 'Versao A', sub: 'ativa', subCor: 'var(--green)', capacidade: 160, usado: 112, realizado: 30,
+        rodape: '112 de 160h', rodape2: '48h livres', rodape2Cor: 'var(--green)', editavel: true, tituloClicavel: true,
+        itens: [{ id: 'b1', horas: 40, realizado: 30, cor: cores[0] }, { id: 'b2', horas: 25, cor: cores[1], dividida: true },
+                { id: 'b3', horas: 20, cor: cores[2] }, { id: 'b4', horas: 15, cor: cores[3] }, { id: 'b5', horas: 8, cor: cores[4] },
+                { id: 'b6', horas: 4, cor: cores[5] }] },
+      { chave: 'v2', tipo: 'versao', titulo: 'Versao B', sub: 'planejada', capacidade: 0, usado: 0,
+        rodape: '0 de 0h', rodape2: 'cheio', editavel: true, tituloClicavel: true, itens: [] },
+      { chave: 'v3', tipo: 'versao', titulo: 'Versao C', sub: 'planejada', capacidade: 80, usado: 80,
+        rodape: '80 de 80h', rodape2: 'cheio', editavel: true, tituloClicavel: true,
+        itens: [{ id: 'b7', horas: 45, cor: cores[0], dividida: true }, { id: 'b8', horas: 35, cor: cores[2] }] },
+      { chave: 'sem', tipo: 'sem', titulo: 'Sem versao ainda', sub: 'nao coube nas versoes', capacidade: 0, usado: 0,
+        rodape: '351h', rodapeCor: 'var(--red)', rodape2: '2 demandas',
+        itens: [{ id: 'big', horas: 337, cor: cores[0] }, { id: 'b9', horas: 14, cor: cores[1] }] }
+    ];
+  }
+  PlanoViz.potes(document.getElementById('p'), document.getElementById('w'), {
+    potes: potes, podeArrastar: true, semAnimacao: stat,
+    aoClicar: cb.aoClicar, aoSoltar: cb.aoSoltar, aoPassar: cb.aoPassar,
+    aoTampa: function (c, h, fin) { say('tampa ' + c + ' ' + h + 'h' + (fin ? ' (final)' : '')); },
+    aoTitulo: function (c) { say('titulo ' + c); }
+  });
+})();
+</script>
+</body>
+</html>
