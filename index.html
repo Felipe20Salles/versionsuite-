@@ -128,6 +128,10 @@ textarea.form-input{resize:vertical;min-height:70px}
 .pl-tip{position:fixed;pointer-events:none;background:var(--card2);border:1px solid var(--border2);border-radius:10px;padding:8px 10px;font-size:12px;max-width:300px;opacity:0;transition:opacity .12s;z-index:260;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .pl-tip b{display:block;font-weight:500;color:var(--text)}.pl-tip span{color:var(--muted)}
 .pl-relatorio summary{cursor:pointer;font-size:14px;font-weight:600}
+.pl-sair{display:none}
+body.plano-apresentar .sidebar,body.plano-apresentar .topbar,body.plano-apresentar .pl-chips,body.plano-apresentar #pl-redmine-id{display:none!important}
+body.plano-apresentar #screen-projetos{zoom:1.15}
+body.plano-apresentar .pl-sair{display:inline-flex;position:fixed;top:12px;right:16px;z-index:300}
 .v-capac{margin:2px 0 12px}
 .v-capac-grade{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;margin-top:6px}
 .v-capac-grade label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
@@ -717,6 +721,7 @@ textarea.form-input{resize:vertical;min-height:70px}
 
       <!-- PROJETOS -->
       <div id="screen-projetos" class="screen">
+      <button class="btn btn-sm btn-ghost pl-sair" onclick="planoApresentar(false)">Sair (Esc)</button>
         <div id="pj-aviso"></div>
         <div id="pl-corpo">
           <div class="pl-chips" id="pl-chips">
@@ -1592,7 +1597,7 @@ textarea.form-input{resize:vertical;min-height:70px}
       <div class="form-group" style="flex:1"><label class="form-label">Observações</label><input class="form-input" id="os-obs" placeholder="Notas internas..."></div>
     </div>
     <div class="form-group" id="os-projeto-wrap" style="display:none">
-      <label class="form-label">Projeto</label>
+      <label class="form-label">Demanda</label>
       <select class="form-input" id="os-projeto"></select>
       <div id="os-projeto-hint" style="font-size:11px;color:var(--hint);margin-top:4px"></div>
     </div>
@@ -2980,7 +2985,7 @@ function renderDash(){
   var vfEl=document.getElementById('dash-versao-filtro');
   if(vfEl){
     var prev=vfEl.value||'todas';
-    vfEl.innerHTML='<option value="todas">Todas as versões</option>'+S.versoes.map(function(v){return'<option value="'+v.id+'">'+v.nome+'</option>'}).join('');
+    vfEl.innerHTML='<option value="todas">Todas as versões</option>'+S.versoes.map(function(v){return'<option value="'+v.id+'">'+escHtml(v.nome)+versaoOpcaoSufixo(v)+'</option>'}).join('');
     vfEl.value=prev;
     if(!vfEl.value)vfEl.value='todas';
   }
@@ -2998,7 +3003,7 @@ function renderDash(){
 
   document.getElementById('dash-metrics').innerHTML=
     '<div class="metric-card"><div class="metric-val">'+S.versoes.length+'</div><div class="metric-lbl">Versões</div><div style="font-size:11px;color:var(--hint);margin-top:2px">total geral</div></div>'+
-    '<div class="metric-card"><div class="metric-val">'+ossF.length+'</div><div class="metric-lbl">OSs registradas</div>'+(filtroVid!=='todas'?'<div style="font-size:11px;color:var(--hint);margin-top:2px">'+S.versoes.find(function(v){return v.id===filtroVid}).nome+'</div>':'')+'</div>'+
+    '<div class="metric-card"><div class="metric-val">'+ossF.length+'</div><div class="metric-lbl">OSs registradas</div>'+(filtroVid!=='todas'?'<div style="font-size:11px;color:var(--hint);margin-top:2px">'+escHtml(S.versoes.find(function(v){return v.id===filtroVid}).nome)+'</div>':'')+'</div>'+
     '<div class="metric-card"><div class="metric-val">'+conc+'</div><div class="metric-lbl">OSs concluídas</div>'+(ossF.length?'<div style="font-size:11px;color:var(--hint);margin-top:2px">'+(ossF.length?Math.round(conc/ossF.length*100):0)+'% do total</div>':'')+'</div>'+
     '<div class="metric-card"><div class="metric-val">'+horasPonto.toFixed(1)+'h</div><div class="metric-lbl">Horas ponto</div><div style="font-size:11px;color:var(--hint);margin-top:2px">'+perLbl+'</div></div>'+
     '<div class="metric-card"><div class="metric-val">'+horasAprop.toFixed(1)+'h</div><div class="metric-lbl">Horas apropriadas</div><div style="font-size:11px;color:var(--hint);margin-top:2px">'+(horasPonto>0?Math.round(horasAprop/horasPonto*100)+'% do ponto':'')+'</div></div>';
@@ -3013,9 +3018,9 @@ function renderDash(){
         var ossV=S.oss.filter(function(o){return o.versaoId===v.id});
         var pendentes=ossV.filter(function(o){return o.status!=='concluido'}).length;
         if(diff<=3&&pendentes>0){
-          banners+='<div class="banner banner-red">⚠️ <span><strong>'+v.nome+'</strong>: boletim em <strong>'+diff+(diff===1?' dia':' dias')+'</strong> e ainda há <strong>'+pendentes+' OS(s) pendente(s)</strong>!</span></div>';
+          banners+='<div class="banner banner-red">⚠️ <span><strong>'+escHtml(v.nome)+'</strong>: boletim em <strong>'+diff+(diff===1?' dia':' dias')+'</strong> e ainda há <strong>'+pendentes+' OS(s) pendente(s)</strong>!</span></div>';
         }else if(diff<=7){
-          banners+='<div class="banner banner-accent">📅 <span>Próximo boletim de <strong>'+v.nome+'</strong>: <strong>'+fmtDate(v.boletim)+'</strong>'+(diff===0?' — hoje!':' — em '+diff+' dia'+(diff>1?'s':''))+'</span></div>';
+          banners+='<div class="banner banner-accent">📅 <span>Próximo boletim de <strong>'+escHtml(v.nome)+'</strong>: <strong>'+fmtDate(v.boletim)+'</strong>'+(diff===0?' — hoje!':' — em '+diff+' dia'+(diff>1?'s':''))+'</span></div>';
         }
       }
     }
@@ -3329,10 +3334,12 @@ function renderKanban(){
   populateFiltroProdutoSel();
   var sel=document.getElementById('kanban-versao-sel');
   sel.innerHTML=S.versoes.map(function(v){return'<option value="'+v.id+'">'+escHtml(v.nome)+versaoOpcaoSufixo(v)+'</option>'}).join('');
-  if(S.versaoK)sel.value=S.versaoK;
+  if(S.versaoK&&S.versoes.some(function(v){return v.id===S.versaoK}))sel.value=S.versaoK;
+  else{var _va=S.versoes.find(function(v){return v.ativa});if(_va)sel.value=_va.id}
   var vid=sel.value;S.versaoK=vid;
   var versao=S.versoes.find(function(v){return v.id===vid});
-  var isEncerrada=!!versao&&versaoStatus(versao)==='encerrada';
+  // planejada (ainda nao iniciada) tem o mesmo tratamento de somente leitura de uma encerrada
+  var isEncerrada=!!versao&&!versao.ativa;
   var oss=S.oss.filter(function(o){return o.versaoId===vid});
   if(S.filtro!=='todos')oss=oss.filter(function(o){return(PLINHA[o.produto]||'')===S.filtro});
   if(S.filtroProduto&&S.filtroProduto!=='todos')oss=oss.filter(function(o){return o.produto===S.filtroProduto});
@@ -3375,7 +3382,7 @@ function renderKanban(){
               '<span class="badge '+(linha==='Gestão de Talentos'?'tag-gt':'tag-pag')+'">'+os.produto+'</span>'+
               (os.tipoRedmine?badgeTipoRedmine(os.tipoRedmine):'')+
               (os.atribuicao?badgeAtribuicao(os.atribuicao):'')+
-              (os.projetoId&&projById(os.projetoId)?'<span class="badge" style="background:var(--accent-glow);color:var(--accent)" title="Projeto">◆ '+escHtml(projById(os.projetoId).titulo.slice(0,24))+'</span>':'')+
+              (os.projetoId&&projById(os.projetoId)?'<span class="badge" style="background:var(--accent-glow);color:var(--accent)" title="Demanda">◆ '+escHtml(projById(os.projetoId).titulo.slice(0,24))+'</span>':'')+
             '</div>'+
             (h>0?'<span class="os-horas-label">'+h.toFixed(1)+'h</span>':'')+
           '</div>'+
@@ -3407,7 +3414,7 @@ function populateProjetoSelOS(os){
   var atual=os&&os.projetoId?os.projetoId:'';
   var lista=PJ.projetos.filter(function(p){return ProjCore.aceitaOS(p.status)||p.id===atual});
   document.getElementById('os-projeto').innerHTML='<option value="">(nenhum)</option>'+
-    lista.map(function(p){return'<option value="'+p.id+'">'+escHtml(p.titulo)+'</option>'}).join('');
+    lista.map(function(p){return'<option value="'+p.id+'">'+(p.pai_redmine?'#'+escHtml(String(p.pai_redmine))+' · ':'')+escHtml(p.titulo)+'</option>'}).join('');
   document.getElementById('os-projeto').value=atual;
   var p=atual?projById(atual):null;
   document.getElementById('os-projeto-hint').textContent=(p&&os.paiRedmine&&String(p.pai_redmine)===String(os.paiRedmine))
@@ -6344,7 +6351,7 @@ function planoDesenharGrade(){
       return{id:x.p.id,linha:x.d.faixaP||'sem',coluna:x.d.faixaE,horas:x.d.horas,cor:st.c,
         anel:x.p.status==='pauta',tracejada:!(x.d.horas>0),apagada:!planoBate(x.p),rotulo:x.p.titulo||'Demanda'};
     }),
-    podeArrastar:can('gerir_projetos'),
+    podeArrastar:can('gerir_projetos')&&!document.body.classList.contains('plano-apresentar'),
     aoClicar:planoClicar,aoSoltar:planoSoltar,aoPassar:planoPassar
   });
 }
@@ -6372,7 +6379,7 @@ function planoItemPote(it,partes){
 function planoDesenharPotes(){
   var svg=document.getElementById('pl-potes'),wrap=document.getElementById('pl-potes-wrap');
   if(!svg||!window.PlanoViz)return;
-  var dist=planoDistribuir(),vers=planoVersoes(),gerir=can('gerir_projetos');
+  var dist=planoDistribuir(),vers=planoVersoes(),gerir=can('gerir_projetos')&&!document.body.classList.contains('plano-apresentar');
   if(_plano.visao!=='todas'&&!planoVersaoPorId(_plano.visao))_plano.visao='todas';
   var sel=document.getElementById('pl-visao');
   if(sel){
@@ -6708,6 +6715,23 @@ async function planoSoltar(id,alvo){
     renderProjetos();
   }finally{_planoOcupado=false}
 }
+
+// ── modo Apresentar ──
+function planoApresentar(on){
+  on=!!on;
+  if(on===document.body.classList.contains('plano-apresentar'))return;
+  document.body.classList.toggle('plano-apresentar',on);
+  if(on){
+    try{var r=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();if(r&&r.catch)r.catch(function(){})}catch(e){}
+  }else{
+    try{if(document.fullscreenElement&&document.exitFullscreen){var x=document.exitFullscreen();if(x&&x.catch)x.catch(function(){})}}catch(e){}
+  }
+  planoEsconderTip();
+  if(planoTela())renderProjetos();
+  if(on){var box=document.getElementById('pl-relatorio');if(box&&!box.hidden)box.open=true}
+}
+document.addEventListener('keydown',function(ev){if(ev.key==='Escape'&&document.body.classList.contains('plano-apresentar'))planoApresentar(false)});
+document.addEventListener('fullscreenchange',function(){if(!document.fullscreenElement&&document.body.classList.contains('plano-apresentar'))planoApresentar(false)});
 
 // ── topo e tela ──
 function planoTopbar(){
