@@ -411,3 +411,63 @@ test('distribuirPlano: sem estimativa mas com realizado na ativa gera item e fic
   assert.equal(r.versoes[0].usado, 9);
   assert.equal(r.versoes[0].livres, 1);
 });
+
+// ---- Task 3: realizado, Redmine e resumo plano x realizado ----
+const PP3 = [
+  { id: 'an', externo: false, ordem: 1, tipos_atividade: ['9'], trackers: ['Análise', '4'] },
+  { id: 'de', externo: false, ordem: 2, tipos_atividade: ['10'], trackers: ['Desenvolvimento'] },
+  { id: 'cl', externo: true, ordem: 3, tipos_atividade: [], trackers: [] },
+];
+
+test('agregarRealizado: tipo como número ou string; sem tipo vai para o padrão', () => {
+  const r = C.agregarRealizado([
+    { projeto_id: 'd1', versao_id: 'v1', activity_type_id: 9, horas: 2 },
+    { projeto_id: 'd1', versao_id: 'v1', activity_type_id: '10', horas: 3 },
+    { projeto_id: 'd1', versao_id: null, activity_type_id: null, horas: 1 },
+    { projeto_id: 'd2', versao_id: 'v1', activity_type_id: '77', horas: '4' },
+  ], PP3, 'de');
+  assert.deepEqual(r.total, { d1: 6, d2: 4 });
+  assert.deepEqual(r.porVersao, { v1: { d1: 5, d2: 4 } });
+  assert.deepEqual(r.porPapel.d1, { an: 2, de: 4 });
+  assert.deepEqual(r.porVersaoPapel.v1.d1, { an: 2, de: 3 });
+  assert.deepEqual(r.versaoPapel.v1, { an: 2, de: 7 });
+});
+
+test('papelPadrao cai no primeiro do plano quando não configurado', () => {
+  assert.equal(C.papelPadrao(PP3, null), 'an');
+  assert.equal(C.papelPadrao(PP3, 'cl'), 'an');
+  assert.equal(C.papelPadrao(PP3, 'de'), 'de');
+});
+
+test('horasDoRedmine: tracker por nome ou id; sem mapa vai para o padrão', () => {
+  const h = C.horasDoRedmine([
+    { tracker: { id: 4, name: 'Outro nome' }, estimated_hours: 5 },
+    { tracker: { id: 2, name: 'Desenvolvimento' }, estimated_hours: 10 },
+    { tracker: { id: 3, name: 'QA' }, estimated_hours: 2 },
+    { tracker: { id: 2, name: 'Desenvolvimento' }, estimated_hours: null },
+  ], PP3, 'de');
+  assert.deepEqual(h, [{ papel_id: 'an', horas: 5 }, { papel_id: 'de', horas: 12 }]);
+});
+
+test('camposSync respeita a origem', () => {
+  const h = [{ papel_id: 'an', horas: 3 }];
+  assert.deepEqual(C.camposSync({ horas_origem: 'redmine' }, h), { horas_redmine: h, horas_papeis: h });
+  assert.deepEqual(C.camposSync({ horas_origem: 'vs' }, h), { horas_redmine: h });
+});
+
+test('resumoVersao: cumprimento, herdadas e precisão', () => {
+  const real = { total: { d1: 12, d2: 3 }, porVersao: { v1: { d1: 10, d2: 3, d9: 50 } } };
+  const r = C.resumoVersao('v1',
+    [{ projeto_id: 'd1', horas_previstas: 10 }, { projeto_id: 'd2', horas_previstas: 8 }],
+    [{ id: 'd1', status: 'entregue', horas: 10 }, { id: 'd2', status: 'plano', horas: 8 }], real);
+  assert.deepEqual(r, { temLinhaBase: true, horasPrevistas: 18, horasRealizadas: 13, previstas: 2, entregues: 1,
+    herdadas: ['d2'], estimadoEntregues: 10, realizadoEntregues: 12 });
+  assert.equal(C.resumoVersao('v2', [], [], real).temLinhaBase, false);
+});
+
+test('capacidadeSugerida: média das 3 últimas encerradas', () => {
+  const enc = [{ id: 'a', data: '2026-01-01' }, { id: 'b', data: '2026-02-01' }, { id: 'c', data: '2026-03-01' }, { id: 'd', data: '2026-04-01' }];
+  const vp = { a: { an: 100 }, b: { an: 10, de: 30 }, c: { an: 20 }, d: { an: 30, de: 31 } };
+  assert.deepEqual(C.capacidadeSugerida(enc, vp, ['an', 'de']), { an: 20, de: 20 });
+  assert.deepEqual(C.capacidadeSugerida([], vp, ['an']), {});
+});

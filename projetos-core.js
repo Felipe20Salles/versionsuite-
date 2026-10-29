@@ -431,6 +431,97 @@
     return out;
   }
 
+  // ---- Realizado, Redmine e resumo plano x realizado ----
+  function papelPadrao(papeis,papelPadraoId){
+    var ps=papeisDoPlano(papeis);
+    if(papelPadraoId!=null){
+      for(var i=0;i<ps.length;i++)if(String(ps[i].id)===String(papelPadraoId))return ps[i].id;
+    }
+    return ps.length?ps[0].id:null;
+  }
+  function papelDoTipo(papeis,papelPadraoId){
+    var m={};
+    papeisDoPlano(papeis).forEach(function(p){
+      (p.tipos_atividade||[]).forEach(function(t){m[String(t)]=p.id});
+    });
+    return m;
+  }
+  function somar(o,k,h){o[k]=(o[k]||0)+h}
+  function agregarRealizado(linhas,papeis,papelPadraoId){
+    var mapa=papelDoTipo(papeis,papelPadraoId),pad=papelPadrao(papeis,papelPadraoId);
+    var r={total:{},porVersao:{},porPapel:{},porVersaoPapel:{},versaoPapel:{}};
+    (linhas||[]).forEach(function(l){
+      var h=num(l.horas);
+      if(!h)return;
+      var d=String(l.projeto_id),t=l.activity_type_id==null?null:String(l.activity_type_id);
+      var p=t!=null&&mapa.hasOwnProperty(t)?mapa[t]:pad;
+      somar(r.total,d,h);
+      if(p!=null){r.porPapel[d]=r.porPapel[d]||{};somar(r.porPapel[d],p,h)}
+      if(l.versao_id==null)return;
+      var v=String(l.versao_id);
+      r.porVersao[v]=r.porVersao[v]||{};somar(r.porVersao[v],d,h);
+      if(p==null)return;
+      r.porVersaoPapel[v]=r.porVersaoPapel[v]||{};
+      r.porVersaoPapel[v][d]=r.porVersaoPapel[v][d]||{};
+      somar(r.porVersaoPapel[v][d],p,h);
+      r.versaoPapel[v]=r.versaoPapel[v]||{};somar(r.versaoPapel[v],p,h);
+    });
+    return r;
+  }
+  function horasDoRedmine(filhas,papeis,papelPadraoId){
+    var ps=papeisDoPlano(papeis),pad=papelPadrao(papeis,papelPadraoId),acc={};
+    (filhas||[]).forEach(function(f){
+      var h=num(f&&f.estimated_hours);
+      if(!h)return;
+      var tr=f.tracker||{},id=tr.id==null?null:String(tr.id),alvo=pad;
+      for(var i=0;i<ps.length;i++){
+        var ts=(ps[i].trackers||[]).map(String);
+        if((id!=null&&ts.indexOf(id)>=0)||(tr.name!=null&&ts.indexOf(String(tr.name))>=0)){alvo=ps[i].id;break}
+      }
+      if(alvo!=null)acc[alvo]=(acc[alvo]||0)+h;
+    });
+    var out=[];
+    ps.forEach(function(p){if(acc[p.id]>0)out.push({papel_id:p.id,horas:acc[p.id]})});
+    return out;
+  }
+  function camposSync(demanda,horasRedmine){
+    var o={horas_redmine:horasRedmine};
+    if(demanda&&demanda.horas_origem==='redmine')o.horas_papeis=horasRedmine;
+    return o;
+  }
+  function resumoVersao(versaoId,linhaBase,demandas,realizado){
+    var base=linhaBase||[],real=realizado||{},v=String(versaoId);
+    var porDem=(real.porVersao&&real.porVersao[v])||{},tot=real.total||{};
+    var idx={};
+    (demandas||[]).forEach(function(d){idx[String(d.id)]=d});
+    var r={temLinhaBase:base.length>0,horasPrevistas:0,horasRealizadas:0,previstas:base.length,entregues:0,
+      herdadas:[],estimadoEntregues:0,realizadoEntregues:0};
+    base.forEach(function(b){
+      var id=String(b.projeto_id),d=idx[id];
+      r.horasPrevistas+=num(b.horas_previstas)||0;
+      r.horasRealizadas+=num(porDem[id])||0;
+      if(!d)return;
+      if(d.status==='plano')r.herdadas.push(b.projeto_id);
+      if(d.status==='entregue'){
+        r.entregues++;
+        r.estimadoEntregues+=num(d.horas)||0;
+        r.realizadoEntregues+=num(tot[id])||0;
+      }
+    });
+    return r;
+  }
+  function capacidadeSugerida(encerradas,versaoPapel,papeisIds,n){
+    var k=n||3,out={};
+    var ult=(encerradas||[]).slice().sort(function(a,b){return String(b.data)<String(a.data)?-1:String(b.data)>String(a.data)?1:0}).slice(0,k);
+    if(!ult.length)return out;
+    (papeisIds||[]).forEach(function(p){
+      var s=0;
+      ult.forEach(function(e){s+=num(((versaoPapel||{})[String(e.id)]||{})[p])||0});
+      out[p]=Math.round(s/ult.length);
+    });
+    return out;
+  }
+
   var api={
     horasPorEtapa:horasPorEtapa,
     intervalosEtapa:intervalosEtapa,tempoPorPapel:tempoPorPapel,diasNaEtapaAtual:diasNaEtapaAtual,
@@ -446,7 +537,9 @@
     podeMudarStatus:podeMudarStatus,statusAposCriterios:statusAposCriterios,compararPlano:compararPlano,
     tituloPlano:tituloPlano,
     distribuirPlano:distribuirPlano,restantePorPapel:restantePorPapel,repartirPorPapel:repartirPorPapel,
-    moverPara:moverPara,renumerar:renumerar,indiceDeSoltura:indiceDeSoltura,repartirTotal:repartirTotal
+    moverPara:moverPara,renumerar:renumerar,indiceDeSoltura:indiceDeSoltura,repartirTotal:repartirTotal,
+    papelPadrao:papelPadrao,papelDoTipo:papelDoTipo,agregarRealizado:agregarRealizado,horasDoRedmine:horasDoRedmine,
+    camposSync:camposSync,resumoVersao:resumoVersao,capacidadeSugerida:capacidadeSugerida
   };
   if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.ProjCore=api;
 })(typeof window!=='undefined'?window:this);
